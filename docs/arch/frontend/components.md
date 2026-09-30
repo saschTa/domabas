@@ -1,0 +1,316 @@
+# UI component library and responsive workspace
+
+Domabas builds its shared interface as a component library of **dumb presenters**
+under `frontend/lib/ui/`. A presenter renders values and child widgets supplied by
+its caller and forwards interaction through callbacks. It does not load data,
+perform authorization, save settings or own an application session.
+
+Feature screens compose these presenters and connect them to their Cubits.
+The app composition root controls workspace navigation and the selected library.
+The library provides a consistent visual language without becoming a second
+application framework.
+
+## Dependency boundary
+
+```text
+app composition → feature screens → shared UI presenters → Flutter Material
+                        ↓
+                 feature Cubits → domain repository ports
+```
+
+Shared UI code may import Flutter and other shared UI files. It must not import
+feature domain models, Cubits, repositories, generated transport models,
+clients, data adapters or `app/`. Pass strings, booleans, icons, immutable
+presentation values, widgets and callbacks instead. Domain and data code must not
+import the UI library. The frontend architecture test enforces these directions.
+
+Presenters may hold local interaction state such as an open chooser or a collapsed
+navigation group. Request state, selected library, permissions and feature-specific
+selection stay in app composition or feature Cubits. Form controllers belong
+to feature forms and must be disposed there. Theme constants are immutable values,
+not global mutable dependencies.
+
+## Components
+
+Import `ui/domabas_ui.dart` from app or feature presentation code.
+
+| Presenter | Responsibility |
+| --- | --- |
+| `AppTheme`, `AppElevation` and `AppLayout` | Material colors, typography, flat surface styling, shape, spacing and width thresholds |
+| `AppWorkspaceShell` | Responsive nested navigation, single-row top bar and account utilities |
+| `AppWorkspaceAction` and its button/menu presenters | Immutable action labels and current callbacks supplied by feature owners |
+| `AppNavigationGroup` and `AppNavigationItem` | Immutable labels, icons, IDs and keys supplied by the caller |
+| `AppPage` | Full-width content with responsive insets, page heading, wrapping actions and remaining content height |
+| `AppSurface` | Flat themed panel with rounded corners and an ink outline |
+| `AppSectionHeader` | Group title, short description and optional trailing control |
+| `AppRecordRow` | List record with leading visual, text, metadata and responsive actions |
+| `AppStatusBadge` | Labeled neutral, information, success, warning or danger state |
+| `AppPipelineDiagram` and `AppPipelineStep` | Shared pipeline boxes, connectors, responsive layout and recorded step states |
+| `AppEmptyState` and `AppNotice` | Empty content, information/status/error message, optional notice title and action |
+| `AppPagedList` | Bounded visible pages, previous/next navigation and caller-owned continuation requests |
+| `AppProgressSlot` | Permanent four-pixel space for foreground progress without moving or replacing adjacent content |
+| `AppDialog` | Wide form frame with viewport-bounded scrolling and wrapping actions |
+| `AppPaperCanvas` | Static dot-grid root background without layout or input changes |
+| `AppStripedProgressIndicator`, `AppStripedDivider` | Borderless diagonal ink strokes with transparent gaps |
+| `AppAppearanceMenu` | Theme choices, persistence feedback and retry with caller-owned state |
+
+The [license reader](licenses.md) composes these same page, surface, record,
+pagination and dialog presenters for searchable offline third-party notices.
+
+Use Flutter's existing buttons, text fields, menus and selection controls inside
+these components. Add a new shared presenter when repeated product UI has an
+established responsibility. Do not create generic abstractions for hypothetical
+future screens or hide business logic in a component configuration object.
+
+`AppPage.child` receives bounded remaining height, so large collections should use
+a lazy `ListView` or `CustomScrollView` there. `AppSurface` can wrap that list with
+zero padding; each `AppRecordRow` supplies its own spacing. Forms inside `AppDialog`
+do not need another outer scroll view: the dialog owns body scrolling. Actions
+remain separate from that body and wrap when the window or enlarged text requires it.
+
+For lists of separate cards, set `AppPage.insetBody` to false and apply
+`AppLayout.cardListPadding(context)` to the list or scroll view. This keeps card
+edges aligned with the page heading and preserves existing collection spacing.
+The padding includes bottom navigation clearance. Keep viewport clipping enabled
+so scrolled cards cannot paint over fixed headings. Enclosed row lists keep the
+default page insets. Dialogs own their padding inside the scrolling body.
+
+## Unified pipelines and jobs
+
+All pipeline types must use the same visual language in both their overview and
+job detail view. Use `AppPipelineDiagram` with the same boxes, connectors, spacing,
+typography and responsive vertical layout. Feature presenters supply step labels
+and recorded states; they must not create a separate diagram style.
+
+Jobs belong in one chronological list with an All pipelines option and filters
+for each pipeline. Use the same record rows, status badges and Details action for
+Paperless imports, email retrieval, document ingestion, AI processing and thumbnail generation. New pipeline types
+must join this list instead of adding a separate list to the page. Permissions
+still determine which jobs the user can see; mailbox and Paperless jobs remain
+private to their owner.
+Paperless history uses owner-scoped cursor pages and requires all of
+the import, document-read and upload claims. Its Jobs Cubit refreshes on private
+Paperless notifications while visible and foregrounded. Selected imports refresh
+independently of the history window; item notifications refresh outcome pages. Fatal terminal records that did not retain
+their earlier stage display Not recorded; per-file failures remain visible.
+
+The Details action opens the same Job details page structure: outcome and timing
+first, then Pipeline for this attempt. Show completed, active, waiting and failed
+steps from persisted evidence. Highlight the last recorded step when a run stops,
+and expose per-item failures separately. Never infer completed work from a later
+step when retries or partial results make that uncertain. Older records without
+stage evidence say Not recorded. Acceptance into another pipeline means queued
+downstream work, not that its processing has completed.
+
+App composition combines feature-owned Cubits and presenters. The shared diagram
+only receives presentation values. Paginated sources share a chronological
+boundary, so older loaded records cannot appear ahead of newer unloaded jobs.
+
+Jobs and pipeline administration show the same compact shared-resource summary.
+Background jobs wait for worker and provider capacity before starting. Running
+jobs continue when imports arrive. Job rows and details show recorded execution
+status without the former High priority and Background policy badges. History
+remains chronological. The interface never infers a specific job's blocked
+resource or a global pause from the current user's visible jobs.
+
+The expandable explanation distinguishes worker-only email/Paperless retrievals
+from document ingestion and full reindexing, which also require Ollama, and AI
+pipelines, which share their configured provider. Administrators edit capacity in
+[Workload limits](workload-settings.md), where the server supplies shared limits,
+active reservations and current pipeline requirements. Deprecated independent
+ingestion/document AI concurrency values are no longer displayed as effective
+capacity. Optional legacy scheduling data supplies only its provider retry count;
+retries within a workflow remain distinct from a persisted document job attempt.
+
+## Responsive layout and navigation
+
+The shell's Activity card uses the Scaffold floating action slot, so it clears
+the measured phone navigation and keyboard. It is at most 280 pixels wide and
+opens one paginated, scrollable panel for uploads, jobs and reindex requests.
+Short windows and enlarged text use a compact row. Upload receipts remain
+available from View uploads after transient completion feedback disappears.
+
+`AppJobSpinner`, `AppJobProgress` and `AppJobActivityCard` receive only display
+values. Running badges and active pipeline steps share the spinner. Reduced
+motion replaces indeterminate animation with a static icon or track. Reindex
+progress has no percentage until enumeration completes; finished outcomes include
+successes, failures, skipped and superseded entries. Scope labels distinguish
+Current library from All libraries. A full bar never implies complete success.
+
+The app-owned `JobActivityCubit` uses injected repositories and existing claims.
+Each document, namespace/system reindex, email and Paperless source has its own
+push-triggered refresh scheduler. Server aggregates supply totals independently
+of the loaded rows. Active-only requests load a bounded page; Load more active
+jobs extends it. Each notification replaces the loaded active window from fresh
+pages, so terminal work disappears without individual record rotation. Slow or
+failed sources do not block fresh results from other sources. Errors retain
+previous evidence and expose Retry; disconnected progress is marked paused.
+
+The monitor is independent of history filters, remains active across workspace
+navigation, pauses with the application and dies with the authenticated scope.
+It has no polling timer. Job and reindex counts stay separate because batches
+contain document attempts and system batches span multiple libraries.
+
+Breakpoints use available logical window width, never platform name or orientation.
+
+| Width | Navigation | Page inset |
+| --- | --- | --- |
+| Below 600 | Floating bar with up to five entries and centered Documents; additional secondary groups share More | 16 |
+| 600–1099 | 88-pixel rail; settings open nested destination menus | 24 |
+| At least 1100 | 256-pixel floating sidebar with expandable settings groups | 32 |
+
+Workspace pages fill the available width with the responsive insets above.
+Document grids add columns on wide screens; focused forms, search inputs and
+dialogs retain their own readable width limits. The workspace header stays on one row;
+secondary actions move into More as its local width shrinks or text grows.
+Rows move their actions below the text
+when their available width is below 560 pixels or text is enlarged. Dialogs default
+to 720 pixels and stay inside a narrow viewport. Member and invitation forms use
+860 pixels, with two permission columns when space and text size allow it.
+
+The [mobile navigation rules](mobile-navigation.md) keep Invoices, Jobs, Documents,
+AI chat and Settings visible when there are five groups. A sixth group moves
+Settings, Admin and future secondary groups into a More sidebar.
+
+The workspace has Documents and nested User settings destinations for Libraries,
+Members, Invitations and Password. Members and Invitations refer to the selected
+library and require the corresponding management claim. Admin settings contains
+System users and requires system authority. The top bar switches libraries; it
+does not contain library-management actions. Appearance, live updates, Your jobs
+and Sign out occupy four labeled-by-tooltip icons in the desktop sidebar footer.
+The rail groups these utilities under Account; phones include them in the header
+More actions menu.
+
+On the document destination, the active library selector also supplies the page
+heading. Upload is the primary action, becoming an icon at compact widths and a
+More entry when even that cannot fit. Scan and New document are secondary icons
+on wide layouts; Upload history stays in More. The selector uses one visible line
+with its complete library/account context in semantics. Settings continue using
+`AppPage` headings. Shared UI receives immutable action values, current callbacks
+and widgets, never a document Cubit or permission object.
+
+Feature action builders keep appearance, activity and connection state mounted
+above the shell. Opening or closing More does not dispose those owners. The menu
+updates its current rows for busy state, badges and connection changes. It owns
+one exact route and generation, rejects covered or stale callbacks, and invalidates
+on owner, action-set, viewport or text-scale changes. Activation removes only that
+route and invokes the current callback synchronously, preserving browser upload
+gestures. Focus returns after the feature action completes, only to a surviving
+trigger on the current owner route. Menus have a fixed Close control and scrollable
+natural-scale rows with targets of at least 48 pixels.
+
+The shell receives allowed navigation entries and the selected ID. It neither
+checks claims nor constructs feature screens. Navigating replaces the selected
+body without swipe tabs or custom page transitions. Ordinary navigation keeps the
+same authenticated dependency scope; sign-out, expiry and library switching still
+replace the entire session-keyed MaterialApp/Navigator subtree.
+
+Groups have stable IDs independent of their full and compact labels. The selected
+primary group follows the selected leaf; opening or cancelling a chooser does not
+select a page. On normal phone widths, Documents is a permanent raised forest
+circle above a curved cutout in the rounded surface. Permitted destinations fill
+the two sides; a separate marker identifies the selected group, including Documents.
+Labels use the user's natural text scale. Their actual measured width and height
+determine whether the cutout layout fits. Narrow or enlarged-text layouts use a
+full-width Documents row above paired or full-width destinations. Scroll the bar when its
+contents exceed 40 percent of usable height, with its margin and bottom safe inset
+inside that budget. Focused buttons scroll into view. The body extends behind the
+bar, so content remains visible through its notch and outer margins. Scaffold
+supplies the bar's measured height as bottom MediaQuery padding. Settings lists
+consume it automatically; the document footer and password form include it inside
+their scrollable content. Final rows and actions can scroll above the bar without
+reserving a solid footer strip. Keep the extended body enabled across keyboard
+and width changes to preserve the child subtree. The bar hides while a software
+keyboard is visible and returns with selection and drafts intact.
+
+Navigation buttons own their hover, press and focus decoration without a second
+Material overlay. Transparent decoration endpoints retain the visible endpoint's
+color channels so intermediate frames do not darken during alpha interpolation.
+The raised center uses an outline for interaction feedback, preserving the cutout.
+Desktop sidebar and tablet rail items share the document cards' primary hover
+outline without shadows or translation. Pointer exit removes
+the outline, including after a click; the selected fill and keyboard feedback
+remain. Navigation hit targets and positions remain fixed.
+
+The single-row shell header retains its complete height in short windows.
+`AppPage` reduces its vertical spacing and bounds
+its scrollable heading against the space above navigation. Its collection viewport
+still extends behind the bar. The document toolbar and
+pagination also have bounded scroll regions so their controls cannot consume the
+collection viewport. This preserves access to real form and document actions at
+large text sizes without suppressing text scaling.
+
+Mobile choosers have a fixed close control above a scrollable heading, account label
+and permitted destinations. Tablet menus retain their anchored native popup. The
+shell owns each exact route and an interaction generation, validates returned IDs
+against current groups, and ignores stale callbacks. Resize, membership changes and
+motion-preference changes invalidate and remove only that route. Focus returns to a
+surviving group trigger after dismissal or resize; disposal restores nothing.
+
+## Visual and interaction rules
+
+Paper & Ink uses a warm `#EFEBE2` dot-grid canvas, `#FFFDF7` surfaces,
+`#2C2925` ink and restrained `#AD4433` rust actions. Dark mode uses `#20201E`,
+`#2B2A27`, `#EEE8DC` and `#DFA28F` respectively. Presenters resolve semantic
+roles at build time, including matching status foreground/background pairs.
+Read [appearance and client preferences](appearance.md) for lifetime and persistence.
+Spacing and responsive dimensions stay unchanged. Panels and dialogs have rounded
+outlines; ordinary buttons retain 12-pixel corners. AppElevation retains its
+existing API but returns no shadows. Surfaces have no grain, blur or hover lift.
+Bundled Lora is used for headings without changing body or navigation typography.
+AppPage and form sections use diagonal striped dividers inside their existing
+spacing. Stripe gaps are transparent in both modes, with no enclosing border.
+Filled inputs, secondary buttons and chips retain focus, selection and error
+indicators. Document and navigation highlights retain primary rings for pointer
+and keyboard use. Thin list separators, checkbox/radio geometry and scanner guides
+remain meaningful. Use semantic state labels alongside color.
+
+Refresh feedback keeps its layout space. `AppProgressSlot` removes the inactive
+indicator while retaining its bounds, and respects reduced-motion preferences.
+Do not conditionally insert progress children ahead of lists, forms or viewers:
+that moves content and can replace stateful children in lazy lists. Background
+reads retain the last successful snapshot, including empty results. Their private
+request flags do not disable visible actions; feature Cubits coordinate any action
+that arrives during a read. Explicit refresh and initial loading remain visible.
+
+Preserve Material keyboard focus, tooltips, popup dismissal and button semantics.
+Keep interactive targets at least 48 pixels. Headings expose heading semantics;
+selected navigation exposes selected semantics; notices use live regions. Use short transitions for meaningful state changes and hover/focus outlines.
+Navigation hover/focus uses 140-millisecond tint and chevron transitions;
+selection uses 180 milliseconds. Hit targets never move. Disable these transitions
+and chooser animations when either MediaQuery's disable-animations preference or
+the platform's reduce-motion preference is set, including runtime changes. Long identifiers must wrap or have accessible full labels,
+and controls cannot depend on hover alone.
+
+The feature, not the component library, combines role bundles and explicit grants.
+Role-included claims appear checked and identified as included; additional grants
+remain distinct. Backend policy remains authoritative even when the UI disables an
+action such as demoting the last system administrator.
+
+## Validation
+
+Focused presenter tests cover desktop navigation, tablet nested menus, mobile
+bottom navigation at 320 and 390 pixels, enlarged text, short windows, dialog scrolling and
+independent row actions. Feature tests cover actual repository/Cubit behavior.
+Inspect the running UI alongside automated checks. See the
+[testing guide](../../development/testing.md) for commands and prerequisites.
+
+## Growing collections
+
+Every growing server collection must expose bounded pages with an accessible
+continuation. Never substitute a larger hard limit for pagination. Jobs, email
+syncs, reindex requests, Paperless imports and document outcomes render at most
+20 rows through AppPagedList, with Previous and Next or Load more controls.
+Identity and document collections retain their existing paginated lazy lists.
+The library picker uses bounded visible pages; the fixed 40-entry local upload
+cache shows ten outcomes per page. Configuration catalogs remain fixed lists.
+
+Status filters query the server before pagination across document, email and
+Paperless jobs. Changing status cancels pending reads and restarts each source at
+its first matching page; late responses cannot restore the previous filter.
+Paperless success excludes runs with failed files, which match Partially completed.
+The combined jobs list uses every unfinished matching source's chronological boundary,
+including Paperless. Loading an older page
+retains existing records and cursors on failure. Automatic refresh keeps older
+job and email-account pages in place, updates active records with bounded reads,
+and leaves explicit refresh to return to the newest history.

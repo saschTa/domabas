@@ -1,0 +1,173 @@
+// AUTO-GENERATED FILE, DO NOT MODIFY!
+// @dart=2.18
+
+// ignore_for_file: unused_element, unused_import
+// ignore_for_file: always_put_required_named_parameters_first
+// ignore_for_file: constant_identifier_names
+// ignore_for_file: lines_longer_than_80_chars
+
+library openapi.api;
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:collection/collection.dart';
+import 'package:http/http.dart';
+import 'package:intl/intl.dart';
+import 'package:meta/meta.dart';
+
+part 'api_client.dart';
+part 'api_helper.dart';
+part 'api_exception.dart';
+part 'auth/authentication.dart';
+part 'auth/api_key_auth.dart';
+part 'auth/oauth.dart';
+part 'auth/http_basic_auth.dart';
+part 'auth/http_bearer_auth.dart';
+
+part 'api/chat_api.dart';
+part 'api/documents_api.dart';
+part 'api/email_api.dart';
+part 'api/identity_api.dart';
+part 'api/invoices_api.dart';
+part 'api/paperless_api.dart';
+part 'api/realtime_api.dart';
+part 'api/system_api.dart';
+
+part 'model/accept_invitation.dart';
+part 'model/account_identity.dart';
+part 'model/account_membership.dart';
+part 'model/account_membership_list.dart';
+part 'model/account_role.dart';
+part 'model/account_user.dart';
+part 'model/account_user_list.dart';
+part 'model/auth_session.dart';
+part 'model/chat_accepted_turn.dart';
+part 'model/chat_configuration.dart';
+part 'model/chat_configuration_summary.dart';
+part 'model/chat_conversation.dart';
+part 'model/chat_conversation_page.dart';
+part 'model/chat_message.dart';
+part 'model/chat_message_page.dart';
+part 'model/chat_model.dart';
+part 'model/chat_model_page.dart';
+part 'model/chat_source.dart';
+part 'model/claim.dart';
+part 'model/claim_list.dart';
+part 'model/create_account_user.dart';
+part 'model/create_chat_conversation_request.dart';
+part 'model/create_document.dart';
+part 'model/create_document_reindex_batch.dart';
+part 'model/create_email_provider.dart';
+part 'model/create_invitation.dart';
+part 'model/current_identity.dart';
+part 'model/document.dart';
+part 'model/document_ai_processing.dart';
+part 'model/document_email_attachment.dart';
+part 'model/document_email_links.dart';
+part 'model/document_email_parents.dart';
+part 'model/document_file.dart';
+part 'model/document_job.dart';
+part 'model/document_job_count.dart';
+part 'model/document_job_counts.dart';
+part 'model/document_job_page.dart';
+part 'model/document_link.dart';
+part 'model/document_list.dart';
+part 'model/document_ocr.dart';
+part 'model/document_processing.dart';
+part 'model/document_processing_configuration.dart';
+part 'model/document_processing_configuration_snapshot.dart';
+part 'model/document_processing_pipeline.dart';
+part 'model/document_processing_scheduling.dart';
+part 'model/document_processing_weight.dart';
+part 'model/document_reindex_batch.dart';
+part 'model/document_reindex_batch_page.dart';
+part 'model/document_search.dart';
+part 'model/document_search_item.dart';
+part 'model/document_search_original.dart';
+part 'model/document_search_results.dart';
+part 'model/document_search_summary.dart';
+part 'model/document_thumbnail.dart';
+part 'model/document_vocabulary_option.dart';
+part 'model/document_vocabulary_page.dart';
+part 'model/email_capabilities.dart';
+part 'model/email_connection_test.dart';
+part 'model/email_provider.dart';
+part 'model/email_provider_page.dart';
+part 'model/email_provider_summary.dart';
+part 'model/email_run.dart';
+part 'model/email_run_page.dart';
+part 'model/error.dart';
+part 'model/health.dart';
+part 'model/invitation.dart';
+part 'model/invitation_list.dart';
+part 'model/invoice.dart';
+part 'model/invoice_allowance.dart';
+part 'model/invoice_classification.dart';
+part 'model/invoice_filter_value_page.dart';
+part 'model/invoice_line.dart';
+part 'model/invoice_page.dart';
+part 'model/invoice_party.dart';
+part 'model/invoice_payment.dart';
+part 'model/invoice_reference.dart';
+part 'model/invoice_tax.dart';
+part 'model/issued_invitation.dart';
+part 'model/job_status_count.dart';
+part 'model/job_status_counts.dart';
+part 'model/llm_configuration.dart';
+part 'model/login.dart';
+part 'model/ollama_model_context.dart';
+part 'model/paperless_options.dart';
+part 'model/paperless_outcome.dart';
+part 'model/paperless_outcome_page.dart';
+part 'model/paperless_run.dart';
+part 'model/paperless_run_page.dart';
+part 'model/paperless_settings.dart';
+part 'model/password_change.dart';
+part 'model/personal_activity.dart';
+part 'model/personal_activity_item.dart';
+part 'model/realtime_authenticate.dart';
+part 'model/realtime_heartbeat.dart';
+part 'model/realtime_invalidation.dart';
+part 'model/realtime_ready.dart';
+part 'model/realtime_resync.dart';
+part 'model/realtime_topic.dart';
+part 'model/registration.dart';
+part 'model/send_chat_message_request.dart';
+part 'model/start_email_run.dart';
+part 'model/start_paperless_run.dart';
+part 'model/switch_account.dart';
+part 'model/system_role.dart';
+part 'model/system_user.dart';
+part 'model/system_user_list.dart';
+part 'model/test_email_connection.dart';
+part 'model/unlock_document.dart';
+part 'model/update_account_user.dart';
+part 'model/update_chat_configuration_request.dart';
+part 'model/update_document.dart';
+part 'model/update_document_ocr.dart';
+part 'model/update_document_processing_configuration.dart';
+part 'model/update_email_provider.dart';
+part 'model/update_llm_configuration.dart';
+part 'model/update_paperless_settings_request.dart';
+part 'model/update_system_user.dart';
+part 'model/update_workload_settings_request.dart';
+part 'model/upload_document_metadata.dart';
+part 'model/user_identity.dart';
+part 'model/workload_pipeline.dart';
+part 'model/workload_resource.dart';
+part 'model/workload_resource_limit.dart';
+part 'model/workload_settings.dart';
+
+var defaultApiClient = ApiClient();
+
+const _delimiters = {'csv': ',', 'ssv': ' ', 'tsv': '\t', 'pipes': '|'};
+const _dateEpochMarker = 'epoch';
+const _deepEquality = DeepCollectionEquality();
+final _dateFormatter = DateFormat('yyyy-MM-dd');
+final _regList = RegExp(r'^List<(.*)>$');
+final _regSet = RegExp(r'^Set<(.*)>$');
+final _regMap = RegExp(r'^Map<String,(.*)>$');
+
+bool _isEpochMarker(String? pattern) => pattern == _dateEpochMarker || pattern == '/$_dateEpochMarker/';

@@ -1,0 +1,19 @@
+{
+  "name": "domabas-tooling",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "engines": { "bun": "1.4.2" },
+  "scripts": {
+    "typecheck": "bun --bun node_modules/typescript/bin/tsc --noEmit",
+    "test": "bun test scripts"
+  },
+  "dependencies": { "cross-spawn": "7.0.6", "yauzl": "3.4.0" },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "@types/cross-spawn": "6.0.6",
+    "@types/yauzl": "3.4.0",
+    "sharp": "0.35.4",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,334 @@
+version: '3'
+
+tasks:
+  default:
+    cmds: [task --list]
+
+  dev:
+    desc: Start development with the selected Ollama runtime, Go hot reload, and Flutter (press r/R/q)
+    interactive: true
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/development/dev.ts {{.CLI_ARGS}}']
+
+  setup:
+    desc: Resolve pinned Bun, Go and Flutter dependencies
+    cmds:
+      - task: setup:tooling
+      - go -C backend mod download
+      - task: setup:frontend
+
+  setup:tooling:
+    desc: Install locked Bun monorepo tooling dependencies
+    run: once
+    cmds: [bun install --frozen-lockfile]
+
+  setup:frontend:
+    internal: true
+    dir: frontend
+    cmds: [flutter pub get --enforce-lockfile]
+
+  doctor:
+    desc: Inspect developer toolchains
+    cmds:
+      - go version
+      - flutter doctor -v
+      - bun --version
+
+  ci:
+    desc: Run CI unit tests (--suite=full adds isolated Linux analysis, integration and E2E)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/ci/ci.ts {{.CLI_ARGS}}']
+
+  ci:setup:
+    desc: Install Linux CI packages in a disposable runner environment
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/ci/setup-ci.ts]
+
+  ci:flutter:
+    desc: Install and verify the pinned Linux x64 Flutter SDK for CI
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/ci/setup-flutter.ts]
+
+  release:
+    desc: Publish versioned GHCR containers and a GitHub release from a tested main push
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/release/release.ts]
+
+  security:dependencies:
+    desc: Scan locked Go, Dart and Bun dependencies with pinned OSV-Scanner
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/security/scan-dependencies.ts]
+
+  security:image:
+    desc: Scan a local Docker image ID with Trivy; block critical vulnerabilities
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/security/scan-image.ts {{.CLI_ARGS}}']
+
+  ci:database:
+    desc: Prepare pgvector in the disposable CI database
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/ci/setup-ci-database.ts]
+
+  db:up:
+    desc: Start PostgreSQL and wait for readiness
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/development/database.ts up]
+
+  db:down:
+    desc: Stop PostgreSQL while retaining its data
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/development/database.ts down]
+
+  db:migrate:
+    desc: Apply pending versioned database migrations
+    dir: backend
+    cmds: [go run ./cmd/migrate]
+
+  db:adopt:
+    desc: Assign unowned legacy documents to an explicit account UUID
+    dir: backend
+    cmds: ['go run ./cmd/adopt-legacy {{.CLI_ARGS}}']
+
+  db:bootstrap-admin:
+    desc: Assign the first system administrator to an explicit existing user UUID
+    dir: backend
+    cmds: ['go run ./cmd/bootstrap-admin {{.CLI_ARGS}}']
+
+  infra:up:
+    desc: Start infrastructure with the selected Ollama runtime (MLX stays in the foreground)
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/development/compose.ts infra-up]
+
+  infra:down:
+    desc: Stop PostgreSQL and Temporal infrastructure, retaining data
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/development/compose.ts infra-down]
+
+  compose:up:
+    desc: Build and start the complete distributable stack
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/development/compose.ts up]
+
+  compose:down:
+    desc: Stop the complete stack, retaining database and workflow data
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/development/compose.ts down]
+
+  diagnose:memory:
+    desc: Record per-container memory and OOM evidence without changing the stack
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/diagnostics/memory.ts {{.CLI_ARGS}}']
+
+  generate:
+    desc: Regenerate Go server and Dart client from contracts/backend/openapi.yaml
+    deps: [setup:tooling]
+    cmds:
+      - go -C backend generate ./...
+      - bun --no-env-file scripts/generation/generate-client.ts
+
+  generate:check:
+    desc: Fail when generated contracts differ from the canonical specification
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/generation/check-generated.ts]
+
+  generate:icons:
+    desc: Export every Filed Paper app icon from the canonical SVG
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/generation/generate-icons.ts {{.CLI_ARGS}}']
+
+  generate:icons:check:
+    desc: Verify checked-in app icons match the canonical SVG
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/generation/generate-icons.ts --check]
+
+  generate:db:
+    desc: Regenerate Jet database models and tables from isolated migrated PostgreSQL
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/generation/generate-database.ts]
+
+  generate:licenses:
+    desc: Generate offline license assets (-- --collect refreshes dependency evidence)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/generation/generate-licenses.ts {{.CLI_ARGS}}']
+
+  generate:licenses:check:
+    desc: Verify retained license evidence and generated assets against dependency inputs
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/generation/generate-licenses.ts --check]
+
+  generate:db:check:
+    desc: Verify checked-in Jet database code against isolated migrated PostgreSQL
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/generation/generate-database.ts --check]
+
+  format:
+    desc: Format handwritten Go and Dart sources
+    cmds:
+      - go -C backend fmt ./...
+      - task: format:frontend
+
+  format:frontend:
+    internal: true
+    dir: frontend
+    cmds: [dart format lib test integration_test test_driver]
+
+  lint:
+    desc: Run Bun TypeScript checking, Go vet and Flutter static analysis
+    cmds:
+      - task: lint:scripts
+      - go -C backend vet ./...
+      - task: lint:frontend
+
+  lint:scripts:
+    desc: Type-check Bun monorepo scripts
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file run typecheck]
+
+  lint:frontend:
+    internal: true
+    dir: frontend
+    cmds: [flutter analyze --fatal-infos]
+
+  test:
+    desc: Run tooling, unit, architecture, widget and repository integration tests
+    cmds:
+      - task: test:scripts
+      - task: test:backend
+      - task: test:frontend
+
+  test:scripts:
+    desc: Test Bun monorepo orchestration behavior
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file test scripts]
+
+  test:backend:
+    desc: Run Go unit and structural architecture tests with race detection
+    dir: backend
+    cmds: [go test -race -count=1 ./...]
+
+  test:frontend:
+    desc: Run Flutter unit, architecture, repository integration, and widget tests
+    dir: frontend
+    cmds: [flutter test --coverage]
+
+  test:integration:
+    desc: Run PostgreSQL repository integration tests (isolated schemas)
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/backend-database-tests.ts integration]
+
+  test:realtime:web:
+    desc: Run realtime parser and transport tests in pinned Chrome
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/browser/realtime-browser-tests.ts]
+
+  test:browser:
+    desc: Run all focused Flutter browser tests in one pinned Chrome invocation
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/browser/browser-tests.ts]
+
+  test:scanner:web:
+    desc: Run scanner validation and image rendering tests in pinned Chrome
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/browser/scanner-browser-tests.ts]
+
+  test:api-e2e:
+    desc: Run compiled API subprocess E2E tests against PostgreSQL
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/backend-database-tests.ts e2e]
+
+  test:documents:web:
+    desc: Run document Unicode transport, navigation frames and preview retention tests in pinned Chrome
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/browser/document-browser-tests.ts]
+
+  test:uploads:web:
+    desc: Run file chooser, drop acquisition and upload receipt tests in pinned Chrome
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/browser/upload-browser-tests.ts]
+
+  test:temporal:
+    desc: Run real Temporal workflow and PostgreSQL integration tests
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/backend-database-tests.ts temporal]
+
+  test:llm:
+    desc: Test live Qwen extraction and embeddings (requires LLM_OLLAMA_URL; may download Qwen)
+    dir: backend
+    cmds: [go test -race -count=1 -p=1 -tags=llm_live -timeout=10m ./internal/data/document/datasources/llm ./internal/data/invoice/datasources ./internal/data/chat/datasources/provider]
+
+  evaluate:ai:
+    desc: Compare installed models using real adapters (thinking off; explicit endpoints required)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/diagnostics/ai-comparison.ts {{.CLI_ARGS}}']
+
+  test:compose:
+    desc: Build and smoke-test a disposable complete Compose stack
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/testing/compose-smoke.ts]
+
+  test:e2e:
+    desc: Run real Flutter + Go + PostgreSQL/Temporal browser E2E (downloads pinned Chrome)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/testing/e2e.ts {{.CLI_ARGS}}']
+
+  check:
+    desc: Run static analysis, generated contract consistency, and fast tests
+    cmds:
+      - task: lint
+      - task: generate:check
+      - task: generate:icons:check
+      - task: generate:licenses:check
+      - task: test
+
+  test:all:
+    desc: Run all application test levels, starting Compose infrastructure
+    deps: [setup:tooling]
+    cmds:
+      - bun --no-env-file scripts/development/compose.ts infra-up --docker-only
+      - task: check
+      - task: test:integration
+      - task: test:temporal
+      - task: test:api-e2e
+      - task: test:browser
+      - task: test:e2e
+
+  build:
+    desc: Build Go server and Flutter web release
+    cmds:
+      - go -C backend build -o ./tmp/server{{if eq OS "windows"}}.exe{{end}} ./cmd/server
+      - task: build:web
+
+  build:web:
+    desc: Build Flutter web release
+    dir: frontend
+    cmds: [flutter build web --release --no-web-resources-cdn]
+
+  build:app:
+    desc: Build a local app with guided setup (use -- android, ios, macos or windows)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/development/build-app.ts {{.CLI_ARGS}}']
+
+  build:android:
+    desc: Build an Android debug APK (use -- --release for a release-mode APK)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/development/build-app.ts android {{.CLI_ARGS}}']
+
+  build:ios:
+    desc: Build unsigned iOS app (use -- --simulator for a simulator debug app)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/development/build-app.ts ios {{.CLI_ARGS}}']
+
+  build:linux:
+    desc: Build Linux desktop app (run on Linux)
+    dir: frontend
+    cmds: [flutter build linux --release]
+
+  build:macos:
+    desc: Build macOS desktop app (macOS and full Xcode required)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/development/build-app.ts macos {{.CLI_ARGS}}']
+
+  build:windows:
+    desc: Build Windows desktop app (run on Windows with Visual Studio C++ tools)
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/development/build-app.ts windows {{.CLI_ARGS}}']

@@ -1,0 +1,331 @@
+x-settings:
+  postgres_memory_limit: &postgres-memory-limit 2g
+  temporal_memory_limit: &temporal-memory-limit 2g
+  temporal_go_memory_limit: &temporal-go-memory-limit 1536MiB
+  backend_memory_limit: &backend-memory-limit 2g
+  backend_go_memory_limit: &backend-go-memory-limit 1536MiB
+  temporal_ui_memory_limit: &temporal-ui-memory-limit 256m
+  temporal_ui_go_memory_limit: &temporal-ui-go-memory-limit 192MiB
+  web_memory_limit: &web-memory-limit 512m
+  ingestion_concurrency: &ingestion-concurrency "1"
+  ollama_max_queue: &ollama-max-queue "128"
+  postgres_admin_password: &postgres-admin-password ""
+  postgres_password: &postgres-password ""
+  temporal_password: &temporal-password ""
+  web_bind_address: &web-bind-address 0.0.0.0
+  web_port: &web-port "8088"
+  temporal_ui_bind_address: &temporal-ui-bind-address 0.0.0.0
+  temporal_ui_port: &temporal-ui-port "8233"
+  temporal_ui_url: &temporal-ui-url http://nas.example.test:8233
+  public_origin: &public-origin https://domabas.example.com
+  dataset_path: &dataset-path /mnt/POOL/domabas
+
+x-init: &init
+  user: "950:950"
+  image: example.invalid/replace-me/domabas-init:REPLACE_WITH_RELEASE
+  platform: linux/amd64
+  restart: "no"
+
+x-database-environment: &database-environment
+  POSTGRES_ADMIN_USER: domabas_admin
+  POSTGRES_ADMIN_PASSWORD: *postgres-admin-password
+  POSTGRES_DB: domabas
+  POSTGRES_USER: domabas
+  POSTGRES_PASSWORD: *postgres-password
+  TEMPORAL_DB: temporal
+  TEMPORAL_VISIBILITY_DB: temporal_visibility
+  TEMPORAL_DB_USER: temporal
+  TEMPORAL_DB_PASSWORD: *temporal-password
+
+services:
+  storage-init:
+    <<: *init
+    network_mode: none
+    read_only: true
+    entrypoint: [bun, --no-env-file, --eval]
+    command:
+      - |
+        import { chmodSync, existsSync, lstatSync, mkdirSync } from "node:fs";
+
+        const directories = [
+          ["postgres", 0o700],
+          ["ingestion", 0o700],
+          ["documents", 0o700],
+          ["secrets", 0o700],
+          ["tesseract", 0o700],
+          ["ollama", 0o755],
+        ] as const;
+
+        for (const [name] of directories) {
+          const path = "/storage/" + name;
+          const existing = lstatSync(path, { throwIfNoEntry: false });
+          if (existing && !existing.isDirectory()) {
+            throw new Error("Storage path must be a directory, not a symlink or file: " + path);
+          }
+          if (existing && existing.uid !== process.getuid()) {
+            throw new Error("Existing storage must be owned by UID 950. Correct ownership in TrueNAS: " + path);
+          }
+        }
+
+        for (const [name, mode] of directories) {
+          const path = "/storage/" + name;
+          if (!existsSync(path)) mkdirSync(path, { mode });
+          chmodSync(path, mode);
+          console.log("Prepared storage directory: " + name);
+        }
+    volumes:
+      - type: bind
+        source: *dataset-path
+        target: /storage
+        bind: {create_host_path: false}
+
+  postgres:
+    mem_limit: *postgres-memory-limit
+    image: pgvector/pgvector:0.8.6-pg18-trixie@sha256:78bf48b801e792f99e3ac62b5036fd3876e9be48afda16c1e331af1c75ceb2ff
+    user: "950:950"
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: domabas_admin
+      POSTGRES_PASSWORD: *postgres-admin-password
+    depends_on:
+      storage-init: {condition: service_completed_successfully}
+    volumes:
+      - type: volume
+        source: domabas-storage
+        target: /var/lib/postgresql
+        volume: {subpath: postgres, nocopy: true}
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    stop_grace_period: 30s
+
+  database-init:
+    <<: *init
+    command: [databases]
+    environment: *database-environment
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  temporal-schema:
+    <<: *init
+    command: [schemas]
+    environment:
+      <<: *database-environment
+      SQL_PASSWORD: *temporal-password
+    depends_on:
+      database-init: {condition: service_completed_successfully}
+
+  temporal:
+    mem_limit: *temporal-memory-limit
+    user: "950:950"
+    image: temporalio/server:1.32.0@sha256:c3e752127759616bb1615e0f9ba0e21635aeb5fdeb922de4f371c350955f46ae
+    restart: unless-stopped
+    environment:
+      USER: "950"
+      DB: postgres12
+      GOMEMLIMIT: *temporal-go-memory-limit
+      POSTGRES_SEEDS: postgres
+      DB_PORT: "5432"
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: *temporal-password
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      SQL_MAX_CONNS: "5"
+      SQL_MAX_IDLE_CONNS: "2"
+      SQL_VIS_MAX_CONNS: "2"
+      SQL_VIS_MAX_IDLE_CONNS: "1"
+      BIND_ON_IP: 0.0.0.0
+      TEMPORAL_ALLOW_NO_AUTH: "true"
+      DYNAMIC_CONFIG_FILE_PATH: /dev/null
+    depends_on:
+      temporal-schema: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, nc, -z, -w, "2", 127.0.0.1, "7233"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    stop_grace_period: 30s
+
+  temporal-init:
+    <<: *init
+    command: [namespace]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: domabas
+    depends_on:
+      temporal: {condition: service_healthy}
+
+  temporal-ui:
+    mem_limit: *temporal-ui-memory-limit
+    user: "950:950"
+    image: temporalio/ui:2.54.1@sha256:ff0943fe532b8e33c46cd28b29e81e0ce0b6f55b9ee50a38ef1b437cc4de3fa5
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_UI_PORT: "8080"
+      GOMEMLIMIT: *temporal-ui-go-memory-limit
+      TEMPORAL_DEFAULT_NAMESPACE: domabas
+    ports:
+      - target: 8080
+        published: *temporal-ui-port
+        host_ip: *temporal-ui-bind-address
+        protocol: tcp
+    depends_on:
+      temporal-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  ollama:
+    user: "950:950"
+    image: ollama/ollama:0.34.1@sha256:0c0a83210471fb50226bcdc2d6611d20ab13ae87e024cc304c94a6a5765c5e65
+    restart: unless-stopped
+    depends_on:
+      storage-init: {condition: service_completed_successfully}
+    environment:
+      HOME: /home/ollama
+      OLLAMA_MODELS: /home/ollama/.ollama/models
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_MAX_QUEUE: *ollama-max-queue
+      OLLAMA_KEEP_ALIVE: -1
+    volumes:
+      - type: volume
+        source: domabas-storage
+        target: /home/ollama/.ollama
+        volume: {subpath: ollama, nocopy: true}
+    cpus: 4
+    mem_limit: 8g
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    stop_grace_period: 30s
+
+  document-processor:
+    user: "950:950"
+    image: example.invalid/replace-me/domabas-document-processor:REPLACE_WITH_RELEASE
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      HTTP_ADDR: 0.0.0.0:8091
+      TMPDIR: /var/tmp
+      MODEL_CACHE_ROOT: /models/tesseract
+      OLLAMA_CACHE_ROOT: /models/ollama/models
+      OLLAMA_URL: http://ollama:11434
+    volumes:
+      - type: volume
+        source: domabas-storage
+        target: /models/tesseract
+        volume: {subpath: tesseract, nocopy: true}
+      - type: volume
+        source: domabas-storage
+        target: /models/ollama
+        read_only: true
+        volume: {subpath: ollama, nocopy: true}
+    tmpfs:
+      - /tmp:size=2147483648,mode=1777
+    cpus: 4
+    mem_limit: 4g
+    pids_limit: 256
+    depends_on:
+      storage-init: {condition: service_completed_successfully}
+      ollama: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8091/readyz]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10m
+    stop_grace_period: 30s
+
+  backend:
+    mem_limit: *backend-memory-limit
+    user: "950:950"
+    image: example.invalid/replace-me/domabas-backend:REPLACE_WITH_RELEASE
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: host=postgres port=5432 sslmode=disable
+      PGUSER: domabas
+      PGPASSWORD: *postgres-password
+      PGDATABASE: domabas
+      HTTP_ADDR: 0.0.0.0:8080
+      GOMEMLIMIT: *backend-go-memory-limit
+      CORS_ORIGINS: *public-origin
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: domabas
+      TEMPORAL_TASK_QUEUE: domabas-documents
+      TEMPORAL_UI_URL: *temporal-ui-url
+      LLM_OLLAMA_URL: http://ollama:11434
+      DOCUMENT_INGESTION_CONCURRENCY: *ingestion-concurrency
+      OLLAMA_MAX_QUEUE: *ollama-max-queue
+      LLM_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/llm.key
+      DOCUMENT_PROCESSOR_URL: http://document-processor:8091
+      DOCUMENT_INGESTION_ROOT: /data/ingestion
+      DOCUMENT_STORAGE_ROOT: /data/documents
+      EMAIL_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/email.key
+      PAPERLESS_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/paperless.key
+    volumes:
+      - type: volume
+        source: domabas-storage
+        target: /data/ingestion
+        volume: {subpath: ingestion, nocopy: true}
+      - type: volume
+        source: domabas-storage
+        target: /data/documents
+        volume: {subpath: documents, nocopy: true}
+      - type: volume
+        source: domabas-storage
+        target: /var/lib/domabas/secrets
+        volume: {subpath: secrets, nocopy: true}
+    depends_on:
+      storage-init: {condition: service_completed_successfully}
+      temporal-init: {condition: service_completed_successfully}
+      document-processor: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8080/readyz]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10m
+    stop_grace_period: 60s
+
+  web:
+    mem_limit: *web-memory-limit
+    user: "950:950"
+    tmpfs:
+      - /var/cache/nginx:uid=950,gid=950,mode=0700
+      - /var/run:uid=950,gid=950,mode=0755
+    image: example.invalid/replace-me/domabas-web:REPLACE_WITH_RELEASE
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - target: 8080
+        published: *web-port
+        host_ip: *web-bind-address
+        protocol: tcp
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/readyz]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  domabas-storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: *dataset-path

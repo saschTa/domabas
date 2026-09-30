@@ -1,0 +1,234 @@
+name: domabas
+
+x-init: &init
+  build:
+    context: .
+    dockerfile: infra/init/Dockerfile
+  restart: "no"
+
+x-database-environment: &database-environment
+  POSTGRES_ADMIN_USER: ${POSTGRES_ADMIN_USER:-domabas_admin}
+  POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-domabas_admin_local}
+  POSTGRES_DB: ${POSTGRES_DB:-domabas}
+  POSTGRES_USER: ${POSTGRES_USER:-domabas}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-domabas}
+  TEMPORAL_DB: ${TEMPORAL_DB:-temporal}
+  TEMPORAL_VISIBILITY_DB: ${TEMPORAL_VISIBILITY_DB:-temporal_visibility}
+  TEMPORAL_DB_USER: ${TEMPORAL_DB_USER:-temporal}
+  TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:-temporal_local}
+
+services:
+  postgres:
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-2g}
+    image: pgvector/pgvector:0.8.6-pg18-trixie@sha256:78bf48b801e792f99e3ac62b5036fd3876e9be48afda16c1e331af1c75ceb2ff
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-domabas_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-domabas_admin_local}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-54329}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    stop_grace_period: 30s
+
+  database-init:
+    <<: *init
+    command: [databases]
+    environment: *database-environment
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  temporal-schema:
+    <<: *init
+    command: [schemas]
+    environment:
+      <<: *database-environment
+      SQL_PASSWORD: ${TEMPORAL_DB_PASSWORD:-temporal_local}
+    depends_on:
+      database-init: {condition: service_completed_successfully}
+
+  temporal:
+    mem_limit: ${TEMPORAL_MEMORY_LIMIT:-2g}
+    image: temporalio/server:1.32.0@sha256:c3e752127759616bb1615e0f9ba0e21635aeb5fdeb922de4f371c350955f46ae
+    environment:
+      DB: postgres12
+      GOMEMLIMIT: ${TEMPORAL_GOMEMLIMIT:-1536MiB}
+      POSTGRES_SEEDS: postgres
+      DB_PORT: "5432"
+      POSTGRES_USER: ${TEMPORAL_DB_USER:-temporal}
+      POSTGRES_PWD: ${TEMPORAL_DB_PASSWORD:-temporal_local}
+      DBNAME: ${TEMPORAL_DB:-temporal}
+      VISIBILITY_DBNAME: ${TEMPORAL_VISIBILITY_DB:-temporal_visibility}
+      SQL_MAX_CONNS: "5"
+      SQL_MAX_IDLE_CONNS: "2"
+      SQL_VIS_MAX_CONNS: "2"
+      SQL_VIS_MAX_IDLE_CONNS: "1"
+      BIND_ON_IP: 0.0.0.0
+      TEMPORAL_ALLOW_NO_AUTH: "true"
+      DYNAMIC_CONFIG_FILE_PATH: /dev/null
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${TEMPORAL_PORT:-7233}:7233"
+    depends_on:
+      temporal-schema: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, nc, -z, -w, "2", 127.0.0.1, "7233"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    stop_grace_period: 30s
+
+  temporal-init:
+    <<: *init
+    command: [namespace]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-domabas}
+    depends_on:
+      temporal: {condition: service_healthy}
+
+  ollama:
+    image: ollama/ollama:0.34.1@sha256:0c0a83210471fb50226bcdc2d6611d20ab13ae87e024cc304c94a6a5765c5e65
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:-128}
+      OLLAMA_KEEP_ALIVE: -1
+    ports:
+      - "${PRIVATE_BIND_ADDRESS:-127.0.0.1}:${LLM_OLLAMA_PORT:-11435}:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    cpus: ${OLLAMA_CPUS:-4}
+    mem_limit: ${OLLAMA_MEMORY_LIMIT:-8g}
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    stop_grace_period: 30s
+
+  document-processor:
+    build:
+      context: .
+      dockerfile: infra/document-processor/Dockerfile
+    environment:
+      HTTP_ADDR: 0.0.0.0:8091
+      MODEL_CACHE_ROOT: /models/tesseract
+      OLLAMA_CACHE_ROOT: /models/ollama/models
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:-128}
+    ports:
+      - "${PRIVATE_BIND_ADDRESS:-127.0.0.1}:${DOCUMENT_PROCESSOR_PORT:-8091}:8091"
+    volumes:
+      - tesseract_models:/models/tesseract
+      - ollama_models:/models/ollama:ro
+    tmpfs:
+      - /tmp:size=2147483648,mode=1777
+    cpus: ${DOCUMENT_PROCESSOR_CPUS:-4}
+    mem_limit: ${DOCUMENT_PROCESSOR_MEMORY_LIMIT:-4g}
+    pids_limit: 256
+    depends_on:
+      ollama: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8091/readyz]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10m
+    stop_grace_period: 30s
+
+  backend:
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-2g}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: host=postgres port=5432 sslmode=disable
+      PGUSER: ${POSTGRES_USER:-domabas}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-domabas}
+      PGDATABASE: ${POSTGRES_DB:-domabas}
+      HTTP_ADDR: 0.0.0.0:8080
+      GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-1536MiB}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:7357,http://127.0.0.1:7357}
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-domabas}
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-domabas-documents}
+      TEMPORAL_UI_URL: ${TEMPORAL_UI_URL:-http://localhost:${TEMPORAL_UI_PORT:-8233}}
+      LLM_OLLAMA_URL: http://ollama:11434
+      DOCUMENT_INGESTION_CONCURRENCY: ${DOCUMENT_INGESTION_CONCURRENCY:-1}
+      DOCUMENT_AI_CONCURRENCY: ${DOCUMENT_AI_CONCURRENCY:-1}
+      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:-128}
+      LLM_CREDENTIAL_KEY: ${LLM_CREDENTIAL_KEY:-}
+      LLM_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/llm.key
+      DOCUMENT_PROCESSOR_URL: http://document-processor:8091
+      DOCUMENT_INGESTION_ROOT: /data/ingestion
+      DOCUMENT_STORAGE_ROOT: /data/documents
+      EMAIL_CREDENTIAL_KEYS: ${EMAIL_CREDENTIAL_KEYS:-}
+      EMAIL_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/email.key
+      PAPERLESS_CREDENTIAL_KEY: ${PAPERLESS_CREDENTIAL_KEY:-}
+      PAPERLESS_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/paperless.key
+      EMAIL_CREDENTIAL_ACTIVE_KEY_ID: ${EMAIL_CREDENTIAL_ACTIVE_KEY_ID:-}
+      EMAIL_IMAP_ALLOWED_HOSTS: ${EMAIL_IMAP_ALLOWED_HOSTS:-}
+      EMAIL_IMAP_CA_FILE: ${EMAIL_IMAP_CA_FILE:-}
+    volumes:
+      - document_ingestion:/data/ingestion
+      - document_storage:/data/documents
+      - credential_keys:/var/lib/domabas/secrets
+    depends_on:
+      temporal-init: {condition: service_completed_successfully}
+      document-processor: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8080/readyz]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10m
+    stop_grace_period: 60s
+
+  web:
+    mem_limit: ${WEB_MEMORY_LIMIT:-512m}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8088}:8080"
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/readyz]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  temporal-ui:
+    mem_limit: ${TEMPORAL_UI_MEMORY_LIMIT:-256m}
+    image: temporalio/ui:2.54.1@sha256:ff0943fe532b8e33c46cd28b29e81e0ce0b6f55b9ee50a38ef1b437cc4de3fa5
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_UI_PORT: "8080"
+      GOMEMLIMIT: ${TEMPORAL_UI_GOMEMLIMIT:-192MiB}
+      TEMPORAL_DEFAULT_NAMESPACE: ${TEMPORAL_NAMESPACE:-domabas}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${TEMPORAL_UI_PORT:-8233}:8080"
+    depends_on:
+      temporal-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres_data:
+  document_ingestion:
+  document_storage:
+  credential_keys:
+  tesseract_models:
+  ollama_models:

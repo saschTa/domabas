@@ -1,0 +1,7 @@
+services:
+  ollama:
+    image: ollama/ollama:0.34.1-rocm@sha256:7620e747881e59c2a6d5b67664dd2dbf2a1f557f2c808bd16f02aefa79e63da3
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    mem_limit: ${OLLAMA_MEMORY_LIMIT:-8g}

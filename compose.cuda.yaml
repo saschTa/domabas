@@ -1,0 +1,4 @@
+services:
+  ollama:
+    gpus: all
+    mem_limit: ${OLLAMA_MEMORY_LIMIT:-8g}

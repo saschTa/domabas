@@ -1,0 +1,56 @@
+name: domabas
+description: A document workspace for private and small business use.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.13.3 <4.0.0'
+  flutter: '>=3.47.4'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  domabas_api:
+    path: packages/domabas_api
+  http: 1.6.0
+  flutter_secure_storage: 11.2.0
+  web: 1.1.1
+  bloc: 9.2.1
+  flutter_bloc: 9.1.1
+  cupertino_icons: 1.0.9
+  pdfrx: 2.6.1
+  url_launcher: 6.3.2
+  web_socket_channel: 3.0.3
+  shared_preferences: 2.5.5
+  document_scan: 0.3.0
+  camera: 0.12.1
+  pdf: 3.13.0
+  image: 4.10.1
+  path_provider: 2.1.6
+  crypto: 3.0.7
+  path: 1.9.1
+  http_parser: 4.1.2
+  file_picker: 13.1.0
+  desktop_drop:
+    path: packages/desktop_drop
+
+dev_dependencies:
+  camera_platform_interface: 2.13.1
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/domabas-mark.png
+    - assets/licenses/frontend-pdfium.txt
+    - assets/licenses/scanner-opencv.txt
+    - assets/licenses/lora-ofl.txt
+    - assets/licenses/third-party.json
+  fonts:
+    - family: DomabasSerif
+      fonts:
+        - asset: assets/fonts/Lora-Variable.ttf

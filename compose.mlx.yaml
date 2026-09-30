@@ -1,0 +1,14 @@
+services:
+  ollama:
+    profiles: [container-ollama]
+  document-processor:
+    environment:
+      OLLAMA_URL: http://host.docker.internal:${LLM_OLLAMA_PORT:-11435}
+    volumes:
+      - type: bind
+        source: ${DOMABAS_OLLAMA_CACHE:?MLX requires the native Ollama launcher; use task dev or task infra:up}
+        target: /models/ollama
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on: !reset {}

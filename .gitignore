@@ -1,0 +1,17 @@
+.DS_Store
+.tools/
+.cache/
+.logs/
+.playwright*/
+.task/
+/backend/tmp/
+/backend/coverage.out
+node_modules/
+*.tsbuildinfo
+coverage/
+*.local
+*.local.yaml
+*.local.yml
+.env.local
+.env.*.local
+/docs/plans/

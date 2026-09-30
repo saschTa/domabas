@@ -1,0 +1,8 @@
+env = false
+
+[install]
+exact = true
+
+[test]
+root = "scripts"
+timeout = 30000

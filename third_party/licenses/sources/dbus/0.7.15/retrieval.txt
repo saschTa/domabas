@@ -1,0 +1,26 @@
+dbus 0.7.15 — covered source availability
+
+Domabas uses the unmodified dbus 0.7.15 Dart package for Linux desktop
+integration. Its covered source is available under the Mozilla Public License,
+version 2.0 (MPL-2.0).
+
+Download the complete, exact package source free of charge:
+https://pub.dev/api/archives/dbus-0.7.15.tar.gz
+
+Version information:
+https://pub.dev/packages/dbus/versions/0.7.15
+
+The download is a gzip-compressed tar archive. Extract it with an archive tool
+(or run: tar -xzf dbus-0.7.15.tar.gz). It contains the original Dart source,
+package metadata, tests, examples, copyright notices and the full MPL-2.0 text
+in LICENSE. These source files remain under their original MPL-2.0 terms.
+
+Archive SHA-256:
+a48d5da28e89bd02196e80d81ed8d7954923d00a0f4a68cc20b575038f023383
+
+The original LICENSE and this retrieval notice are retained in the Domabas
+source distribution under third_party/licenses/sources/dbus/0.7.15/.
+The source archive itself is available from the upstream download above.
+
+This source notice concerns dbus only. It does not change the license of
+separate Domabas application files or restrict your rights to the dbus source.

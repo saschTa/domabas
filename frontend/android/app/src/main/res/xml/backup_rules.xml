@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="file" path="scanner-v1/"/>
+    <exclude domain="sharedpref" path="domabas_sessions_v1.xml"/>
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage:domabas_sessions_v1.xml"/>
+    <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:domabas_sessions_v1.xml"/>
+</full-backup-content>

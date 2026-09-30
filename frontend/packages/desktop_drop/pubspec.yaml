@@ -1,0 +1,19 @@
+name: desktop_drop
+description: Domabas-owned Linux and Windows physical-file drop adapter.
+version: 0.8.4+domabas.1
+publish_to: none
+homepage: https://github.com/MixinNetwork/flutter-plugins/tree/main/packages/desktop_drop
+environment:
+  sdk: '>=3.13.3 <4.0.0'
+  flutter: '>=3.47.4'
+dependencies:
+  flutter:
+    sdk: flutter
+  dbus: 0.7.15
+flutter:
+  plugin:
+    platforms:
+      linux:
+        pluginClass: DesktopDropPlugin
+      windows:
+        pluginClass: DesktopDropPlugin

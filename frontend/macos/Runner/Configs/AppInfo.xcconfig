@@ -1,0 +1,5 @@
+PRODUCT_NAME = domabas
+
+PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas
+
+PRODUCT_COPYRIGHT = Copyright (c) 2026 Sascha Traub

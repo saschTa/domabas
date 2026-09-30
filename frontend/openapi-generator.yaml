@@ -1,0 +1,5 @@
+pubName: domabas_api
+pubVersion: 0.1.0
+pubDescription: Generated client for the Domabas backend contract.
+nullableFields: true
+hideGenerationTimestamp: true

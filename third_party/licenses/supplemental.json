@@ -1,0 +1,2321 @@
+[
+  {
+    "id": "extra:Domabas",
+    "name": "Domabas",
+    "version": "",
+    "component": "Application",
+    "license": "MIT",
+    "sourceUrl": "",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "id": "extra:pdfium/WAZERO-NOTICE",
+    "name": "PDFium backend — WAZERO-NOTICE",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/WAZERO-NOTICE"
+    ]
+  },
+  {
+    "id": "extra:pdfium/WAZERO-LICENSE",
+    "name": "PDFium backend — WAZERO-LICENSE",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/WAZERO-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:pdfium/LICENSE",
+    "name": "PDFium backend — LICENSE",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/tree/v1.20.3",
+    "note": "The backend document processor uses the PDFium 8057 WebAssembly artifact provided by go-pdfium v1.20.3.\n\nUpstream repository:\nhttps://github.com/klippa-app/go-pdfium/tree/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/LICENSE"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/libopenjpeg.txt",
+    "name": "PDFium backend — licenses/libopenjpeg.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/libopenjpeg.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/abseil.txt",
+    "name": "PDFium backend — licenses/abseil.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/abseil.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/agg23.txt",
+    "name": "PDFium backend — licenses/agg23.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/agg23.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/libjpeg_turbo.md",
+    "name": "PDFium backend — licenses/libjpeg_turbo.md",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/libjpeg_turbo.md"
+    ],
+    "license": "BSD-3-Clause; IJG; Zlib (see notices)"
+  },
+  {
+    "id": "extra:pdfium/licenses/fast_float.txt",
+    "name": "PDFium backend — licenses/fast_float.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/fast_float.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/zlib.txt",
+    "name": "PDFium backend — licenses/zlib.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/zlib.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/libpng.txt",
+    "name": "PDFium backend — licenses/libpng.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/libpng.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/lcms.txt",
+    "name": "PDFium backend — licenses/lcms.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/lcms.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/pdfium.txt",
+    "name": "PDFium backend — licenses/pdfium.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/pdfium.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/icu.txt",
+    "name": "PDFium backend — licenses/icu.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/icu.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/libjpeg_turbo.ijg",
+    "name": "PDFium backend — licenses/libjpeg_turbo.ijg",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/libjpeg_turbo.ijg"
+    ],
+    "license": "IJG (see notices)"
+  },
+  {
+    "id": "extra:pdfium/licenses/simdutf.txt",
+    "name": "PDFium backend — licenses/simdutf.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/simdutf.txt"
+    ]
+  },
+  {
+    "id": "extra:pdfium/licenses/freetype.txt",
+    "name": "PDFium backend — licenses/freetype.txt",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/licenses/freetype.txt"
+    ],
+    "license": "FTL (FreeType Project License)"
+  },
+  {
+    "id": "extra:pdfium/GO-PDFIUM-LICENSE",
+    "name": "PDFium backend — GO-PDFIUM-LICENSE",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/GO-PDFIUM-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:pdfium/WRAPPER-FORK-LICENSE",
+    "name": "PDFium backend — WRAPPER-FORK-LICENSE",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/WRAPPER-FORK-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:pdfium/GO-COMMONS-POOL-LICENSE",
+    "name": "PDFium backend — GO-COMMONS-POOL-LICENSE",
+    "version": "PDFium 8057 / Go pins",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/klippa-app/go-pdfium/releases/tag/v1.20.3",
+    "urls": [],
+    "files": [
+      "third_party/pdfium/GO-COMMONS-POOL-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:models/NOMIC-LICENSE",
+    "name": "Nomic Embed Text",
+    "version": "v1.5",
+    "component": "Models / inference",
+    "sourceUrl": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5",
+    "urls": [],
+    "files": [
+      "third_party/models/NOMIC-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:models/OLLAMA-LICENSE",
+    "name": "Ollama",
+    "version": "0.34.1",
+    "component": "Models / inference",
+    "sourceUrl": "https://github.com/ollama/ollama/tree/v0.34.1",
+    "urls": [],
+    "files": [
+      "third_party/models/OLLAMA-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:models/TESSDATA-LICENSE",
+    "name": "Tesseract tessdata_fast weights",
+    "version": "4.1.0",
+    "component": "Models / inference",
+    "sourceUrl": "https://github.com/tesseract-ocr/tessdata_fast/tree/4.1.0",
+    "urls": [],
+    "files": [
+      "third_party/models/TESSDATA-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:realtime/web-socket-LICENSE.txt",
+    "name": "web-socket — retained notice",
+    "version": "See dependency lock",
+    "component": "Retained native notices",
+    "sourceUrl": "https://pub.dev/packages/web_socket",
+    "urls": [],
+    "files": [
+      "third_party/realtime/web-socket-LICENSE.txt"
+    ]
+  },
+  {
+    "id": "extra:realtime/web-socket-channel-LICENSE.txt",
+    "name": "web-socket-channel — retained notice",
+    "version": "See dependency lock",
+    "component": "Retained native notices",
+    "sourceUrl": "https://pub.dev/packages/web_socket_channel",
+    "urls": [],
+    "files": [
+      "third_party/realtime/web-socket-channel-LICENSE.txt"
+    ]
+  },
+  {
+    "id": "extra:realtime/coder-websocket-LICENSE.txt",
+    "name": "coder-websocket — retained notice",
+    "version": "See dependency lock",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/coder/websocket/tree/v1.8.15",
+    "urls": [],
+    "files": [
+      "third_party/realtime/coder-websocket-LICENSE.txt"
+    ]
+  },
+  {
+    "id": "extra:emscripten/system_lib_libcxxabi_LICENSE.TXT",
+    "name": "Emscripten — system_lib_libcxxabi_LICENSE.TXT",
+    "version": "6.0.9",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emscripten-core/emscripten/tree/6.0.9",
+    "urls": [],
+    "files": [
+      "third_party/emscripten/system_lib_libcxxabi_LICENSE.TXT"
+    ],
+    "license": "Apache-2.0 WITH LLVM-exception; third-party terms (see notices)"
+  },
+  {
+    "id": "extra:emscripten/LICENSE",
+    "name": "Emscripten — LICENSE",
+    "version": "6.0.9",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emscripten-core/emscripten/tree/6.0.9",
+    "urls": [],
+    "files": [
+      "third_party/emscripten/LICENSE"
+    ]
+  },
+  {
+    "id": "extra:emscripten/system_lib_libc_musl_COPYRIGHT",
+    "name": "Emscripten — system_lib_libc_musl_COPYRIGHT",
+    "version": "6.0.9",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emscripten-core/emscripten/tree/6.0.9",
+    "urls": [],
+    "files": [
+      "third_party/emscripten/system_lib_libc_musl_COPYRIGHT"
+    ],
+    "license": "MIT; BSD and other bundled terms (see notices)"
+  },
+  {
+    "id": "extra:emscripten/system_lib_compiler-rt_LICENSE.TXT",
+    "name": "Emscripten — system_lib_compiler-rt_LICENSE.TXT",
+    "version": "6.0.9",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emscripten-core/emscripten/tree/6.0.9",
+    "urls": [],
+    "files": [
+      "third_party/emscripten/system_lib_compiler-rt_LICENSE.TXT"
+    ],
+    "license": "Apache-2.0 WITH LLVM-exception; third-party terms (see notices)"
+  },
+  {
+    "id": "extra:emscripten/system_lib_libcxx_LICENSE.TXT",
+    "name": "Emscripten — system_lib_libcxx_LICENSE.TXT",
+    "version": "6.0.9",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emscripten-core/emscripten/tree/6.0.9",
+    "urls": [],
+    "files": [
+      "third_party/emscripten/system_lib_libcxx_LICENSE.TXT"
+    ],
+    "license": "Apache-2.0 WITH LLVM-exception; third-party terms (see notices)"
+  },
+  {
+    "id": "extra:email/go-sasl-LICENSE",
+    "name": "go-sasl — retained notice",
+    "version": "See dependency lock",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emersion/go-sasl",
+    "urls": [],
+    "files": [
+      "third_party/email/go-sasl-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:email/go-message-LICENSE",
+    "name": "go-message — retained notice",
+    "version": "See dependency lock",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emersion/go-message",
+    "urls": [],
+    "files": [
+      "third_party/email/go-message-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:email/go-imap-LICENSE",
+    "name": "go-imap — retained notice",
+    "version": "See dependency lock",
+    "component": "Retained native notices",
+    "sourceUrl": "https://github.com/emersion/go-imap",
+    "urls": [],
+    "files": [
+      "third_party/email/go-imap-LICENSE"
+    ]
+  },
+  {
+    "id": "extra:PDFium — frontend and dependencies",
+    "name": "PDFium — frontend and dependencies",
+    "version": "chromium/7811",
+    "component": "Native libraries",
+    "sourceUrl": "https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium%2F7811",
+    "urls": [],
+    "files": [
+      "frontend/assets/licenses/frontend-pdfium.txt"
+    ],
+    "license": "BSD; Apache-2.0; MIT; FTL; IJG; Zlib and other bundled terms (see notices)"
+  },
+  {
+    "id": "extra:OpenCV — scanner and dependencies",
+    "name": "OpenCV — scanner and dependencies",
+    "version": "4.13.0",
+    "component": "Native libraries",
+    "sourceUrl": "https://github.com/opencv/opencv/tree/4.13.0",
+    "urls": [],
+    "files": [
+      "frontend/assets/licenses/scanner-opencv.txt"
+    ]
+  },
+  {
+    "id": "extra:Lora font",
+    "name": "Lora font",
+    "version": "186331d77cc99caaa9c3b52391fd2b519c9e1ee8",
+    "component": "Fonts",
+    "sourceUrl": "https://github.com/google/fonts/tree/186331d77cc99caaa9c3b52391fd2b519c9e1ee8/ofl/lora",
+    "urls": [],
+    "files": [
+      "frontend/assets/licenses/lora-ofl.txt"
+    ],
+    "license": "OFL-1.1"
+  },
+  {
+    "id": "extra:Tesseract",
+    "name": "Tesseract",
+    "version": "5.5.3",
+    "component": "Document processor",
+    "sourceUrl": "https://github.com/tesseract-ocr/tesseract/tree/db0ec62f81b0737fbbe184d8fea40af5738f8eef",
+    "urls": [
+      "https://raw.githubusercontent.com/tesseract-ocr/tesseract/db0ec62f81b0737fbbe184d8fea40af5738f8eef/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:Leptonica",
+    "name": "Leptonica",
+    "version": "1.87.0",
+    "component": "Document processor",
+    "sourceUrl": "https://github.com/DanBloomberg/leptonica/tree/1.87.0",
+    "urls": [
+      "https://raw.githubusercontent.com/DanBloomberg/leptonica/1.87.0/leptonica-license.txt"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:pgvector",
+    "name": "pgvector",
+    "version": "0.8.6",
+    "component": "Database",
+    "sourceUrl": "https://github.com/pgvector/pgvector/tree/v0.8.6",
+    "urls": [
+      "https://raw.githubusercontent.com/pgvector/pgvector/v0.8.6/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:PostgreSQL",
+    "name": "PostgreSQL",
+    "version": "18 (image pinned in Compose)",
+    "component": "Database",
+    "sourceUrl": "https://www.postgresql.org/about/licence/",
+    "urls": [
+      "https://raw.githubusercontent.com/postgres/postgres/REL_18_STABLE/COPYRIGHT"
+    ],
+    "files": [],
+    "license": "PostgreSQL"
+  },
+  {
+    "id": "extra:Temporal server / admin tools",
+    "name": "Temporal server / admin tools",
+    "version": "1.32.0",
+    "component": "Workflow infrastructure",
+    "sourceUrl": "https://github.com/temporalio/temporal/tree/v1.32.0",
+    "urls": [
+      "https://raw.githubusercontent.com/temporalio/temporal/v1.32.0/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:Temporal UI",
+    "name": "Temporal UI",
+    "version": "2.54.1",
+    "component": "Workflow infrastructure",
+    "sourceUrl": "https://github.com/temporalio/ui/tree/v2.54.1",
+    "urls": [
+      "https://raw.githubusercontent.com/temporalio/ui/v2.54.1/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:Temporal CLI",
+    "name": "Temporal CLI",
+    "version": "1.9.1",
+    "component": "Initialization / tooling",
+    "sourceUrl": "https://github.com/temporalio/cli/tree/v1.9.1",
+    "urls": [
+      "https://raw.githubusercontent.com/temporalio/cli/v1.9.1/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:nginx",
+    "name": "nginx",
+    "version": "1.30.5",
+    "component": "Web server",
+    "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.5",
+    "urls": [
+      "https://raw.githubusercontent.com/nginx/nginx/release-1.30.5/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:Bun",
+    "name": "Bun",
+    "version": "1.4.2",
+    "component": "Initialization / tooling",
+    "sourceUrl": "https://github.com/oven-sh/bun/tree/bun-v1.4.2",
+    "urls": [
+      "https://raw.githubusercontent.com/oven-sh/bun/bun-v1.4.2/LICENSE.md"
+    ],
+    "files": [],
+    "license": "MIT; statically linked LGPL-2.0 / LGPL-2.1 components and other terms (see notices)"
+  },
+  {
+    "id": "extra:Go runtime and SDK",
+    "name": "Go runtime and SDK",
+    "version": "1.27.1",
+    "component": "Go runtime / tooling",
+    "sourceUrl": "https://github.com/golang/go/tree/go1.27.1",
+    "urls": [
+      "https://raw.githubusercontent.com/golang/go/go1.27.1/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:OpenAPI Generator",
+    "name": "OpenAPI Generator",
+    "version": "7.25.0",
+    "component": "Code generation",
+    "sourceUrl": "https://github.com/OpenAPITools/openapi-generator/tree/v7.25.0",
+    "urls": [
+      "https://raw.githubusercontent.com/OpenAPITools/openapi-generator/v7.25.0/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:Qwen3.5-4B",
+    "name": "Qwen3.5-4B",
+    "version": "qwen3.5:4b (model tag is mutable)",
+    "component": "Models / inference",
+    "sourceUrl": "https://huggingface.co/Qwen/Qwen3.5-4B/tree/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "urls": [
+      "https://huggingface.co/Qwen/Qwen3.5-4B/resolve/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a/LICENSE"
+    ],
+    "files": [],
+    "license": "Apache-2.0",
+    "note": "The default model is downloaded on demand. This notice describes the upstream 4B model; the configured Ollama tag is mutable and administrators can select different models. Verify the actual model artifact and license before redistribution."
+  },
+  {
+    "id": "extra:actions/checkout",
+    "name": "actions/checkout",
+    "version": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/actions/checkout/tree/3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "urls": [
+      "https://raw.githubusercontent.com/actions/checkout/3d3c42e5aac5ba805825da76410c181273ba90b1/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:actions/setup-go",
+    "name": "actions/setup-go",
+    "version": "b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/actions/setup-go/tree/b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
+    "urls": [
+      "https://raw.githubusercontent.com/actions/setup-go/b7ad1dad31e06c5925ef5d2fc7ad053ef454303e/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:oven-sh/setup-bun",
+    "name": "oven-sh/setup-bun",
+    "version": "0c5077e51419868618aeaa5fe8019c62421857d6",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/oven-sh/setup-bun/tree/0c5077e51419868618aeaa5fe8019c62421857d6",
+    "urls": [
+      "https://raw.githubusercontent.com/oven-sh/setup-bun/0c5077e51419868618aeaa5fe8019c62421857d6/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:actions/setup-java",
+    "name": "actions/setup-java",
+    "version": "de7274f081f381c8f8158605e0321c36c376e2e6",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/actions/setup-java/tree/de7274f081f381c8f8158605e0321c36c376e2e6",
+    "urls": [
+      "https://raw.githubusercontent.com/actions/setup-java/de7274f081f381c8f8158605e0321c36c376e2e6/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "maven:androidx.activity:activity",
+    "name": "androidx.activity:activity",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/activity/activity/1.9.0/activity-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.activity:activity-ktx",
+    "name": "androidx.activity:activity-ktx",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/activity/activity-ktx/1.9.0/activity-ktx-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.annotation:annotation",
+    "name": "androidx.annotation:annotation",
+    "version": "1.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/annotation/annotation/1.10.0/annotation-1.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.annotation:annotation-experimental",
+    "name": "androidx.annotation:annotation-experimental",
+    "version": "1.4.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/annotation/annotation-experimental/1.4.1/annotation-experimental-1.4.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.annotation:annotation-jvm",
+    "name": "androidx.annotation:annotation-jvm",
+    "version": "1.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/annotation/annotation-jvm/1.10.0/annotation-jvm-1.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.appcompat:appcompat",
+    "name": "androidx.appcompat:appcompat",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat/1.1.0/appcompat-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.appcompat:appcompat-resources",
+    "name": "androidx.appcompat:appcompat-resources",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat-resources/1.1.0/appcompat-resources-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.arch.core:core-common",
+    "name": "androidx.arch.core:core-common",
+    "version": "2.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/arch/core/core-common/2.2.0/core-common-2.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.arch.core:core-runtime",
+    "name": "androidx.arch.core:core-runtime",
+    "version": "2.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/arch/core/core-runtime/2.2.0/core-runtime-2.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.asynclayoutinflater:asynclayoutinflater",
+    "name": "androidx.asynclayoutinflater:asynclayoutinflater",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/asynclayoutinflater/asynclayoutinflater/1.0.0/asynclayoutinflater-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.browser:browser",
+    "name": "androidx.browser:browser",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/browser/browser/1.9.0/browser-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.camera.featurecombinationquery:featurecombinationquery",
+    "name": "androidx.camera.featurecombinationquery:featurecombinationquery",
+    "version": "1.6.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/camera/featurecombinationquery/featurecombinationquery/1.6.2/featurecombinationquery-1.6.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.camera:camera-camera2",
+    "name": "androidx.camera:camera-camera2",
+    "version": "1.6.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-camera2/1.6.2/camera-camera2-1.6.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.camera:camera-camera2-pipe",
+    "name": "androidx.camera:camera-camera2-pipe",
+    "version": "1.6.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-camera2-pipe/1.6.2/camera-camera2-pipe-1.6.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.camera:camera-core",
+    "name": "androidx.camera:camera-core",
+    "version": "1.6.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-core/1.6.2/camera-core-1.6.2.pom",
+    "license": "The Apache Software License, Version 2.0; BSD-3-Clause",
+    "urls": [],
+    "note": "Resolved again from Android releaseRuntimeClasspath on 2026-09-28: camera-core 1.6.2. Retains the exact AAR Apache notice and the original libyuv BSD-3-Clause notice (Copyright 2011 The LibYuv Project Authors). The official CameraX 1.6.2 release source is AndroidX 9046f07948c1e7a89aaec581463730f4d666611b: https://developer.android.com/jetpack/androidx/releases/camera#1.6.2 . Its camera/camera-core/src/main/cpp/CMakeLists.txt links libyuv::yuv. The matching release manifest https://android.googlesource.com/platform/manifest/+/3feefa495c15c5fdf0339cb58e52e73629d5a92e/default.xml pins that framework commit and external/libyuv afae031e789e344bfc34c9e763c83f861a1ff3f1. Original notice: https://android.googlesource.com/platform/external/libyuv/+/afae031e789e344bfc34c9e763c83f861a1ff3f1/LICENSE (SHA-256 2b2cc1180c7e6988328ad2033b04b80117419db9c4c584918bbb3cfec7e9364f). libyuv METADATA identifies upstream b7d97d5f3f8f897b88872b6935e4c996b955bc1f. Native dependencies are not locked by pubspec.lock; recheck the graph and actual artifact for each release. The same pinned libyuv PATENTS grant and AUTHORS file are retained without changes.",
+    "files": [
+      "third_party/licenses/native/camera-core-LICENSE.txt",
+      "third_party/licenses/native/camera-core-libyuv-LICENSE.txt",
+      "third_party/licenses/native/camera-core-libyuv-PATENTS.txt",
+      "third_party/licenses/native/camera-core-libyuv-AUTHORS.txt"
+    ]
+  },
+  {
+    "id": "maven:androidx.camera:camera-lifecycle",
+    "name": "androidx.camera:camera-lifecycle",
+    "version": "1.6.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-lifecycle/1.6.2/camera-lifecycle-1.6.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.camera:camera-video",
+    "name": "androidx.camera:camera-video",
+    "version": "1.6.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/camera/camera-video/1.6.2/camera-video-1.6.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.collection:collection",
+    "name": "androidx.collection:collection",
+    "version": "1.4.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/collection/collection/1.4.2/collection-1.4.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.collection:collection-jvm",
+    "name": "androidx.collection:collection-jvm",
+    "version": "1.4.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/collection/collection-jvm/1.4.2/collection-jvm-1.4.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.collection:collection-ktx",
+    "name": "androidx.collection:collection-ktx",
+    "version": "1.4.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/collection/collection-ktx/1.4.2/collection-ktx-1.4.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.concurrent:concurrent-futures",
+    "name": "androidx.concurrent:concurrent-futures",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/concurrent/concurrent-futures/1.1.0/concurrent-futures-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.concurrent:concurrent-futures-ktx",
+    "name": "androidx.concurrent:concurrent-futures-ktx",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/concurrent/concurrent-futures-ktx/1.1.0/concurrent-futures-ktx-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.coordinatorlayout:coordinatorlayout",
+    "name": "androidx.coordinatorlayout:coordinatorlayout",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/coordinatorlayout/coordinatorlayout/1.0.0/coordinatorlayout-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.core:core",
+    "name": "androidx.core:core",
+    "version": "1.18.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/core/core/1.18.0/core-1.18.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.core:core-backported-fixes",
+    "name": "androidx.core:core-backported-fixes",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/core/core-backported-fixes/1.0.0/core-backported-fixes-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.core:core-ktx",
+    "name": "androidx.core:core-ktx",
+    "version": "1.18.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/1.18.0/core-ktx-1.18.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.core:core-viewtree",
+    "name": "androidx.core:core-viewtree",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/core/core-viewtree/1.0.0/core-viewtree-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.cursoradapter:cursoradapter",
+    "name": "androidx.cursoradapter:cursoradapter",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/cursoradapter/cursoradapter/1.0.0/cursoradapter-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.customview:customview",
+    "name": "androidx.customview:customview",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/customview/customview/1.1.0/customview-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore",
+    "name": "androidx.datastore:datastore",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore/1.1.7/datastore-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-android",
+    "name": "androidx.datastore:datastore-android",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-android/1.1.7/datastore-android-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-core",
+    "name": "androidx.datastore:datastore-core",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-core/1.1.7/datastore-core-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-core-android",
+    "name": "androidx.datastore:datastore-core-android",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-core-android/1.1.7/datastore-core-android-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-core-okio",
+    "name": "androidx.datastore:datastore-core-okio",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-core-okio/1.1.7/datastore-core-okio-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-core-okio-jvm",
+    "name": "androidx.datastore:datastore-core-okio-jvm",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-core-okio-jvm/1.1.7/datastore-core-okio-jvm-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-preferences",
+    "name": "androidx.datastore:datastore-preferences",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences/1.1.7/datastore-preferences-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-preferences-android",
+    "name": "androidx.datastore:datastore-preferences-android",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-android/1.1.7/datastore-preferences-android-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-preferences-core",
+    "name": "androidx.datastore:datastore-preferences-core",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-core/1.1.7/datastore-preferences-core-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-preferences-core-android",
+    "name": "androidx.datastore:datastore-preferences-core-android",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-core-android/1.1.7/datastore-preferences-core-android-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-preferences-external-protobuf",
+    "name": "androidx.datastore:datastore-preferences-external-protobuf",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-external-protobuf/1.1.7/datastore-preferences-external-protobuf-1.1.7.pom",
+    "license": "BSD-3-Clause",
+    "urls": [],
+    "note": "Resolved again from Android releaseRuntimeClasspath on 2026-09-28: datastore-preferences-external-protobuf 1.1.7. The exact JAR contains androidx.datastore.preferences.protobuf classes. The official DataStore 1.1.7 release source is AndroidX 420da5f291449f11801e378c6789a328a06ec6cb: https://developer.android.com/jetpack/androidx/releases/datastore#1.1.7 . Its datastore/datastore-preferences-external-protobuf/build.gradle relocates com.google.protobuf to androidx.datastore.preferences.protobuf, and gradle/libs.versions.toml pins com.google.protobuf:protobuf-javalite:4.28.2. Upstream v28.2 resolves to 9fff46d7327c699ef970769d5c9fd0e44df08fc7. Retains the complete original BSD-3-Clause notice (Copyright 2008 Google Inc.): https://github.com/protocolbuffers/protobuf/blob/9fff46d7327c699ef970769d5c9fd0e44df08fc7/LICENSE (SHA-256 6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d). Native dependencies are not locked by pubspec.lock; recheck the graph and actual artifact for each release.",
+    "files": [
+      "third_party/licenses/native/datastore-protobuf-LICENSE.txt"
+    ]
+  },
+  {
+    "id": "maven:androidx.datastore:datastore-preferences-proto",
+    "name": "androidx.datastore:datastore-preferences-proto",
+    "version": "1.1.7",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-proto/1.1.7/datastore-preferences-proto-1.1.7.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.documentfile:documentfile",
+    "name": "androidx.documentfile:documentfile",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/documentfile/documentfile/1.0.0/documentfile-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.drawerlayout:drawerlayout",
+    "name": "androidx.drawerlayout:drawerlayout",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/drawerlayout/drawerlayout/1.0.0/drawerlayout-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.exifinterface:exifinterface",
+    "name": "androidx.exifinterface:exifinterface",
+    "version": "1.4.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/exifinterface/exifinterface/1.4.2/exifinterface-1.4.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.fragment:fragment",
+    "name": "androidx.fragment:fragment",
+    "version": "1.7.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/fragment/fragment/1.7.1/fragment-1.7.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.fragment:fragment-ktx",
+    "name": "androidx.fragment:fragment-ktx",
+    "version": "1.7.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/fragment/fragment-ktx/1.7.1/fragment-ktx-1.7.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.interpolator:interpolator",
+    "name": "androidx.interpolator:interpolator",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/interpolator/interpolator/1.0.0/interpolator-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.legacy:legacy-support-core-ui",
+    "name": "androidx.legacy:legacy-support-core-ui",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/legacy/legacy-support-core-ui/1.0.0/legacy-support-core-ui-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.legacy:legacy-support-core-utils",
+    "name": "androidx.legacy:legacy-support-core-utils",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/legacy/legacy-support-core-utils/1.0.0/legacy-support-core-utils-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-common",
+    "name": "androidx.lifecycle:lifecycle-common",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common/2.10.0/lifecycle-common-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-common-java8",
+    "name": "androidx.lifecycle:lifecycle-common-java8",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-java8/2.10.0/lifecycle-common-java8-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-common-jvm",
+    "name": "androidx.lifecycle:lifecycle-common-jvm",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-jvm/2.10.0/lifecycle-common-jvm-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-livedata",
+    "name": "androidx.lifecycle:lifecycle-livedata",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata/2.10.0/lifecycle-livedata-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-livedata-core",
+    "name": "androidx.lifecycle:lifecycle-livedata-core",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata-core/2.10.0/lifecycle-livedata-core-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-livedata-core-ktx",
+    "name": "androidx.lifecycle:lifecycle-livedata-core-ktx",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata-core-ktx/2.10.0/lifecycle-livedata-core-ktx-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-process",
+    "name": "androidx.lifecycle:lifecycle-process",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-process/2.10.0/lifecycle-process-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-runtime",
+    "name": "androidx.lifecycle:lifecycle-runtime",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime/2.10.0/lifecycle-runtime-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-runtime-android",
+    "name": "androidx.lifecycle:lifecycle-runtime-android",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-android/2.10.0/lifecycle-runtime-android-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-runtime-ktx",
+    "name": "androidx.lifecycle:lifecycle-runtime-ktx",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx/2.10.0/lifecycle-runtime-ktx-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-runtime-ktx-android",
+    "name": "androidx.lifecycle:lifecycle-runtime-ktx-android",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx-android/2.10.0/lifecycle-runtime-ktx-android-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-viewmodel",
+    "name": "androidx.lifecycle:lifecycle-viewmodel",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel/2.10.0/lifecycle-viewmodel-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-viewmodel-android",
+    "name": "androidx.lifecycle:lifecycle-viewmodel-android",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-android/2.10.0/lifecycle-viewmodel-android-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-viewmodel-ktx",
+    "name": "androidx.lifecycle:lifecycle-viewmodel-ktx",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-ktx/2.10.0/lifecycle-viewmodel-ktx-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-viewmodel-savedstate",
+    "name": "androidx.lifecycle:lifecycle-viewmodel-savedstate",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-savedstate/2.10.0/lifecycle-viewmodel-savedstate-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.lifecycle:lifecycle-viewmodel-savedstate-android",
+    "name": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android",
+    "version": "2.10.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-savedstate-android/2.10.0/lifecycle-viewmodel-savedstate-android-2.10.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.loader:loader",
+    "name": "androidx.loader:loader",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/loader/loader/1.0.0/loader-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.localbroadcastmanager:localbroadcastmanager",
+    "name": "androidx.localbroadcastmanager:localbroadcastmanager",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/localbroadcastmanager/localbroadcastmanager/1.0.0/localbroadcastmanager-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.media3:media3-common",
+    "name": "androidx.media3:media3-common",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/media3/media3-common/1.9.0/media3-common-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.media3:media3-container",
+    "name": "androidx.media3:media3-container",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/media3/media3-container/1.9.0/media3-container-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.media3:media3-muxer",
+    "name": "androidx.media3:media3-muxer",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/media3/media3-muxer/1.9.0/media3-muxer-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.preference:preference",
+    "name": "androidx.preference:preference",
+    "version": "1.2.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/preference/preference/1.2.1/preference-1.2.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.print:print",
+    "name": "androidx.print:print",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/print/print/1.0.0/print-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.profileinstaller:profileinstaller",
+    "name": "androidx.profileinstaller:profileinstaller",
+    "version": "1.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/profileinstaller/profileinstaller/1.4.0/profileinstaller-1.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.recyclerview:recyclerview",
+    "name": "androidx.recyclerview:recyclerview",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/recyclerview/recyclerview/1.0.0/recyclerview-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.savedstate:savedstate",
+    "name": "androidx.savedstate:savedstate",
+    "version": "1.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate/1.4.0/savedstate-1.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.savedstate:savedstate-android",
+    "name": "androidx.savedstate:savedstate-android",
+    "version": "1.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-android/1.4.0/savedstate-android-1.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.savedstate:savedstate-ktx",
+    "name": "androidx.savedstate:savedstate-ktx",
+    "version": "1.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-ktx/1.4.0/savedstate-ktx-1.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.slidingpanelayout:slidingpanelayout",
+    "name": "androidx.slidingpanelayout:slidingpanelayout",
+    "version": "1.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/slidingpanelayout/slidingpanelayout/1.2.0/slidingpanelayout-1.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.startup:startup-runtime",
+    "name": "androidx.startup:startup-runtime",
+    "version": "1.1.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/startup/startup-runtime/1.1.1/startup-runtime-1.1.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.swiperefreshlayout:swiperefreshlayout",
+    "name": "androidx.swiperefreshlayout:swiperefreshlayout",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/swiperefreshlayout/swiperefreshlayout/1.0.0/swiperefreshlayout-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.tracing:tracing",
+    "name": "androidx.tracing:tracing",
+    "version": "1.3.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing/1.3.0/tracing-1.3.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.tracing:tracing-android",
+    "name": "androidx.tracing:tracing-android",
+    "version": "1.3.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing-android/1.3.0/tracing-android-1.3.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.tracing:tracing-ktx",
+    "name": "androidx.tracing:tracing-ktx",
+    "version": "1.3.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing-ktx/1.3.0/tracing-ktx-1.3.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.transition:transition",
+    "name": "androidx.transition:transition",
+    "version": "1.4.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/transition/transition/1.4.1/transition-1.4.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.vectordrawable:vectordrawable",
+    "name": "androidx.vectordrawable:vectordrawable",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/vectordrawable/vectordrawable/1.1.0/vectordrawable-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.vectordrawable:vectordrawable-animated",
+    "name": "androidx.vectordrawable:vectordrawable-animated",
+    "version": "1.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/vectordrawable/vectordrawable-animated/1.1.0/vectordrawable-animated-1.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.versionedparcelable:versionedparcelable",
+    "name": "androidx.versionedparcelable:versionedparcelable",
+    "version": "1.1.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/versionedparcelable/versionedparcelable/1.1.1/versionedparcelable-1.1.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.viewpager:viewpager",
+    "name": "androidx.viewpager:viewpager",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/viewpager/viewpager/1.0.0/viewpager-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.window.extensions.core:core",
+    "name": "androidx.window.extensions.core:core",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/window/extensions/core/core/1.0.0/core-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.window:window",
+    "name": "androidx.window:window",
+    "version": "1.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/window/window/1.2.0/window-1.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:androidx.window:window-java",
+    "name": "androidx.window:window-java",
+    "version": "1.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/window/window-java/1.2.0/window-java-1.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.getkeepsafe.relinker:relinker",
+    "name": "com.getkeepsafe.relinker:relinker",
+    "version": "1.4.5",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/getkeepsafe/relinker/relinker/1.4.5/relinker-1.4.5.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.google.auto.value:auto-value-annotations",
+    "name": "com.google.auto.value:auto-value-annotations",
+    "version": "1.6.3",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/auto/value/auto-value-annotations/1.6.3/auto-value-annotations-1.6.3.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "The exact POM inherits its license from https://repo.maven.apache.org/maven2/com/google/auto/auto-parent/7/auto-parent-7.pom\n\n\n    <license>\n      <name>Apache 2.0</name>\n      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>\n    </license>\n  "
+  },
+  {
+    "id": "maven:com.google.code.findbugs:jsr305",
+    "name": "com.google.code.findbugs:jsr305",
+    "version": "3.0.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.google.code.gson:gson",
+    "name": "com.google.code.gson:gson",
+    "version": "2.13.2",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache-2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.google.crypto.tink:tink-android",
+    "name": "com.google.crypto.tink:tink-android",
+    "version": "1.23.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/crypto/tink/tink-android/1.23.0/tink-android-1.23.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.google.dagger:dagger",
+    "name": "com.google.dagger:dagger",
+    "version": "2.59",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/dagger/dagger/2.59/dagger-2.59.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.google.errorprone:error_prone_annotations",
+    "name": "com.google.errorprone:error_prone_annotations",
+    "version": "2.41.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/errorprone/error_prone_annotations/2.41.0/error_prone_annotations-2.41.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.google.guava:failureaccess",
+    "name": "com.google.guava:failureaccess",
+    "version": "1.0.3",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/guava/failureaccess/1.0.3/failureaccess-1.0.3.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "The exact POM inherits its license from https://repo.maven.apache.org/maven2/com/google/guava/guava-parent/33.4.0-android/guava-parent-33.4.0-android.pom\n\n\n    <license>\n      <name>Apache License, Version 2.0</name>\n      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>\n      <distribution>repo</distribution>\n    </license>\n  "
+  },
+  {
+    "id": "maven:com.google.guava:guava",
+    "name": "com.google.guava:guava",
+    "version": "33.5.0-android",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/guava/guava/33.5.0-android/guava-33.5.0-android.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "The exact POM inherits its license from https://repo.maven.apache.org/maven2/com/google/guava/guava-parent/33.5.0-android/guava-parent-33.5.0-android.pom\n\n\n    <license>\n      <name>Apache License, Version 2.0</name>\n      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>\n      <distribution>repo</distribution>\n    </license>\n  "
+  },
+  {
+    "id": "maven:com.google.guava:listenablefuture",
+    "name": "com.google.guava:listenablefuture",
+    "version": "9999.0-empty-to-avoid-conflict-with-guava",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "The exact POM inherits its license from https://repo.maven.apache.org/maven2/com/google/guava/guava-parent/26.0-android/guava-parent-26.0-android.pom\n\n\n    <license>\n      <name>The Apache Software License, Version 2.0</name>\n      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>\n      <distribution>repo</distribution>\n    </license>\n  "
+  },
+  {
+    "id": "maven:com.google.j2objc:j2objc-annotations",
+    "name": "com.google.j2objc:j2objc-annotations",
+    "version": "3.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/google/j2objc/j2objc-annotations/3.1/j2objc-annotations-3.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.squareup.okio:okio",
+    "name": "com.squareup.okio:okio",
+    "version": "3.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio/3.4.0/okio-3.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:com.squareup.okio:okio-jvm",
+    "name": "com.squareup.okio:okio-jvm",
+    "version": "3.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/com/squareup/okio/okio-jvm/3.4.0/okio-jvm-3.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:jakarta.inject:jakarta.inject-api",
+    "name": "jakarta.inject:jakarta.inject-api",
+    "version": "2.0.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/jakarta/inject/jakarta.inject-api/2.0.1/jakarta.inject-api-2.0.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:javax.inject:javax.inject",
+    "name": "javax.inject:javax.inject",
+    "version": "1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlin:kotlin-android-extensions-runtime",
+    "name": "org.jetbrains.kotlin:kotlin-android-extensions-runtime",
+    "version": "1.9.22",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-android-extensions-runtime/1.9.22/kotlin-android-extensions-runtime-1.9.22.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlin:kotlin-bom",
+    "name": "org.jetbrains.kotlin:kotlin-bom",
+    "version": "1.8.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-bom/1.8.0/kotlin-bom-1.8.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlin:kotlin-parcelize-runtime",
+    "name": "org.jetbrains.kotlin:kotlin-parcelize-runtime",
+    "version": "1.9.22",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-parcelize-runtime/1.9.22/kotlin-parcelize-runtime-1.9.22.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlin:kotlin-stdlib",
+    "name": "org.jetbrains.kotlin:kotlin-stdlib",
+    "version": "2.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.4.0/kotlin-stdlib-2.4.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache-2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+    "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+    "version": "1.8.20",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk7/1.8.20/kotlin-stdlib-jdk7-1.8.20.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+    "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+    "version": "1.8.20",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk8/1.8.20/kotlin-stdlib-jdk8-1.8.20.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:atomicfu",
+    "name": "org.jetbrains.kotlinx:atomicfu",
+    "version": "0.28.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/atomicfu/0.28.0/atomicfu-0.28.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache-2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:atomicfu-jvm",
+    "name": "org.jetbrains.kotlinx:atomicfu-jvm",
+    "version": "0.28.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/atomicfu-jvm/0.28.0/atomicfu-jvm-0.28.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache-2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-coroutines-android",
+    "name": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-android/1.9.0/kotlinx-coroutines-android-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-coroutines-bom",
+    "name": "org.jetbrains.kotlinx:kotlinx-coroutines-bom",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-bom/1.9.0/kotlinx-coroutines-bom-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-coroutines-core",
+    "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.9.0/kotlinx-coroutines-core-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm",
+    "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm",
+    "version": "1.9.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.9.0/kotlinx-coroutines-core-jvm-1.9.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-serialization-bom",
+    "name": "org.jetbrains.kotlinx:kotlinx-serialization-bom",
+    "version": "1.7.3",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-bom/1.7.3/kotlinx-serialization-bom-1.7.3.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-serialization-core",
+    "name": "org.jetbrains.kotlinx:kotlinx-serialization-core",
+    "version": "1.7.3",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core/1.7.3/kotlinx-serialization-core-1.7.3.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains.kotlinx:kotlinx-serialization-core-jvm",
+    "name": "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm",
+    "version": "1.7.3",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-core-jvm/1.7.3/kotlinx-serialization-core-jvm-1.7.3.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jetbrains:annotations",
+    "name": "org.jetbrains:annotations",
+    "version": "23.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/23.0.0/annotations-23.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"https://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.jspecify:jspecify",
+    "name": "org.jspecify:jspecify",
+    "version": "1.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "maven:org.opencv:opencv",
+    "name": "org.opencv:opencv",
+    "version": "4.13.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://repo.maven.apache.org/maven2/org/opencv/opencv/4.13.0/opencv-4.13.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"Apache-2.0\",\"url\":\"https://github.com/opencv/opencv/blob/master/LICENSE\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+  },
+  {
+    "id": "extra:Debian runtime and build image packages",
+    "name": "Debian runtime and build image packages",
+    "version": "trixie; digest pins in Dockerfiles",
+    "component": "Container operating systems",
+    "sourceUrl": "https://www.debian.org/legal/licenses/",
+    "license": "Multiple licenses; includes GPL / LGPL",
+    "note": "Base images and apt-installed libraries have individual licenses under /usr/share/doc/*/copyright and /usr/share/common-licenses. Source-level dependency scanning is not a complete OS-image inventory. Preserve these notices and arrange corresponding source for redistributed GPL/LGPL packages. Exact apt versions are not snapshot-pinned; audit each built release image.",
+    "urls": [
+      "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt",
+      "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
+    ]
+  },
+  {
+    "id": "extra:Alpine runtime image packages",
+    "name": "Alpine runtime image packages",
+    "version": "Image digest pins in Dockerfiles / Compose",
+    "component": "Container operating systems",
+    "sourceUrl": "https://pkgs.alpinelinux.org/",
+    "license": "Multiple licenses; includes GPL / LGPL",
+    "note": "The nginx and Bun image families and other service images include independent OS and native dependencies. Their package licenses and corresponding source are separate from the nginx/Bun project license. Audit the actual release images, including BusyBox/musl/OpenSSL where present.",
+    "urls": [
+      "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt"
+    ]
+  },
+  {
+    "id": "extra:Linux desktop libraries",
+    "name": "Linux desktop libraries",
+    "version": "Host supplied",
+    "component": "Native platform libraries",
+    "sourceUrl": "https://www.gtk.org/docs/",
+    "license": "LGPL and other system-library terms",
+    "note": "Linux plugins link to host GTK/GLib/libsecret libraries. Host installations are not bundled by this repository, but Linux installers or container distributions that include them must retain their notices and satisfy applicable LGPL obligations.",
+    "urls": [
+      "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
+    ]
+  },
+  {
+    "id": "extra:CUDA runtime components",
+    "name": "CUDA runtime components",
+    "version": "Optional Ollama GPU deployment",
+    "component": "Optional GPU runtime",
+    "sourceUrl": "https://docs.nvidia.com/cuda/eula/",
+    "license": "NVIDIA vendor terms",
+    "note": "Ollama MIT terms do not replace the terms for CUDA runtime components. Redistribution is limited to permitted redistributables and is subject to the actual CUDA version terms. The exact image-specific GPU bundle has not been cleared by this source inventory.",
+    "urls": []
+  },
+  {
+    "id": "extra:ROCm runtime components",
+    "name": "ROCm runtime components",
+    "version": "Ollama 0.34.1-rocm image pin",
+    "component": "Optional GPU runtime",
+    "sourceUrl": "https://rocm.docs.amd.com/en/latest/about/license.html",
+    "license": "Multiple component licenses",
+    "note": "ROCm images contain multiple projects and may include separately licensed runtime or firmware components. Audit the exact digest image before distribution; no complete binary inventory is claimed here.",
+    "urls": []
+  },
+  {
+    "id": "extra:Chrome for Testing / ChromeDriver",
+    "name": "Chrome for Testing / ChromeDriver",
+    "version": "153.0.8010.47",
+    "component": "Browser test tooling",
+    "sourceUrl": "https://developer.chrome.com/docs/chromium/terms",
+    "license": "Chromium licenses and Google Chrome terms",
+    "note": "Downloaded only for tests by scripts/testing/browser/browser-tools.ts. Chrome binaries have terms distinct from the Chromium source license. Do not assume redistribution rights from BSD-licensed Chromium components. They are not copied into Domabas release images by its Dockerfiles.",
+    "urls": []
+  },
+  {
+    "id": "extra:Android SDK",
+    "name": "Android SDK",
+    "version": "Platform tools / command-line tools 15859902",
+    "component": "Native build tooling",
+    "sourceUrl": "https://developer.android.com/studio/terms",
+    "license": "Android SDK License Agreement",
+    "note": "The SDK is a development prerequisite with separate terms, including limits on redistributing SDK components. Building a commercial application is distinct from shipping the SDK. It is not part of the application license inventory.",
+    "urls": []
+  },
+  {
+    "id": "extra:Apple SDKs and platform frameworks",
+    "name": "Apple SDKs and platform frameworks",
+    "version": "Host supplied",
+    "component": "Native build tooling",
+    "sourceUrl": "https://developer.apple.com/support/terms/",
+    "license": "Apple developer and SDK terms",
+    "note": "iOS and macOS require Apple tooling and platform frameworks. Their platform/distribution agreements are separate from open-source dependency licenses. No Apple SDK is redistributed by this repository.",
+    "urls": []
+  },
+  {
+    "id": "extra:Gradle",
+    "name": "Gradle",
+    "version": "9.3.1",
+    "component": "Native build tooling",
+    "sourceUrl": "https://github.com/gradle/gradle/tree/v9.3.1",
+    "license": "Apache-2.0",
+    "note": "Gradle wrapper resolves the pinned distribution; its bundled dependencies carry additional notices.",
+    "urls": [
+      "https://raw.githubusercontent.com/gradle/gradle/v9.3.1/LICENSE"
+    ]
+  },
+  {
+    "id": "extra:Kotlin Gradle plugin",
+    "name": "Kotlin Gradle plugin",
+    "version": "2.4.0",
+    "component": "Native build tooling",
+    "sourceUrl": "https://github.com/JetBrains/kotlin/tree/v2.4.0",
+    "license": "Apache-2.0",
+    "note": "Android build plugin dependency; additional Kotlin runtime components appear in the Android inventory.",
+    "urls": [
+      "https://raw.githubusercontent.com/JetBrains/kotlin/v2.4.0/license/LICENSE.txt"
+    ]
+  },
+  {
+    "id": "extra:OpenJDK / Temurin",
+    "name": "OpenJDK / Temurin",
+    "version": "21.0.12+101.0.LTS in CI",
+    "component": "Native build tooling",
+    "sourceUrl": "https://openjdk.org/legal/gplv2+ce.html",
+    "license": "GPL-2.0 with Classpath Exception",
+    "note": "Java is a build/generator prerequisite, not bundled in the Flutter app or Go executables. The exception and separate bundled-component notices matter if redistributing a JDK.",
+    "urls": []
+  },
+  {
+    "id": "extra:Go Task",
+    "name": "Go Task",
+    "version": "Host prerequisite (not repository pinned)",
+    "component": "Build tooling",
+    "sourceUrl": "https://github.com/go-task/task",
+    "license": "MIT",
+    "note": "Go Task is a host-installed command runner and is not shipped in the application.",
+    "urls": [
+      "https://raw.githubusercontent.com/go-task/task/main/LICENSE"
+    ]
+  },
+  {
+    "appendTo": "dart:dbus",
+    "version": "0.7.15",
+    "files": [
+      "third_party/licenses/sources/dbus/0.7.15/LICENSE",
+      "third_party/licenses/sources/dbus/0.7.15/retrieval.txt"
+    ]
+  },
+  {
+    "id": "extra:actions/cache",
+    "name": "actions/cache",
+    "version": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/actions/cache/tree/55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    "urls": [
+      "https://raw.githubusercontent.com/actions/cache/55cc8345863c7cc4c66a329aec7e433d2d1c52a9/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:arduino/setup-task",
+    "name": "arduino/setup-task",
+    "version": "c0bc642852239c2689f73f4ea6459c29405f3c52",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/arduino/setup-task/tree/c0bc642852239c2689f73f4ea6459c29405f3c52",
+    "urls": [
+      "https://raw.githubusercontent.com/arduino/setup-task/c0bc642852239c2689f73f4ea6459c29405f3c52/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:docker/setup-buildx-action",
+    "name": "docker/setup-buildx-action",
+    "version": "f87e5991a6d7451dcb8d9637bfbc97413f497069",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/docker/setup-buildx-action/tree/f87e5991a6d7451dcb8d9637bfbc97413f497069",
+    "urls": [
+      "https://raw.githubusercontent.com/docker/setup-buildx-action/f87e5991a6d7451dcb8d9637bfbc97413f497069/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:go-task/task",
+    "name": "go-task/task",
+    "version": "v3.53.1",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/go-task/task/tree/v3.53.1",
+    "urls": [
+      "https://raw.githubusercontent.com/go-task/task/v3.53.1/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:docker/buildx",
+    "name": "docker/buildx",
+    "version": "v0.37.1",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/docker/buildx/tree/v0.37.1",
+    "urls": [
+      "https://raw.githubusercontent.com/docker/buildx/v0.37.1/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:google/osv-scanner",
+    "name": "google/osv-scanner",
+    "version": "v2.6.0",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/google/osv-scanner/tree/v2.6.0",
+    "urls": [
+      "https://raw.githubusercontent.com/google/osv-scanner/v2.6.0/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:aquasecurity/trivy",
+    "name": "aquasecurity/trivy",
+    "version": "v0.74.0",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/aquasecurity/trivy/tree/v0.74.0",
+    "urls": [
+      "https://raw.githubusercontent.com/aquasecurity/trivy/v0.74.0/LICENSE"
+    ],
+    "files": []
+  },
+  {
+    "id": "extra:actions/upload-artifact",
+    "name": "actions/upload-artifact",
+    "version": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/actions/upload-artifact/tree/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "urls": [
+      "https://raw.githubusercontent.com/actions/upload-artifact/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/LICENSE"
+    ],
+    "files": []
+  }
+]

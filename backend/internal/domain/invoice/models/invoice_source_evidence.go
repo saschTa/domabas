@@ -12,7 +12,7 @@ func InvoiceSourcePrefix(text string) string {
 }
 
 func (p InvoiceEvidencePolicy) Accept(text string, v Invoice) (bool, error) {
-	source := strings.ToLower(strings.Join(strings.Fields(text), " "))
+	printedDates, dateSpans := invoiceSourceDates(text)
 	identifiers := []string{v.Number}
 	dates := []string{v.IssueDate, v.DueDate}
 	numbers := []string{v.TotalNet, v.TotalTax, v.TotalGross, v.AmountDue, v.PaidAmount, v.RoundingAmount, v.TaxAccountingAmount}
@@ -31,18 +31,16 @@ func (p InvoiceEvidencePolicy) Accept(text string, v Invoice) (bool, error) {
 		dates = append(dates, reference.IssueDate)
 	}
 	for _, value := range identifiers {
-		value = strings.ToLower(strings.Join(strings.Fields(value), " "))
-		if value != "" && !invoiceContainsToken(source, value) {
+		if strings.TrimSpace(value) != "" && !invoiceContainsIdentifier(text, value, dateSpans) {
 			return false, ErrInvalid
 		}
 	}
-	printedNumbers := invoiceSourceNumbers(text)
+	printedNumbers := invoiceSourceNumbers(text, dateSpans, v.Currency, v.TaxCurrency)
 	for _, value := range numbers {
 		if value != "" && !printedNumbers[invoiceCanonicalDecimal(value)] {
 			return false, ErrInvalid
 		}
 	}
-	printedDates := invoiceSourceDates(text)
 	for _, value := range dates {
 		if value != "" && !printedDates[value] {
 			return false, ErrInvalid
@@ -51,27 +49,9 @@ func (p InvoiceEvidencePolicy) Accept(text string, v Invoice) (bool, error) {
 	return true, nil
 }
 
-func invoiceContainsToken(text, value string) bool {
-	if value == "" {
-		return false
-	}
-	for offset := 0; offset <= len(text); {
-		found := strings.Index(text[offset:], value)
-		if found < 0 {
-			return false
-		}
-		start := offset + found
-		if invoiceTokenBoundary(text, start, start+len(value)) {
-			return true
-		}
-		offset = start + len(value)
-	}
-	return false
-}
-
 func invoiceTokenBoundary(text string, start, end int) bool {
 	word := func(r rune) bool {
-		return unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_+-−/", r)
+		return unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.Is(unicode.Pd, r) || strings.ContainsRune("_+−/", r)
 	}
 	if start > 0 {
 		r, size := utf8.DecodeLastRuneInString(text[:start])

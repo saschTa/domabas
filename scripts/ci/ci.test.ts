@@ -51,7 +51,7 @@ test("combined browser selection retains every focused test file exactly once", 
   const files = Object.values(browserTestGroups).flat();
   const aggregate = await Bun.file(join(ROOT, "frontend/test/browser_suite.dart")).text();
   const imports = [...aggregate.matchAll(/^import '(.+_test\.dart)' as (\w+);$/gm)];
-  expect(files).toHaveLength(9);
+  expect(files).toHaveLength(10);
   expect(new Set(files).size).toBe(files.length);
   expect(imports.map(match => `test/${match[1]}`).sort()).toEqual([...files].sort());
   for (const match of imports) expect(aggregate.match(new RegExp(`group\\('[^']+', ${match[2]}\\.main\\);`, "g"))).toHaveLength(1);

@@ -215,12 +215,12 @@ not require Origin, since browsers can omit it for reads that do not mutate
 persistence.
 
 HTTPS uses `__Host-domabas_session` with Secure, HttpOnly, SameSite=Strict, Path=/
-and no Domain. HTTP is supported only for loopback development, using
+and no Domain. HTTP is supported on IP addresses and hostnames, using
 `domabas_session` with the same restrictions except Secure. The validated Origin
 determines HTTPS even when a TLS proxy connects to Go over plaintext. Forwarded
 headers do not grant trust. The nginx proxy preserves the original Host and port.
 Frontend and API must share a site; use the same loopback hostname on both when
-developing across ports.
+developing across ports. HTTP does not encrypt credentials or documents in transit.
 
 Successful registration, login, switching and restore set the cookie. Its lifetime
 is at most 400 days, reduced to any retained finite session deadline, and renewed

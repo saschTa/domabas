@@ -64,7 +64,7 @@ final class _ServerConfigurationScreenState
                           decoration: const InputDecoration(
                             labelText: 'Server address',
                             hintText: 'https://documents.example.com',
-                            helperText: 'Use HTTPS for your server. Include a port or base path if needed.',
+                            helperText: 'Use HTTP or HTTPS. Include a port or base path if needed.',
                             helperMaxLines: 3,
                             errorMaxLines: 4,
                           ),

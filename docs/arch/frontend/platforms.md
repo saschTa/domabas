@@ -39,9 +39,10 @@ the server must present the necessary certificate chain. Untrusted self-signed
 servers remain rejected. Install the issuing CA as a trusted CA, rather than as
 a client identity or Wi-Fi certificate; see [server setup](server-configuration.md).
 
-The debug resource override preserves local HTTP development. Release/profile
-configuration keeps HTTPS policy. Other native platforms retain their existing
-certificate stores, and browsers retain browser-managed trust. See
+Android permits HTTP in debug, profile and release builds for user-selected
+servers, including LAN IP addresses. HTTPS still validates certificates. Other
+native platforms retain their existing certificate stores, and browsers retain
+browser-managed trust. See
 [server setup](server-configuration.md) for connection checks and endpoint ownership.
 
 ## Persistent session storage
@@ -92,13 +93,18 @@ when preference storage is unavailable and offers retry. See
 [appearance and client preferences](appearance.md) for the storage locations,
 ordering and scope.
 
-Android applies Flutter's Gradle plugin after the Android plugin and takes SDK/version values from Flutter. Its current release build configuration uses development signing; store distribution needs separate signing setup. Debug manifests permit local development networking. Android styles and drawable files control the launch background and the transition to the Flutter view.
+Android applies Flutter's Gradle plugin after the Android plugin and takes SDK/version values from Flutter. Its current release build configuration uses development signing; store distribution needs separate signing setup. All build modes permit HTTP networking. Android styles and drawable files control the launch background and the transition to the Flutter view.
 
 GitHub releases publish containers only. Android, iOS and desktop targets remain
 available for local development, with no native downloads or CI build claim.
 See the [release support table](../../development/releases.md#supported-artifacts).
 
-iOS keeps development networking settings separate from release settings. App delegates, storyboard files and Xcode project settings supply the native host. Store distribution needs signing and application identifiers.
+iOS debug and release property lists permit HTTP to user-selected servers and
+explain local-network access in the system permission prompt. macOS also permits
+HTTP. Apple hosts use `NSAllowsArbitraryLoads` because server addresses are chosen
+at runtime; store submission requires justification for this transport exception.
+App delegates, storyboard files and Xcode project settings supply the native
+host. Store distribution needs signing and application identifiers.
 
 macOS uses a sandboxed Cocoa host and Swift Package Manager plugin integration.
 Debug/profile and release builds permit outgoing API connections and read access

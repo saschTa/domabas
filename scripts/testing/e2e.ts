@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, open, rm, type FileHandle } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { isIPv4 } from "node:net";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
@@ -65,6 +66,12 @@ export function portValue(text: string | undefined, fallback: number): number {
   return value;
 }
 
+export function hostValue(text: string | undefined): string {
+  const host = text ?? "127.0.0.1";
+  if (!isIPv4(host) || host === "0.0.0.0") throw new Error("E2E_HOST must be a reachable IPv4 address on this computer.");
+  return host;
+}
+
 export function composeDatabaseURL(databaseURL: string): string {
   const url = new URL(databaseURL);
   if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
@@ -89,8 +96,10 @@ if (import.meta.main) await runCLI(async scope => {
   if (values.help) { console.log("Usage: bun scripts/testing/e2e.ts [--external-services] (--external-db remains an alias)"); return; }
   const go = command("go"), flutter = command("flutter");
   let env = environment();
+  const host = hostValue(env.E2E_HOST);
   const apiPort = portValue(env.E2E_API_PORT, 18080), webPort = portValue(env.E2E_WEB_PORT, 7357), driverPort = portValue(env.E2E_DRIVER_PORT, 4444);
-  for (const port of [apiPort, webPort, driverPort]) await requireFreePort("127.0.0.1", port);
+  for (const port of [apiPort, webPort]) await requireFreePort(host, port);
+  await requireFreePort("127.0.0.1", driverPort);
   const external = values["external-db"] || values["external-services"];
   if (!external) await infraUp(scope, env);
   const databaseURL = env.TEST_DATABASE_URL || required(env, "DATABASE_URL");
@@ -120,10 +129,10 @@ if (import.meta.main) await runCLI(async scope => {
   const schema = `e2e_${crypto.randomUUID().replaceAll("-", "")}`;
   env.CHROME_EXECUTABLE = chrome;
   env.DATABASE_URL = schemaURL(databaseURL, schema);
-  env.HTTP_ADDR = `127.0.0.1:${apiPort}`;
-  env.CORS_ORIGINS = `http://localhost:${webPort},http://127.0.0.1:${webPort}`;
+  env.HTTP_ADDR = `${host}:${apiPort}`;
+  env.CORS_ORIGINS = `http://localhost:${webPort},http://127.0.0.1:${webPort},http://${host}:${webPort}`;
   env.TEMPORAL_TASK_QUEUE = `domabas-${schema}`;
-  const apiURL = `http://127.0.0.1:${apiPort}`;
+  const apiURL = `http://${host}:${apiPort}`;
   const executable = join(ROOT, ".tools", binary("domabas-e2e"));
   await scope.run([go, "build", "-o", executable, "./cmd/server"], { cwd: join(ROOT, "backend"), env });
   await scope.run([flutter, "pub", "get", "--enforce-lockfile"], { cwd: join(ROOT, "frontend"), env });
@@ -168,7 +177,7 @@ if (import.meta.main) await runCLI(async scope => {
         try {
           const test = scope.start([flutter, "drive", "--driver=test_driver/integration_test.dart", "--target=integration_test/app_test.dart",
             "-d", "web-server", "--browser-name=chrome", `--chrome-binary=${chrome}`, "--headless", "--web-browser-flag=--disable-dev-shm-usage",
-            "--web-hostname=127.0.0.1", `--web-port=${webPort}`, `--driver-port=${driverPort}`, `--dart-define=API_BASE_URL=${apiURL}`, `--dart-define-from-file=${fixtureDefines}`],
+            `--web-hostname=${host}`, `--web-port=${webPort}`, `--driver-port=${driverPort}`, `--dart-define=API_BASE_URL=${apiURL}`, `--dart-define-from-file=${fixtureDefines}`],
             { cwd: join(ROOT, "frontend"), env });
           const result = await test.wait(600000);
           scope.signal.throwIfAborted();

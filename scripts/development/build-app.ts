@@ -129,7 +129,7 @@ export async function buildApp(build: AppBuild, deps: AppBuildDependencies): Pro
   const output = appBuildOutput(build, deps.arch);
   const path = join(frontend, output.path);
   if (!deps.exists(path)) throw new Error(`Flutter finished but the expected app is missing: ${path}`);
-  deps.log(`\nBuild complete: ${path}\n${output.next}\nOn first launch, enter your Domabas server's HTTPS address.\nFull instructions: ${join(deps.root, GUIDE)}`);
+  deps.log(`\nBuild complete: ${path}\n${output.next}\nOn first launch, enter your Domabas server's HTTP or HTTPS address.\nFull instructions: ${join(deps.root, GUIDE)}`);
 }
 
 if (import.meta.main) await runCLI(async (scope: ProcessScope) => {

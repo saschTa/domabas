@@ -20,6 +20,10 @@ void main() {
       'http://127.0.0.1:8080',
     );
     expect(
+      ServerAddress.parse('http://192.168.0.230:8088/').value,
+      'http://192.168.0.230:8088',
+    );
+    expect(
       ServerAddress.parse('http://[::1]:8080/base').value,
       'http://[::1]:8080/base',
     );

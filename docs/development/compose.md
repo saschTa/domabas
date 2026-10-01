@@ -176,8 +176,9 @@ password. Plan administrator password rotation in PostgreSQL separately;
 changing this file alone is insufficient.
 
 Edit only the private file to add deployment settings, such as
-`CORS_ORIGINS=https://documents.example.test` with your actual HTTPS origin.
-Keep private service ports on loopback and configure your HTTPS proxy separately.
+`CORS_ORIGINS=http://192.168.0.230:8088` with your actual browser origin.
+HTTP works directly on the published web port. To use HTTPS, configure a proxy
+separately and use its HTTPS origin. Keep private service ports on loopback.
 Compose supplies internal service addresses and passes `POSTGRES_PASSWORD` to
 the backend as `PGPASSWORD`; no deployment `DATABASE_URL` needs to be copied from
 the development file.

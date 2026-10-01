@@ -1,6 +1,6 @@
 # Native server configuration
 
-Android, iOS, Linux and Windows select their server at runtime. A new native
+Android, iOS, macOS, Linux and Windows select their server at runtime. A new native
 installation opens server setup before authentication. The user enters an HTTP(S)
 base address, including any port or installation path, and presses Connect. The
 app checks the existing unauthenticated readiness endpoint and saves the address
@@ -45,10 +45,13 @@ available before authentication, grants no namespace authority, and adds no
 backend claim or HTTP endpoint. Existing authorization checks still apply to
 every authenticated operation.
 
-The existing mobile transport policy is retained: use HTTPS for deployed servers;
-debug builds support local development HTTP. The iOS simulator can reach the Mac
-at `http://localhost:8080`; Android emulators use `http://10.0.2.2:8080`. Physical
-devices need a reachable server hostname or LAN address.
+All native build modes support HTTP and HTTPS servers. For a LAN installation,
+enter an address such as `http://192.168.0.230:8088`; use the published web port
+or the API's reachable port. The iOS simulator can reach the Mac at
+`http://localhost:8080`; Android emulators use `http://10.0.2.2:8080`. Physical
+devices need a reachable server hostname or LAN address and must allow local
+network access when the operating system asks. HTTP does not encrypt traffic;
+HTTPS remains available with normal certificate validation.
 
 For a self-hosted Android server with a private or self-signed CA, install that
 CA through Android Settings → Security → Encryption & credentials → Install a

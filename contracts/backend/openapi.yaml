@@ -6,7 +6,7 @@ info:
     Namespace-scoped documents, durable file ingestion, OCR, semantic search and local accounts with scoped permissions.
     Browser clients opt into persistent HttpOnly cookies using X-Domabas-Browser: 1 and credentialed requests.
     Cookie-affecting authentication operations require a single trusted Origin and return 403 for invalid browser origins or markers.
-    HTTPS uses a Secure host-only cookie; plaintext browser persistence is restricted to loopback development.
+    HTTPS uses a Secure host-only cookie; HTTP uses a host-only cookie without Secure, including on non-loopback hosts.
     Only restoreSession reads cookies as authentication. Other protected operations require Authorization Bearer.
 servers:
   - url: http://127.0.0.1:8080

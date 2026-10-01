@@ -37,6 +37,34 @@ void main() {
 
   tearDown(() => messenger.setMockMethodCallHandler(_channel, null));
 
+  test('HTTP supports readiness, document traffic and realtime WS', () async {
+    final server = await _startServer(secure: false);
+    final client = NativeHttpClient(clientFactory: factory.create);
+    addTearDown(client.close);
+    expect((await client.get(server.uri)).body, 'ok');
+    expect(
+      (await client.post(server.uri, body: 'document contents')).statusCode,
+      200,
+    );
+    final readiness = ReadinessServerDataSource(
+      clientFactory: () => NativeHttpClient(clientFactory: factory.create),
+    );
+    expect(
+      await readiness.check(server.uri.toString()),
+      ServerProbeResult.ready,
+    );
+    final attempt = createSocketAttempt(
+      server.uri.replace(scheme: 'ws'),
+      clientFactory: factory.create,
+    );
+    addTearDown(attempt.abort);
+    final reply = attempt.channel.stream.first;
+    await attempt.ready;
+    expect(attempt.channel.protocol, 'domabas.realtime.v1');
+    attempt.channel.sink.add('HTTP realtime');
+    expect(await reply, 'HTTP realtime');
+  });
+
   test(
     'private CA enables readiness and API traffic with one load per client',
     () async {
@@ -254,17 +282,18 @@ void main() {
   );
 }
 
-Future<({Uri uri})> _startServer({bool expired = false}) async {
+Future<({Uri uri})> _startServer({
+  bool expired = false,
+  bool secure = true,
+}) async {
   final context = SecurityContext()
     ..useCertificateChain(
       'test/fixtures/tls/${expired ? 'expired-server' : 'server'}.pem',
     )
     ..usePrivateKey('test/fixtures/tls/server-key.pem');
-  final server = await HttpServer.bindSecure(
-    InternetAddress.loopbackIPv4,
-    0,
-    context,
-  );
+  final server = secure
+      ? await HttpServer.bindSecure(InternetAddress.loopbackIPv4, 0, context)
+      : await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   final sockets = <WebSocket>[];
   final subscription = server.listen(
     (request) async {
@@ -297,7 +326,9 @@ Future<({Uri uri})> _startServer({bool expired = false}) async {
     await subscription.cancel();
     await server.close(force: true);
   });
-  return (uri: Uri.parse('https://localhost:${server.port}'));
+  return (
+    uri: Uri.parse('${secure ? 'https' : 'http'}://localhost:${server.port}'),
+  );
 }
 
 final class _TrackedHttpClient implements HttpClient {

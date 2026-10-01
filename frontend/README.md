@@ -53,8 +53,9 @@ origins; an HTTPS web app also needs an HTTPS API.
 
 Android emulators can reach the host at `http://10.0.2.2:8080`; the iOS simulator
 can use host loopback. Physical devices need a reachable LAN address and an
-intentional backend bind address. Local debug builds allow development HTTP;
-use HTTPS for deployment. See [platform networking](../docs/arch/frontend/platforms.md)
+intentional backend bind address. Browser and native release/debug builds support
+HTTP, for example `http://192.168.0.230:8088`, as well as HTTPS. Include your
+published port and allow local-network access when asked. See [platform networking](../docs/arch/frontend/platforms.md)
 and [server configuration](../docs/arch/frontend/server-configuration.md).
 
 ## Sessions and libraries

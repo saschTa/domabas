@@ -49,7 +49,7 @@ flutter test integration_test/server_configuration_test.dart -d <device-id> \
 ```
 
 Do not supply `API_BASE_URL` for this test: it exercises first-run server setup.
-Use `http://10.0.2.2:8080` on an Android emulator and a reachable HTTPS address on
+Use `http://10.0.2.2:8080` on an Android emulator and a reachable HTTP or HTTPS address on
 a physical device. The test restores the previous server preference and makes
 only readiness requests; it does not create accounts or modify server data.
 iOS requires full Xcode, an installed simulator runtime and simulator signing
@@ -107,6 +107,13 @@ personal libraries, invitation acceptance, namespace switching and document
 persistence, including fresh app/client state.
 
 The Bun browser harness downloads pinned Chrome/ChromeDriver, creates a random schema, queue and document storage roots, and starts Go at `127.0.0.1:18080`, Flutter on port 7357 and WebDriver on port 4444. It cleans up owned processes and data. Use `bun --no-env-file scripts/testing/e2e.ts --external-services` with `TEST_DATABASE_URL`, `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` and `DOCUMENT_PROCESSOR_URL` for externally managed services. External mode requires `psql`; managed Docker mode can use its container client. `E2E_API_PORT`, `E2E_WEB_PORT`, and `E2E_DRIVER_PORT` override test ports. Logs remain in `.logs/`. When a development Flutter process already owns port 7357, use `E2E_WEB_PORT=7358 task test:e2e` or another free port; do not stop that development process.
+
+Set `E2E_HOST` to this computer's reachable LAN IPv4 address to run the same browser
+workflows over non-loopback HTTP, for example
+`E2E_HOST=192.168.0.211 task test:e2e`. The API and Flutter bind to that address;
+ChromeDriver remains on loopback. This checks HTTP browser behavior without
+localhost's secure-context exception. Only use an address assigned to the test
+host; the fixture schema, queues and storage remain isolated.
 
 The diagnostic workflow has a remote execution deadline as well as a client wait deadline. Queue tests use only owned workflow IDs, and stop workers before dropping their schemas. Tests never delete a shared Temporal namespace. Ordinary developer shutdown retains volumes; the full local and Compose smoke harnesses may remove their own explicitly disposable randomly named projects and volumes.
 

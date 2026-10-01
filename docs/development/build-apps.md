@@ -4,7 +4,7 @@ This guide is for building your own copy of Domabas, even if you do not write
 code. Setup is needed once; after that, one command builds the app. The first
 build downloads tools and libraries and can take several minutes.
 
-The app connects to a Domabas server. You need that server's HTTPS address when
+The app connects to a Domabas server. You need that server's HTTP or HTTPS address when
 you open the app, but the server does not need to be running during the build.
 You do not need Go, Docker, a database, `task setup`, or `task generate` to build
 these apps. To host a server too, follow the [hosting guide](compose.md).
@@ -190,7 +190,7 @@ task build:android -- --release
 
 Copy `frontend/build/app/outputs/flutter-apk/app-release.apk` to your phone,
 open it, and allow installation from that file manager when Android asks. The
-app supports Android 7.0/API 24 or later. It asks for your HTTPS server address
+app supports Android 7.0/API 24 or later. It asks for your HTTP or HTTPS server address
 on first launch. An emulator and USB debugging are not needed for this method.
 
 Both release and debug APKs use your computer's **development signing key**.
@@ -235,13 +235,14 @@ and [distribution guide](https://docs.flutter.dev/deployment/windows).
 
 ## Connect to your documents
 
-Open the app, enter your Domabas server's HTTPS address, and press **Connect**.
+Open the app, enter your Domabas server's HTTP or HTTPS address, and press **Connect**.
 Then sign in or create an account. Ask the person hosting Domabas for the address
 if you do not know it. You can change it later in **Settings → Server**.
 
 `localhost` on a phone means the phone itself, not your computer. Use a server
-hostname reachable from that device. Release mobile builds use HTTPS. For
-private certificates and development addresses, see the
+hostname or LAN address reachable from that device, such as
+`http://192.168.0.230:8088`. Release mobile builds support HTTP too. Allow local
+network access if asked. For private certificates and development addresses, see the
 [server guide](../arch/frontend/server-configuration.md).
 
 ## If a command fails
@@ -256,7 +257,7 @@ private certificates and development addresses, see the
 | Android licenses or command-line tools missing | Install Command-line Tools in Android Studio, then run `flutter doctor --android-licenses`. |
 | Windows symlink or ATL error | Enable Developer Mode or add the C++ ATL component in Visual Studio Installer. |
 | Package or native-library download failed | Check your network, proxy and access to pub.dev and GitHub, then rerun the same build command. |
-| Build succeeds but server connection fails | Check the server address and HTTPS certificate; building the app does not start the server. |
+| Build succeeds but server connection fails | Check the server address, port and local-network permission; check the certificate if using HTTPS. Building the app does not start the server. |
 
 The common script can also be used as `task build:app -- macos`, replacing
 `macos` with `android`, `ios` or `windows`. Run `task build:app -- --help` for

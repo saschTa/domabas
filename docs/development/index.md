@@ -156,7 +156,7 @@ Android supports API 24 and later; session preferences are excluded from backup 
 
 Use `flutter devices` and `task dev -- --device <id>` for a connected target. An Android emulator reaches the host API at `http://10.0.2.2:8080`; set `API_BASE_URL` accordingly. A physical device needs an API address it can reach and an intentional backend bind address. Flutter's web debugger can attach with `--device chrome`; set `CHROME_EXECUTABLE` when Chrome is installed outside its usual location.
 
-See the [frontend guide](../arch/frontend/index.md) for mobile HTTP development configuration. Release networking should use HTTPS. Native build tasks validate compilation on the corresponding host. GitHub releases distribute containers only; app signing and distribution are outside this baseline.
+See the [frontend guide](../arch/frontend/index.md) for mobile networking configuration. HTTP and HTTPS work in debug and release builds. Native build tasks validate compilation on the corresponding host. GitHub releases distribute containers only; app signing and distribution are outside this baseline.
 
 Live browser connections use the same configured API endpoint and exact CORS origins as the HTTP client. See [live connection deployment](compose.md#live-connections) and [realtime checks](testing.md#realtime-checks).
 

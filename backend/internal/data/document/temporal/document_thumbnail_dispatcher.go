@@ -6,6 +6,7 @@ import (
 	"errors"
 	m "github.com/domabas/domabas/backend/internal/domain/document/models"
 	w "github.com/domabas/domabas/backend/internal/domain/document/workflows"
+	schedulermodels "github.com/domabas/domabas/backend/internal/domain/scheduler/models"
 	enumspb "go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/serviceerror"
 	"go.temporal.io/api/workflowservice/v1"
@@ -106,13 +107,21 @@ func (d *DocumentThumbnailDispatcher) dispatch(ctx context.Context) error {
 	if err := d.service.Discover(ctx); err != nil {
 		return err
 	}
-	jobs, err := d.service.Claim(ctx, d.queue)
-	if err != nil {
-		return err
-	}
-	for _, j := range jobs {
-		if err = d.deliver(ctx, j); err != nil {
+	for range schedulermodels.SchedulerMaximumLimit {
+		if err := ctx.Err(); err != nil {
 			return err
+		}
+		jobs, err := d.service.Claim(ctx, d.queue)
+		if err != nil {
+			return err
+		}
+		if len(jobs) == 0 {
+			return nil
+		}
+		for _, j := range jobs {
+			if err = d.deliver(ctx, j); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

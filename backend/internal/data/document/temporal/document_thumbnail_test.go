@@ -3,8 +3,10 @@ package temporal
 import (
 	"context"
 	"errors"
+	"fmt"
 	m "github.com/domabas/domabas/backend/internal/domain/document/models"
 	w "github.com/domabas/domabas/backend/internal/domain/document/workflows"
+	schedulermodels "github.com/domabas/domabas/backend/internal/domain/scheduler/models"
 	"github.com/stretchr/testify/mock"
 	commonpb "go.temporal.io/api/common/v1"
 	enumspb "go.temporal.io/api/enums/v1"
@@ -72,12 +74,22 @@ func TestThumbnailWorkflowRetryOutcomes(t *testing.T) {
 }
 
 type thumbnailDispatchStub struct {
+	discover    func(context.Context) error
+	claim       func(context.Context, string) ([]m.DocumentThumbnailJob, error)
 	acknowledge func(m.DocumentThumbnailJob, string) error
 	released    bool
 }
 
-func (s *thumbnailDispatchStub) Discover(context.Context) error { return nil }
-func (s *thumbnailDispatchStub) Claim(context.Context, string) ([]m.DocumentThumbnailJob, error) {
+func (s *thumbnailDispatchStub) Discover(ctx context.Context) error {
+	if s.discover != nil {
+		return s.discover(ctx)
+	}
+	return nil
+}
+func (s *thumbnailDispatchStub) Claim(ctx context.Context, queue string) ([]m.DocumentThumbnailJob, error) {
+	if s.claim != nil {
+		return s.claim(ctx, queue)
+	}
 	return nil, nil
 }
 func (s *thumbnailDispatchStub) Acknowledge(_ context.Context, j m.DocumentThumbnailJob, run string) error {
@@ -152,5 +164,131 @@ func TestThumbnailDeliveryRejectsForeignStartInput(t *testing.T) {
 	dispatcher := NewDocumentThumbnailDispatcher(service, remote, j.TaskQueue, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
 	if err := dispatcher.deliver(t.Context(), j); err == nil || !service.released {
 		t.Fatalf("foreign input not rejected: %v", err)
+	}
+}
+
+func TestThumbnailDispatchFillsAvailableSlotsInOnePass(t *testing.T) {
+	for _, available := range []int{0, 3, 21, schedulermodels.SchedulerMaximumLimit + 1} {
+		t.Run(fmt.Sprintf("available_%d", available), func(t *testing.T) {
+			remote := mocks.NewClient(t)
+			claims, acknowledgements, discoveries, retentionChecks := 0, 0, 0, 0
+			service := &thumbnailDispatchStub{
+				discover: func(context.Context) error {
+					discoveries++
+					return nil
+				},
+				claim: func(_ context.Context, queue string) ([]m.DocumentThumbnailJob, error) {
+					if queue != "thumbnail-queue" || claims != acknowledgements {
+						t.Fatal("next claim did not follow acknowledgement on the expected queue")
+					}
+					claims++
+					if claims > available {
+						return nil, nil
+					}
+					job, _ := thumbnailDeliveryFixture()
+					job.ID = fmt.Sprintf("thumbnail-job-%d", claims)
+					job.WorkflowID = "document-thumbnail-v1/" + job.ID
+					run := mocks.NewWorkflowRun(t)
+					run.On("GetID").Return(job.WorkflowID).Once()
+					run.On("GetRunID").Return(job.ID + "-run").Twice()
+					remote.On("ExecuteWorkflow", mock.Anything, mock.Anything, w.DocumentThumbnailWorkflowName, thumbnailJobRequestMapper(job)).Return(run, nil).Once()
+					return []m.DocumentThumbnailJob{job}, nil
+				},
+				acknowledge: func(job m.DocumentThumbnailJob, run string) error {
+					if run != job.ID+"-run" {
+						t.Fatal("acknowledged another workflow run")
+					}
+					acknowledgements++
+					return nil
+				},
+			}
+			dispatcher := NewDocumentThumbnailDispatcher(service, remote, "thumbnail-queue", slog.New(slog.NewTextHandler(io.Discard, nil)), func(context.Context) error {
+				retentionChecks++
+				return nil
+			})
+			if err := dispatcher.dispatch(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			wantStarts := min(available, schedulermodels.SchedulerMaximumLimit)
+			wantClaims := min(available+1, schedulermodels.SchedulerMaximumLimit)
+			if acknowledgements != wantStarts || claims != wantClaims || discoveries != 1 || retentionChecks != 1 || service.released {
+				t.Fatalf("starts=%d claims=%d discoveries=%d retention=%d released=%v; want starts=%d claims=%d", acknowledgements, claims, discoveries, retentionChecks, service.released, wantStarts, wantClaims)
+			}
+		})
+	}
+}
+
+func TestThumbnailDispatchStopsOnFailureOrCancellation(t *testing.T) {
+	failure := errors.New("thumbnail dispatch unavailable")
+	for _, scenario := range []string{"retention", "discovery", "claim", "delivery", "acknowledgement", "cancelled before claim", "cancelled after start"} {
+		t.Run(scenario, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			job, _ := thumbnailDeliveryFixture()
+			remote := mocks.NewClient(t)
+			claims, acknowledgements := 0, 0
+			service := &thumbnailDispatchStub{
+				discover: func(context.Context) error {
+					if scenario == "discovery" {
+						return failure
+					}
+					return nil
+				},
+				claim: func(context.Context, string) ([]m.DocumentThumbnailJob, error) {
+					claims++
+					if claims > 1 {
+						t.Fatal("claimed more work after an error or cancellation")
+					}
+					if scenario == "claim" {
+						return nil, failure
+					}
+					return []m.DocumentThumbnailJob{job}, nil
+				},
+				acknowledge: func(m.DocumentThumbnailJob, string) error {
+					acknowledgements++
+					if scenario == "acknowledgement" {
+						return failure
+					}
+					cancel()
+					return nil
+				},
+			}
+			if scenario == "delivery" {
+				remote.On("ExecuteWorkflow", mock.Anything, mock.Anything, w.DocumentThumbnailWorkflowName, thumbnailJobRequestMapper(job)).Return(nil, failure).Once()
+			}
+			if scenario == "acknowledgement" || scenario == "cancelled after start" {
+				run := mocks.NewWorkflowRun(t)
+				run.On("GetID").Return(job.WorkflowID).Once()
+				run.On("GetRunID").Return("run").Twice()
+				remote.On("ExecuteWorkflow", mock.Anything, mock.Anything, w.DocumentThumbnailWorkflowName, thumbnailJobRequestMapper(job)).Return(run, nil).Once()
+			}
+			want := failure
+			if scenario == "cancelled before claim" {
+				cancel()
+				want = context.Canceled
+			}
+			if scenario == "cancelled after start" {
+				want = context.Canceled
+			}
+			dispatcher := NewDocumentThumbnailDispatcher(service, remote, job.TaskQueue, slog.New(slog.NewTextHandler(io.Discard, nil)), func(context.Context) error {
+				if scenario == "retention" {
+					return failure
+				}
+				return nil
+			})
+			if err := dispatcher.dispatch(ctx); !errors.Is(err, want) {
+				t.Fatalf("dispatch error=%v; want %v", err, want)
+			}
+			wantClaims, wantAcknowledgements := 1, 0
+			if scenario == "retention" || scenario == "discovery" || scenario == "cancelled before claim" {
+				wantClaims = 0
+			}
+			if scenario == "acknowledgement" || scenario == "cancelled after start" {
+				wantAcknowledgements = 1
+			}
+			if claims != wantClaims || acknowledgements != wantAcknowledgements || service.released != (scenario == "delivery") {
+				t.Fatalf("claims=%d acknowledgements=%d released=%v", claims, acknowledgements, service.released)
+			}
+		})
 	}
 }

@@ -21,6 +21,12 @@ no locks while contacting Temporal or the processor.
 Finite Temporal workflows perform accepted generation. The shared resource
 scheduler admits each render using one worker permit and no model permit. The
 100-document page is a discovery bound, not a rendering concurrency setting.
+Each two-second delivery poll repeatedly claims and starts accepted jobs until
+the scheduler grants no further work. Each claim checks the shared workload
+limits and older feasible waiters, then delivery starts the job before claiming
+another. A poll is bounded by the maximum configurable workload limit of 256
+claims and its existing twelve-second deadline. Rendering can run concurrently;
+starting the next job does not wait for an earlier render to finish.
 Duplicate delivery and ambiguous starts reconcile the exact retained workflow
 identity. Scheduler ownership remains until execution closure is verified,
 including when the document is deleted or its original changes.

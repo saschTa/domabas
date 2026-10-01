@@ -87,8 +87,8 @@ func TestBrowserLogoutClearsPersistenceBeforeBearerRejection(t *testing.T) {
 	}
 }
 
-func TestBrowserOriginRejectsExternalPlaintextAndDuplicateOrigins(t *testing.T) {
-	for _, origin := range []string{"http://app.example", "http://192.168.0.100", "https://user@app.example", "https://app.example?query", "https://app.example#fragment", "https://app.example?", "https://app.example#"} {
+func TestBrowserOriginRejectsMalformedAndDuplicateOrigins(t *testing.T) {
+	for _, origin := range []string{"http://user@app.example", "https://user@app.example", "https://app.example?query", "https://app.example#fragment", "https://app.example?", "https://app.example#", "ftp://app.example"} {
 		request := httptest.NewRequest("POST", "http://app.example/", nil)
 		request.Header.Set("Origin", origin)
 		if _, ok := trustedBrowserOrigin(request, []string{origin}); ok {
@@ -100,5 +100,59 @@ func TestBrowserOriginRejectsExternalPlaintextAndDuplicateOrigins(t *testing.T) 
 	request.Header.Add("Origin", "https://app.example")
 	if _, ok := trustedBrowserOrigin(request, nil); ok {
 		t.Fatal("accepted duplicate origins")
+	}
+}
+
+func TestBrowserSessionsSupportHTTPHostsAndHTTPSProxies(t *testing.T) {
+	for _, test := range []struct {
+		name, authority, origin string
+		allowed                 []string
+		secure, forbidden       bool
+	}{
+		{name: "LAN IP", authority: "192.168.0.230", origin: "http://192.168.0.230"},
+		{name: "LAN port", authority: "192.168.0.230:8088", origin: "http://192.168.0.230:8088"},
+		{name: "LAN IPv6", authority: "[fd00::230]:8088", origin: "http://[fd00::230]:8088"},
+		{name: "hostname", authority: "documents.example:8088", origin: "http://documents.example:8088"},
+		{name: "allowed origin", authority: "192.168.0.230:8080", origin: "http://192.168.0.230:8088", allowed: []string{"http://192.168.0.230:8088"}},
+		{name: "untrusted origin", authority: "192.168.0.230", origin: "http://evil.example", forbidden: true},
+		{name: "untrusted port", authority: "192.168.0.230:8088", origin: "http://192.168.0.230:9000", forbidden: true},
+		{name: "HTTPS proxy", authority: "documents.example", origin: "https://documents.example", secure: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			cookieName := models.BrowserSessionCookieName
+			if test.secure {
+				cookieName = models.SecureBrowserSessionCookieName
+			}
+			request := httptest.NewRequest(http.MethodPost, "http://"+test.authority+"/api/v1/auth/restore", nil)
+			request.Pattern = "POST /api/v1/auth/restore"
+			request.Header.Set("X-Domabas-Browser", "1")
+			request.Header.Set("Origin", test.origin)
+			request.Header.Set("Cookie", cookieName+"=session-token")
+			response := httptest.NewRecorder()
+			called := false
+			browserSessions(test.allowed, time.Now)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				called = true
+				state := models.CurrentSessionRequest(r.Context())
+				if !state.Browser || !state.HasCredential || state.Secure != test.secure || state.Token != "session-token" {
+					t.Fatalf("session request: %+v", state)
+				}
+				http.SetCookie(w, models.BrowserCookie(r.Context(), state.Token, nil))
+				w.WriteHeader(http.StatusNoContent)
+			})).ServeHTTP(response, request)
+			cookies := response.Result().Cookies()
+			if test.forbidden {
+				if response.Code != http.StatusForbidden || called || len(cookies) != 0 {
+					t.Fatalf("untrusted origin accepted: %d, called %v, cookies %v", response.Code, called, cookies)
+				}
+				return
+			}
+			if response.Code != http.StatusNoContent || !called || len(cookies) != 1 {
+				t.Fatalf("session restore: %d, called %v, cookies %v", response.Code, called, cookies)
+			}
+			cookie := cookies[0]
+			if cookie.Name != cookieName || cookie.Value != "session-token" || cookie.Secure != test.secure || !cookie.HttpOnly || cookie.SameSite != http.SameSiteStrictMode || cookie.Path != "/" || cookie.Domain != "" || cookie.MaxAge <= 0 {
+				t.Fatalf("session cookie: %+v", cookie)
+			}
+		})
 	}
 }

@@ -89,7 +89,7 @@ other development tools on the host.
 | **Container runtime** | Docker with [Compose v2 or newer](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the current web build stage. |
 | **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for Ollama models when using AI. Leave capacity for your operating system and other services. |
 | **Storage** | Persistent space for original files, the database, encryption keys and model caches, plus temporary processing space and backups. Size this for your library and chosen models. |
-| **Network** | Internet access for the initial image and model downloads. Use HTTPS before signing in from outside your own computer. |
+| **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |
 | **GPU** | Optional. CPU operation is supported; NVIDIA and AMD setups need compatible hardware and drivers. |
 
 Memory needs grow with document size, concurrent jobs and model context. Search
@@ -137,7 +137,7 @@ The commands download the app's dependencies and print where to find the output.
 You do not need to run `task setup` or `task generate` first. The iOS command
 builds an **unsigned app**; follow the guide's Xcode signing steps to install it
 on your device, or use `task build:ios -- --simulator` for a simulator build.
-The apps connect to your existing Domabas server; enter its HTTPS address when
+The apps connect to your existing Domabas server; enter its HTTP or HTTPS address when
 you first open them.
 
 ## Use at your own risk

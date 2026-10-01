@@ -46,9 +46,10 @@ func TestPersistentBrowserAndNativeSessionLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 		if browser {
+			r.Host = "192.168.0.230:8088"
 			r.Header.Set("X-Domabas-Browser", "1")
 			if origin == "" {
-				origin = baseURL
+				origin = "http://" + r.Host
 			}
 			r.Header.Set("Origin", origin)
 		}
@@ -73,7 +74,7 @@ func TestPersistentBrowserAndNativeSessionLifecycle(t *testing.T) {
 	cookieValue := func(cookies []*http.Cookie) string {
 		t.Helper()
 		if len(cookies) != 1 || cookies[0].Name != "domabas_session" || !cookies[0].HttpOnly || cookies[0].Secure || cookies[0].SameSite != http.SameSiteStrictMode || cookies[0].Path != "/" || cookies[0].Domain != "" || cookies[0].MaxAge != 400*24*60*60 {
-			t.Fatalf("persistent HTTP loopback cookie: %+v", cookies)
+			t.Fatalf("persistent HTTP cookie: %+v", cookies)
 		}
 		return cookies[0].Name + "=" + cookies[0].Value
 	}

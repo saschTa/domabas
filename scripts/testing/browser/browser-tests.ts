@@ -4,6 +4,7 @@ import { install } from "./browser-tools.ts";
 import { ROOT, ProcessScope, command, environment, runCLI } from "../../shared/runtime.ts";
 
 export const browserTestGroups = {
+  identity: ["test/identity_clipboard_browser_test.dart"],
   realtime: ["test/realtime_frame_independent_test.dart", "test/realtime_transport_independent_test.dart", "test/realtime_browser_independent_test.dart"],
   scanner: ["test/unit/scanner_validation_independent_test.dart", "test/scanner_images_browser_independent_test.dart"],
   document: ["test/document_vocabulary_transport_independent_test.dart", "test/document_rendering_browser_independent_test.dart"],

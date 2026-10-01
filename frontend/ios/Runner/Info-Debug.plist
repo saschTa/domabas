@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Domabas connects to your chosen document server on your local network.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Domabas uses the camera to scan documents into your selected library.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
@@ -70,7 +72,7 @@
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsLocalNetworking</key>
+		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
 </dict>

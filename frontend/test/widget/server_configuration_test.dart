@@ -48,13 +48,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Connect to your server'), findsOneWidget);
     expect(built, isEmpty);
-    await connect(tester, ' https://documents.example.com/base/ ');
-    expect(built.last, 'https://documents.example.com/base');
+    await connect(tester, ' http://192.168.0.230:8088/base/ ');
+    expect(built.last, 'http://192.168.0.230:8088/base');
     expect(repository.checks, hasLength(1));
     expect(repository.stored?.value, built.last);
     await tester.pumpWidget(app(const ValueKey(2)));
     await tester.pumpAndSettle();
-    expect(find.text('https://documents.example.com/base'), findsOneWidget);
+    expect(find.text('http://192.168.0.230:8088/base'), findsOneWidget);
     expect(repository.checks, hasLength(1));
   });
 

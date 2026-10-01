@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -86,13 +85,6 @@ func trustedBrowserOrigin(r *http.Request, allowed []string) (*url.URL, bool) {
 	origin, err := url.Parse(values[0])
 	if err != nil || origin.User != nil || origin.Host == "" || values[0] != origin.Scheme+"://"+origin.Host || (origin.Scheme != "http" && origin.Scheme != "https") {
 		return nil, false
-	}
-	if origin.Scheme == "http" {
-		host := origin.Hostname()
-		ip := net.ParseIP(host)
-		if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
-			return nil, false
-		}
 	}
 	if !strings.EqualFold(origin.Host, r.Host) && !slices.Contains(allowed, values[0]) {
 		return nil, false

@@ -12,7 +12,11 @@ memberships and displays role and ownership separately from system administratio
 An invitation adds a membership without changing the current library. Managers
 issue email-bound invitations, copy their one-time code and deliver it outside the
 app; recipients paste the code while signed in. Invitation lists do not recover
-secrets. Member forms use namespace roles and additional claims; owned memberships
+secrets. Invitation copying uses an injected clipboard data source. HTTPS and
+native clients use the platform clipboard; HTTP browsers use a temporary text
+selection and copy command, restoring focus and removing the element afterward.
+If the browser refuses clipboard access, the code remains selectable for manual
+copying. Member forms use namespace roles and additional claims; owned memberships
 are shown as immutable. System administrators have a separate user-management
 screen for promotion and demotion, with no automatic access to foreign libraries.
 

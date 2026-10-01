@@ -7,8 +7,8 @@ document processing. Follow the steps below, then paste one complete file into
 
 This guide is for NAS operators. For a small home library, start with **4 CPU
 cores and 5 GiB available RAM**, plus memory for Ollama models, TrueNAS and other
-apps. You also need a dedicated dataset, an HTTPS proxy and usable Domabas image
-references as described below. A GPU is optional.
+apps. You also need a dedicated dataset and usable Domabas image references as
+described below. A GPU and HTTPS proxy are optional.
 
 [Choose a file](#1-choose-a-file) · [Storage](#2-prepare-the-dataset) ·
 [Settings](#3-fill-in-your-settings) · [GPU setup](#4-check-your-gpu-on-the-host) ·
@@ -122,8 +122,8 @@ edit `x-settings` at the top. Leave the YAML anchor names (`&...`) and reference
 | `postgres_admin_password` | PostgreSQL provisioning password |
 | `postgres_password` | Separate password for the Domabas database role |
 | `temporal_password` | Separate password for the Temporal database role |
-| `public_origin` | Browser HTTPS origin, such as `https://documents.example.com`; include a non-default port if used, with no path or trailing slash |
-| `web_bind_address`, `web_port` | NAS address and host port reached by your proxy; `0.0.0.0` binds all IPv4 interfaces |
+| `public_origin` | Browser HTTP or HTTPS origin, such as `http://192.168.0.230:8088` or `https://documents.example.com`; include a non-default port if used, with no path or trailing slash |
+| `web_bind_address`, `web_port` | NAS address and host port reached by your browser or proxy; `0.0.0.0` binds all IPv4 interfaces |
 | `temporal_ui_bind_address`, `temporal_ui_port` | NAS address and host port for Temporal UI |
 | `temporal_ui_url` | Browser-reachable Temporal URL; update the NAS address and port or use a separate HTTPS hostname |
 | `ingestion_concurrency` | Legacy setting retained for release compatibility; default `1`. Current source builds use Admin settings → Workload limits instead. |
@@ -146,10 +146,12 @@ docker compose -f truenas/compose.cpu.local.yaml config --quiet
 Use the matching filename for CUDA or ROCm. This validates syntax only; empty
 passwords and placeholder images must still be replaced before deployment.
 
-Point your HTTPS proxy at `http://<NAS-address>:<web_port>`. It must preserve
-the original Host and Origin and support WebSocket upgrades. Open Domabas
-through the HTTPS hostname; browser sign-in rejects plain HTTP on non-loopback
-addresses.
+Open Domabas directly at `http://<NAS-address>:<web_port>`, for example
+`http://192.168.0.230:8088`, and set `public_origin` to that exact origin.
+Browser sign-in and installed apps support this HTTP address. HTTP does not
+encrypt traffic. To use HTTPS, point your proxy at the same HTTP address; the
+proxy must preserve the original Host and Origin and support WebSocket upgrades.
+Set `public_origin` to the HTTPS origin when using the proxy.
 
 Temporal UI opens the `domabas` namespace. **Admin > Document processing >
 Temporal dashboard** uses `temporal_ui_url`. Replace the fictional hostname
@@ -263,7 +265,7 @@ GPU mapping or device groups.
 3. Wait for storage, database and Temporal initialization, then model preparation.
    Successful one-shot initialization services exit normally; they do not keep
    running. First startup may download models and take several minutes.
-4. Check service logs if the app does not become ready. Open the HTTPS hostname
+4. Check service logs if the app does not become ready. Open your configured web address
    and register the first account. On an empty installation, it becomes system
    administrator.
 
@@ -455,7 +457,7 @@ one `dataset_path` and UID/GID `950:950` throughout.
    existing contents, including PostgreSQL's nested data and saved secret keys.
    Preserve file permissions within them; do not apply one directory mode to
    every file. Resolve incompatible inherited ACLs on this app's storage.
-4. Preserve the existing passwords, image versions, ports and HTTPS origin.
+4. Preserve the existing passwords, image versions, ports and public origin.
    Keep the Ollama cache contents: its container path changes from
    `/root/.ollama` to `/home/ollama/.ollama`, but its host `ollama/models`
    directory remains the same.

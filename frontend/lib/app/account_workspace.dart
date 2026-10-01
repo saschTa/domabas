@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/identity/datasources/identity_clipboard_data_source.dart';
 import '../domain/document/models/document_capabilities.dart';
 import '../presentation/chat/cubits/chat_cubit.dart';
 import '../presentation/chat/cubits/chat_settings_cubit.dart';
@@ -93,6 +94,7 @@ final class AccountWorkspace extends StatefulWidget {
 final class _AccountWorkspaceState extends State<AccountWorkspace>
     with WidgetsBindingObserver {
   late final CurrentIdentityCubit _identity;
+  final _invitationClipboard = IdentityClipboardDataSource();
   late final ChatCubit _chat;
   late final ChatSettingsCubit _chatSettings;
   late final RealtimeCubit _realtime;
@@ -991,10 +993,14 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                   libraryName: identity.accountName,
                 ),
                 'libraries' => LibrariesScreen(cubit: _libraries),
-                'members' => MembersScreen(cubit: _account),
+                'members' => MembersScreen(
+                  cubit: _account,
+                  copyInvitation: _invitationClipboard.copy,
+                ),
                 'invitations' => MembersScreen(
                   cubit: _account,
                   invitations: true,
+                  copyInvitation: _invitationClipboard.copy,
                 ),
                 'password' => _passwordSettings(),
                 'system-users' => SystemUsersScreen(cubit: _systemUsers),

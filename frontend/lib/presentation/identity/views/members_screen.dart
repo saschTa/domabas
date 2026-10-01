@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/services.dart';
 
 import '../../../ui/domabas_ui.dart';
 import '../../../domain/identity/models/identity.dart';
@@ -10,10 +9,12 @@ final class MembersScreen extends StatelessWidget {
   const MembersScreen({
     super.key,
     required this.cubit,
+    required this.copyInvitation,
     this.invitations = false,
   });
 
   final AccountCubit cubit;
+  final Future<bool> Function(String) copyInvitation;
   final bool invitations;
 
   @override
@@ -262,7 +263,8 @@ final class MembersScreen extends StatelessWidget {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _InvitationCodeDialog(issued: issued),
+      builder: (_) =>
+          _InvitationCodeDialog(issued: issued, copyInvitation: copyInvitation),
     );
   }
 }
@@ -572,8 +574,12 @@ final class _MemberDialogState extends State<_MemberDialog> {
 }
 
 final class _InvitationCodeDialog extends StatefulWidget {
-  const _InvitationCodeDialog({required this.issued});
+  const _InvitationCodeDialog({
+    required this.issued,
+    required this.copyInvitation,
+  });
   final IssuedInvitation issued;
+  final Future<bool> Function(String) copyInvitation;
   @override
   State<_InvitationCodeDialog> createState() => _InvitationCodeDialogState();
 }
@@ -623,13 +629,13 @@ final class _InvitationCodeDialogState extends State<_InvitationCodeDialog> {
   );
 
   Future<void> _copy() async {
-    try {
-      await Clipboard.setData(ClipboardData(text: widget.issued.code));
-      if (mounted) setState(() => _message = 'Code copied.');
-    } on PlatformException {
-      if (mounted) {
-        setState(() => _message = 'Select the code above to copy it manually.');
-      }
+    final copied = await widget.copyInvitation(widget.issued.code);
+    if (mounted) {
+      setState(
+        () => _message = copied
+            ? 'Code copied.'
+            : 'Select the code above to copy it manually.',
+      );
     }
   }
 }

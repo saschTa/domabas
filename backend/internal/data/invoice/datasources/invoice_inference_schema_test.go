@@ -20,6 +20,7 @@ func TestClassifiedInvoiceSchemaRejectsUnusableResponses(t *testing.T) {
 	}{
 		{"valid header", invoiceSchemaTestResponse, true},
 		{"optional buyer has no name", strings.Replace(invoiceSchemaTestResponse, `"vatAccounting":null`, `"vatAccounting":null,"buyer":{}`, 1), true},
+		{"blank optional identifier", strings.Replace(invoiceSchemaTestResponse, `"vatAccounting":null`, `"vatAccounting":null,"lines":[{"id":" \t "}]`, 1), true},
 		{"unknown dates empty", invoiceSchemaTestResponse, true},
 		{"unknown date null", strings.Replace(invoiceSchemaTestResponse, `"dueDate":""`, `"dueDate":null`, 1), true},
 		{"unknown total null", strings.Replace(invoiceSchemaTestResponse, `"totalNet":"100.00"`, `"totalNet":null`, 1), true},

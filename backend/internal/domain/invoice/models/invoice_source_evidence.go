@@ -31,7 +31,7 @@ func (p InvoiceEvidencePolicy) Accept(text string, v Invoice) (bool, error) {
 		dates = append(dates, reference.IssueDate)
 	}
 	for _, value := range identifiers {
-		if value != "" && !invoiceContainsIdentifier(text, value, dateSpans) {
+		if strings.TrimSpace(value) != "" && !invoiceContainsIdentifier(text, value, dateSpans) {
 			return false, ErrInvalid
 		}
 	}

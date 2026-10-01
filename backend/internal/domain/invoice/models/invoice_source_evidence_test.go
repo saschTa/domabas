@@ -11,7 +11,7 @@ func TestInvoiceEvidenceMatchesValuesWithoutLabels(t *testing.T) {
 	} {
 		accepted, err := (InvoiceEvidencePolicy{}).Accept(source, v)
 		if !accepted || err != nil {
-			t.Fatalf("printed facts rejected: %v", err)
+			t.Fatalf("printed facts rejected in %q: %v", source, err)
 		}
 	}
 }

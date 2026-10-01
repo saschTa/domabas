@@ -1,21 +1,16 @@
 package models
 
 import (
-	"regexp"
 	"strings"
+	"unicode"
 )
 
-var invoiceNumberToken = regexp.MustCompile(`(?:[+−-][ \t]*)?(?:[0-9]+(?:[.,'’\x{00a0}\x{202f}][0-9]+)*|[.,][0-9]+)`)
-
-func invoiceSourceNumbers(text string) map[string]bool {
+func invoiceSourceNumbers(text string, dates []invoiceSourceSpan, currencies ...string) map[string]bool {
 	values := make(map[string]bool)
 	var ambiguous []invoiceSourceNumber
 	dot, comma := false, false
-	for _, span := range invoiceNumberToken.FindAllStringIndex(text, -1) {
-		if !invoiceTokenBoundary(text, span[0], span[1]) {
-			continue
-		}
-		raw := text[span[0]:span[1]]
+	for _, span := range invoiceSourceNumberSpans(text, dates, currencies...) {
+		raw := text[span.start:span.end]
 		dotValue, dotOK := invoiceSourceDecimal(raw, '.')
 		commaValue, commaOK := invoiceSourceDecimal(raw, ',')
 		switch {
@@ -42,9 +37,24 @@ func invoiceSourceNumbers(text string) map[string]bool {
 }
 
 func invoiceSourceDecimal(raw string, separator byte) (string, bool) {
-	raw = strings.NewReplacer("−", "-", "\u00a0", " ", "\u202f", " ", "’", "'").Replace(raw)
+	raw = invoiceNumberPadding.ReplaceAllString(raw, "$1")
+	raw = strings.Map(func(r rune) rune {
+		if unicode.Is(unicode.Pd, r) {
+			return '-'
+		}
+		return r
+	}, raw)
+	raw = strings.NewReplacer("−", "-", "\u00a0", " ", "\u202f", " ", "\u2009", " ", "’", "'").Replace(raw)
 	sign := ""
+	if strings.HasPrefix(raw, "(") && strings.HasSuffix(raw, ")") {
+		sign, raw = "-", strings.TrimSpace(raw[1:len(raw)-1])
+	} else if strings.HasSuffix(raw, "-") {
+		sign, raw = "-", strings.TrimSpace(raw[:len(raw)-1])
+	}
 	if strings.HasPrefix(raw, "-") || strings.HasPrefix(raw, "+") {
+		if sign != "" {
+			return "", false
+		}
 		sign, raw = raw[:1], strings.TrimLeft(raw[1:], " \t")
 	}
 	if strings.Count(raw, string(separator)) > 1 {

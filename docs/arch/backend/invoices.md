@@ -57,7 +57,8 @@ Neither outcome deletes an existing invoice. Positive-only extraction uses an
 explicit schema containing only a required non-null `invoice` object; it has no
 `isInvoice` field. Its shared field definitions require a nonempty invoice number
 and seller name, uppercase three-letter currency syntax, and optional dates in ISO
-format or empty. Unknown buyer and other optional details can remain absent. Actual
+format, empty or null. Unknown totals, buyer and other optional details can remain
+absent or null; the adapter maps them to empty domain values. Actual
 calendar dates, recognized currencies and source facts still require application
 validation; schema-conforming JSON alone is insufficient. Failed grounding stays a
 visible extraction failure rather than changing the classification.
@@ -81,22 +82,45 @@ The model decides document purpose and the roles of parties and values. For exam
 identifier `SYN-42` and amount `1259.90` without recognizing either label.
 Finding a value cannot prove that the model assigned it to the correct field.
 
-Numeric comparisons use exact decimal strings, never floating point. They preserve
-signs and zero and normalize decimal comma/point and valid three-digit grouping
-with punctuation, apostrophes, nonbreaking spaces or narrow nonbreaking spaces.
-Ordinary spaces separate tokens, so table quantities and prices cannot be joined
-into a fabricated amount. Partial numbers, digits inside identifiers or dates, and
-malformed grouping cannot supply monetary evidence. A single separator before
-three digits is ambiguous: another unambiguous number must establish a consistent
-decimal convention before that token is accepted. Mixed conventions do not resolve
-such tokens. Numeric scripts other than ASCII digits are currently unsupported.
+Identifiers use escaped, case-insensitive regexes. Letters, digits and leading
+zeros remain significant. Matching accepts OCR whitespace around hyphens, slashes,
+periods and underscores, typographic hyphen variants, and gaps between letters and
+digits. It preserves whole-identifier boundaries, including spaced suffixes, and
+recognizes the abbreviated prefixes `Nr.` and `No.` without requiring an invoice
+label. Regex metacharacters in identifiers are literal. Whitespace is not removed
+between arbitrary digits or letters.
 
-Dates require a complete numeric calendar date with a four-digit year and a
-consistent dash, slash or period separator. Year-first dates normalize as year,
-month, day. Year-last dates are accepted only when day/month order is unambiguous
-(or both interpretations give the same date). Named months and two-digit years
-are currently unsupported. The prompts give decimal and date normalization
-examples and tell the model to leave unknown or ambiguous optional values absent.
+Numeric candidates use regexes followed by exact decimal-string comparison, never
+floating point. Matching preserves signs and zero, supports leading signs,
+accounting parentheses and attached trailing minus signs, and normalizes decimal comma/point
+and valid three-digit grouping with punctuation, apostrophes, nonbreaking, narrow
+nonbreaking or thin spaces. Horizontal whitespace around numeric punctuation is
+accepted. Ordinary single-space grouping is accepted only when the grouped number
+is the sole numeric expression on its physical line. Tabs, multiple column spaces,
+line breaks and additional numeric cells prevent this grouping. Text alone cannot
+distinguish an isolated grouped number from two cells with the same representation;
+the extracted record still needs review. Grouped-number components cannot supply
+separate numeric evidence. Numbers may touch either declared invoice currency code
+or common quantity suffixes such as `kg`, `m`, `Stk` and `h`; arbitrary identifier
+letters remain boundaries. Complete date spans cannot supply numeric evidence.
+A single comma or point before three digits remains ambiguous: another unambiguous
+number must establish a consistent decimal convention before that token is accepted.
+Mixed conventions do not resolve such tokens. Non-ASCII digits and grouping schemes
+other than three-digit groups are unsupported. AI output still uses canonical
+decimal strings without grouping, whitespace or a leading plus.
+
+Dates use regex captures followed by calendar validation. Numeric dates accept
+whitespace around consistent dash, slash or period separators, including line
+wraps. Year-first dates use year/month/day. English and German month names and
+abbreviations support day-first and month-first forms with four-digit years.
+Unambiguous numeric dates establish day/month order for other dates with the same
+separator. Dotted dates default to day/month/year when no order is established;
+conflicting evidence leaves ambiguous dates unsupported. Slash and year-last dash
+dates have no default order. Two-digit years require a complete valid date elsewhere
+in the supplied text establishing a unique matching full year. No century is
+inferred from the current time. Unsupported or ambiguous optional values stay empty,
+null or absent; zero is not a substitute for an unknown amount. The shared prompts
+describe these conventions for both current and retained extraction paths.
 Schema-derived type, unit, tax-category and payment-means codes are outside source
 occurrence checks. No totals are calculated. Accepted records retain their AI
 review label; these checks do not verify party roles or payment instructions.
@@ -130,7 +154,8 @@ classification and extraction prompts require English JSON regardless of source
 language. Classification and extraction both use the accepted invoice thinking
 preference, independently of property extraction.
 Both extraction paths share concise field instructions and the full field schema.
-Names, addresses and identifiers stay verbatim. Date examples show conversion to
+Names and addresses are preserved; identifier normalization is limited to the
+formatting equivalents described above. Date examples show conversion to
 zero-padded `YYYY-MM-DD` without a time; unsupported, invalid or ambiguous dates
 remain empty. Missing values must not be invented or calculated.
 Invoice classification, invoice extraction, property extraction and chat use

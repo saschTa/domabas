@@ -6,10 +6,10 @@ const invoiceExtractionSchema = `{"type":"object","additionalProperties":false,"
 
 const invoiceObjectFields = `
 "additionalProperties":false,
-"required":["number","currency","totalNet","totalTax","totalGross","seller","vatAccounting"],
+"required":["number","currency","seller"],
 "properties":{
   "number":{"type":"string","minLength":1,"maxLength":4000},
-  "typeCode":{"type":"string"},
+  "typeCode":{"type":["string","null"]},
   "issueDate":{"$ref":"#/$defs/date"},
   "dueDate":{"$ref":"#/$defs/date"},
   "currency":{"$ref":"#/$defs/currency"},
@@ -20,20 +20,20 @@ const invoiceObjectFields = `
   "paidAmount":{"$ref":"#/$defs/decimal"},
   "roundingAmount":{"$ref":"#/$defs/decimal"},
   "seller":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":4000},` + invoicePartyFields + `},"additionalProperties":false},
-  "buyer":{"type":"object","properties":{"name":{"type":"string"},` + invoicePartyFields + `},"additionalProperties":false},
-  "lines":{"type":"array","maxItems":200,"items":{"type":"object","properties":{"id":{"type":"string"},"description":{"type":"string"},"quantity":{"$ref":"#/$defs/decimal"},"unitCode":{"type":"string"},"unitPrice":{"$ref":"#/$defs/decimal"},"netAmount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":"string"},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
-  "taxes":{"type":"array","maxItems":50,"items":{"type":"object","properties":{"category":{"type":"string"},"rate":{"$ref":"#/$defs/decimal"},"taxableAmount":{"$ref":"#/$defs/decimal"},"taxAmount":{"$ref":"#/$defs/decimal"},"exemptionReason":{"type":"string"}},"additionalProperties":false}},
-  "allowances":{"type":"array","maxItems":100,"items":{"type":"object","properties":{"charge":{"type":"boolean"},"reason":{"type":"string"},"amount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":"string"},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
-  "references":{"type":"array","maxItems":50,"items":{"type":"object","properties":{"number":{"type":"string","minLength":1,"maxLength":4000},"issueDate":{"$ref":"#/$defs/date"}},"required":["number"],"additionalProperties":false}},
-  "payment":{"type":"object","properties":{"meansCode":{"type":"string"},"reference":{"type":"string"},"iban":{"type":"string"},"bic":{"type":"string"},"terms":{"type":"string"}},"additionalProperties":false},
-  "notes":{"type":"array","maxItems":50,"items":{"type":"string"}},
+  "buyer":{"type":["object","null"],"properties":{"name":{"type":["string","null"]},` + invoicePartyFields + `},"additionalProperties":false},
+  "lines":{"type":["array","null"],"maxItems":200,"items":{"type":"object","properties":{"id":{"type":["string","null"]},"description":{"type":["string","null"]},"quantity":{"$ref":"#/$defs/decimal"},"unitCode":{"type":["string","null"]},"unitPrice":{"$ref":"#/$defs/decimal"},"netAmount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":["string","null"]},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
+  "taxes":{"type":["array","null"],"maxItems":50,"items":{"type":"object","properties":{"category":{"type":["string","null"]},"rate":{"$ref":"#/$defs/decimal"},"taxableAmount":{"$ref":"#/$defs/decimal"},"taxAmount":{"$ref":"#/$defs/decimal"},"exemptionReason":{"type":["string","null"]}},"additionalProperties":false}},
+  "allowances":{"type":["array","null"],"maxItems":100,"items":{"type":"object","properties":{"charge":{"type":["boolean","null"]},"reason":{"type":["string","null"]},"amount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":["string","null"]},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
+  "references":{"type":["array","null"],"maxItems":50,"items":{"type":"object","properties":{"number":{"type":"string","minLength":1,"maxLength":4000},"issueDate":{"$ref":"#/$defs/date"}},"required":["number"],"additionalProperties":false}},
+  "payment":{"type":["object","null"],"properties":{"meansCode":{"type":["string","null"]},"reference":{"type":["string","null"]},"iban":{"type":["string","null"]},"bic":{"type":["string","null"]},"terms":{"type":["string","null"]}},"additionalProperties":false},
+  "notes":{"type":["array","null"],"maxItems":50,"items":{"type":["string","null"]}},
   "vatAccounting":{"description":"VAT reported in a different accounting currency; never repeat ordinary invoice VAT here.","anyOf":[{"type":"null","description":"All VAT is in the invoice currency."},{"type":"object","additionalProperties":false,"required":["currency","amount"],"properties":{"currency":{"$ref":"#/$defs/currency"},"amount":{"type":"string","pattern":"^-?(0|[1-9][0-9]{0,23})(\\.[0-9]{1,12})?$"}}}]}
 }`
 
-const invoicePartyFields = `"taxId":{"type":"string"},"registrationId":{"type":"string"},"address":{"type":"string"},"country":{"type":"string"},"email":{"type":"string"}`
+const invoicePartyFields = `"taxId":{"type":["string","null"]},"registrationId":{"type":["string","null"]},"address":{"type":["string","null"]},"country":{"type":["string","null"]},"email":{"type":["string","null"]}`
 
 const invoiceInferenceDefinitions = `{
-  "decimal":{"type":"string","pattern":"^(-?(0|[1-9][0-9]{0,23})(\\.[0-9]{1,12})?)?$"},
+  "decimal":{"type":["string","null"],"pattern":"^(-?(0|[1-9][0-9]{0,23})(\\.[0-9]{1,12})?)?$"},
   "currency":{"type":"string","pattern":"^[A-Z]{3}$"},
-  "date":{"type":"string","pattern":"^([0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]))?$"}
+  "date":{"type":["string","null"],"pattern":"^([0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]))?$"}
 }`

@@ -6,6 +6,11 @@ Existing titles and populated properties stay unchanged. Empty description, tags
 sender, recipients, date and subject can be filled from OCR. Check extracted data
 when using it: a model can infer an incorrect value.
 
+Extraction requests all six fields and instructs the model to return `null` for
+unknown or ambiguous facts instead of inventing data. Such values leave metadata
+empty. A required output field does not require a guessed value, and existing
+populated properties remain unchanged.
+
 Choose Internal Ollama and keep `qwen3.5:4b`, or enter another model name. The first
 job that needs an absent model downloads it into the persistent Ollama cache.
 Jobs shows the property extraction stage while this happens. A slow download may

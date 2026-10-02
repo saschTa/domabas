@@ -247,7 +247,7 @@ func TestExternalAuthenticationAndInvalidOutputs(t *testing.T) {
 		{"valid", properties, "stop", 200, false, false},
 		{"empty object", `{}`, "stop", 200, true, false},
 		{"missing properties", `{"description":"summary"}`, "stop", 200, true, false},
-		{"null properties", `{"description":null,"tags":null,"sender":null,"recipients":null,"documentDate":null,"subject":null}`, "stop", 200, true, false},
+		{"null properties", `{"description":null,"tags":null,"sender":null,"recipients":null,"documentDate":null,"subject":null}`, "stop", 200, false, false},
 		{"empty properties", `{"description":"","tags":[],"sender":"","recipients":[],"documentDate":"","subject":""}`, "stop", 200, false, false},
 		{"unknown field", `{"title":"do not overwrite"}`, "stop", 200, true, false},
 		{"trailing object", properties + `{}`, "stop", 200, true, false},

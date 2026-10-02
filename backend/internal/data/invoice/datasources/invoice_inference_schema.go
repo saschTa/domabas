@@ -6,9 +6,9 @@ const invoiceExtractionSchema = `{"type":"object","additionalProperties":false,"
 
 const invoiceObjectFields = `
 "additionalProperties":false,
-"required":["number","currency","seller"],
+"required":["number","typeCode","issueDate","dueDate","currency","totalNet","totalTax","totalGross","amountDue","paidAmount","roundingAmount","seller","buyer","lines","taxes","allowances","references","payment","notes","vatAccounting"],
 "properties":{
-  "number":{"type":"string","minLength":1,"maxLength":4000},
+  "number":{"type":["string","null"],"minLength":1,"maxLength":4000},
   "typeCode":{"type":["string","null"]},
   "issueDate":{"$ref":"#/$defs/date"},
   "dueDate":{"$ref":"#/$defs/date"},
@@ -19,21 +19,23 @@ const invoiceObjectFields = `
   "amountDue":{"$ref":"#/$defs/decimal"},
   "paidAmount":{"$ref":"#/$defs/decimal"},
   "roundingAmount":{"$ref":"#/$defs/decimal"},
-  "seller":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":4000},` + invoicePartyFields + `},"additionalProperties":false},
-  "buyer":{"type":["object","null"],"properties":{"name":{"type":["string","null"]},` + invoicePartyFields + `},"additionalProperties":false},
-  "lines":{"type":["array","null"],"maxItems":200,"items":{"type":"object","properties":{"id":{"type":["string","null"]},"description":{"type":["string","null"]},"quantity":{"$ref":"#/$defs/decimal"},"unitCode":{"type":["string","null"]},"unitPrice":{"$ref":"#/$defs/decimal"},"netAmount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":["string","null"]},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
-  "taxes":{"type":["array","null"],"maxItems":50,"items":{"type":"object","properties":{"category":{"type":["string","null"]},"rate":{"$ref":"#/$defs/decimal"},"taxableAmount":{"$ref":"#/$defs/decimal"},"taxAmount":{"$ref":"#/$defs/decimal"},"exemptionReason":{"type":["string","null"]}},"additionalProperties":false}},
-  "allowances":{"type":["array","null"],"maxItems":100,"items":{"type":"object","properties":{"charge":{"type":["boolean","null"]},"reason":{"type":["string","null"]},"amount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":["string","null"]},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
-  "references":{"type":["array","null"],"maxItems":50,"items":{"type":"object","properties":{"number":{"type":"string","minLength":1,"maxLength":4000},"issueDate":{"$ref":"#/$defs/date"}},"required":["number"],"additionalProperties":false}},
-  "payment":{"type":["object","null"],"properties":{"meansCode":{"type":["string","null"]},"reference":{"type":["string","null"]},"iban":{"type":["string","null"]},"bic":{"type":["string","null"]},"terms":{"type":["string","null"]}},"additionalProperties":false},
+  "seller":{"type":["object","null"],"required":` + invoicePartyRequired + `,"properties":{"name":{"type":["string","null"],"minLength":1,"maxLength":4000},` + invoicePartyFields + `},"additionalProperties":false},
+  "buyer":{"type":["object","null"],"required":` + invoicePartyRequired + `,"properties":{"name":{"type":["string","null"]},` + invoicePartyFields + `},"additionalProperties":false},
+  "lines":{"type":["array","null"],"maxItems":200,"items":{"type":"object","required":["id","description","quantity","unitCode","unitPrice","netAmount","taxCategory","taxRate"],"properties":{"id":{"type":["string","null"],"description":"Printed line or position number, not a product or material code."},"description":{"type":["string","null"]},"quantity":{"$ref":"#/$defs/decimal"},"unitCode":{"type":["string","null"]},"unitPrice":{"$ref":"#/$defs/decimal"},"netAmount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":["string","null"]},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
+  "taxes":{"type":["array","null"],"maxItems":50,"items":{"type":"object","required":["category","rate","taxableAmount","taxAmount","exemptionReason"],"properties":{"category":{"type":["string","null"]},"rate":{"$ref":"#/$defs/decimal"},"taxableAmount":{"$ref":"#/$defs/decimal"},"taxAmount":{"$ref":"#/$defs/decimal"},"exemptionReason":{"type":["string","null"]}},"additionalProperties":false}},
+  "allowances":{"type":["array","null"],"maxItems":100,"items":{"type":"object","required":["charge","reason","amount","taxCategory","taxRate"],"properties":{"charge":{"type":["boolean","null"]},"reason":{"type":["string","null"]},"amount":{"$ref":"#/$defs/decimal"},"taxCategory":{"type":["string","null"]},"taxRate":{"$ref":"#/$defs/decimal"}},"additionalProperties":false}},
+  "references":{"type":["array","null"],"maxItems":50,"items":{"type":"object","properties":{"number":{"type":["string","null"],"minLength":1,"maxLength":4000},"issueDate":{"$ref":"#/$defs/date"}},"required":["number","issueDate"],"additionalProperties":false}},
+  "payment":{"type":["object","null"],"required":["meansCode","reference","iban","bic","terms"],"properties":{"meansCode":{"type":["string","null"]},"reference":{"type":["string","null"]},"iban":{"type":["string","null"]},"bic":{"type":["string","null"]},"terms":{"type":["string","null"]}},"additionalProperties":false},
   "notes":{"type":["array","null"],"maxItems":50,"items":{"type":["string","null"]}},
-  "vatAccounting":{"description":"VAT reported in a different accounting currency; never repeat ordinary invoice VAT here.","anyOf":[{"type":"null","description":"All VAT is in the invoice currency."},{"type":"object","additionalProperties":false,"required":["currency","amount"],"properties":{"currency":{"$ref":"#/$defs/currency"},"amount":{"type":"string","pattern":"^-?(0|[1-9][0-9]{0,23})(\\.[0-9]{1,12})?$"}}}]}
+  "vatAccounting":{"description":"VAT reported in a different accounting currency; never repeat ordinary invoice VAT here.","anyOf":[{"type":"null","description":"All VAT is in the invoice currency."},{"type":"object","additionalProperties":false,"required":["currency","amount"],"properties":{"currency":{"$ref":"#/$defs/currency"},"amount":{"$ref":"#/$defs/decimal"}}}]}
 }`
 
 const invoicePartyFields = `"taxId":{"type":["string","null"]},"registrationId":{"type":["string","null"]},"address":{"type":["string","null"]},"country":{"type":["string","null"]},"email":{"type":["string","null"]}`
 
+const invoicePartyRequired = `["name","taxId","registrationId","address","country","email"]`
+
 const invoiceInferenceDefinitions = `{
   "decimal":{"type":["string","null"],"pattern":"^(-?(0|[1-9][0-9]{0,23})(\\.[0-9]{1,12})?)?$"},
-  "currency":{"type":"string","pattern":"^[A-Z]{3}$"},
+  "currency":{"type":["string","null"],"pattern":"^[A-Z]{3}$"},
   "date":{"type":["string","null"],"pattern":"^([0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]))?$"}
 }`

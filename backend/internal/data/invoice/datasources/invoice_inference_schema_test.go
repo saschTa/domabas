@@ -13,7 +13,9 @@ import (
 const invoiceSchemaTestResponse = `{"invoice":{"number":"INV-1","issueDate":"","dueDate":"","currency":"EUR","seller":{"name":"Supplier"},"totalNet":"100.00","totalTax":"19.00","totalGross":"119.00","vatAccounting":null}}`
 const invoiceSchemaTestSource = "Invoice No. INV-1\nSupplier\nGrand Total: 119.00 EUR\nNet: 100.00\nVAT: 19.00\n29.02.2024"
 
-func TestClassifiedInvoiceSchemaRejectsUnusableResponses(t *testing.T) {
+const invoiceSchemaCompleteResponse = `{"invoice":{"number":"INV-1","typeCode":null,"issueDate":"","dueDate":"","currency":"EUR","totalNet":"100.00","totalTax":"19.00","totalGross":"119.00","amountDue":null,"paidAmount":null,"roundingAmount":null,"seller":{"name":"Supplier","taxId":null,"registrationId":null,"address":null,"country":null,"email":null},"buyer":null,"lines":[],"taxes":[],"allowances":[],"references":[],"payment":null,"notes":[],"vatAccounting":null}}`
+
+func TestClassifiedInvoiceAdapterRejectsUnusableResponses(t *testing.T) {
 	for _, scenario := range []struct {
 		name, response string
 		valid          bool
@@ -54,9 +56,6 @@ func TestClassifiedInvoiceSchemaRejectsUnusableResponses(t *testing.T) {
 			if inference.temperature != 0.2 {
 				t.Fatalf("extraction temperature: %v", inference.temperature)
 			}
-			if valid := invoiceSchemaValid(t, inference.schema, scenario.response); valid != scenario.valid {
-				t.Fatalf("request schema accepted=%t; expected %t", valid, scenario.valid)
-			}
 			if valid := err == nil && value != nil; valid != scenario.valid {
 				t.Fatalf("adapter accepted=%t; error=%v", valid, err)
 			}
@@ -65,7 +64,7 @@ func TestClassifiedInvoiceSchemaRejectsUnusableResponses(t *testing.T) {
 }
 
 func TestInvoiceSchemaRetainsLegacyNegativeAndPositive(t *testing.T) {
-	for _, response := range []string{`{"isInvoice":false,"invoice":null}`, strings.Replace(invoiceSchemaTestResponse, `{"invoice":`, `{"isInvoice":true,"invoice":`, 1)} {
+	for _, response := range []string{`{"isInvoice":false,"invoice":null}`, strings.Replace(invoiceSchemaCompleteResponse, `{"invoice":`, `{"isInvoice":true,"invoice":`, 1)} {
 		inference := &inferenceFixture{response: response}
 		_, err := NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{}, "", invoiceSchemaTestSource)
 		if err != nil || !invoiceSchemaValid(t, inference.schema, response) {
@@ -76,10 +75,10 @@ func TestInvoiceSchemaRetainsLegacyNegativeAndPositive(t *testing.T) {
 
 func TestInvoiceSchemaKeepsCalendarAndSourceValidation(t *testing.T) {
 	for _, scenario := range []struct{ name, response, source string }{
-		{"impossible calendar date", strings.Replace(invoiceSchemaTestResponse, `"dueDate":""`, `"dueDate":"2026-02-30"`, 1), invoiceSchemaTestSource},
-		{"invented total", strings.Replace(invoiceSchemaTestResponse, `"totalGross":"119.00"`, `"totalGross":"120.00"`, 1), invoiceSchemaTestSource},
-		{"invented date", strings.Replace(invoiceSchemaTestResponse, `"issueDate":""`, `"issueDate":"2026-09-16"`, 1), invoiceSchemaTestSource},
-		{"ordinary VAT copied into accounting VAT", strings.Replace(invoiceSchemaTestResponse, `"vatAccounting":null`, `"vatAccounting":{"currency":"EUR","amount":"19.00"}`, 1), invoiceSchemaTestSource},
+		{"impossible calendar date", strings.Replace(invoiceSchemaCompleteResponse, `"dueDate":""`, `"dueDate":"2026-02-30"`, 1), invoiceSchemaTestSource},
+		{"invented total", strings.Replace(invoiceSchemaCompleteResponse, `"totalGross":"119.00"`, `"totalGross":"120.00"`, 1), invoiceSchemaTestSource},
+		{"invented date", strings.Replace(invoiceSchemaCompleteResponse, `"issueDate":""`, `"issueDate":"2026-09-16"`, 1), invoiceSchemaTestSource},
+		{"ordinary VAT copied into accounting VAT", strings.Replace(invoiceSchemaCompleteResponse, `"vatAccounting":null`, `"vatAccounting":{"currency":"EUR","amount":"19.00"}`, 1), invoiceSchemaTestSource},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			inference := &inferenceFixture{response: scenario.response}

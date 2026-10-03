@@ -408,7 +408,7 @@ final class _ScannerScreenState extends State<ScannerScreen>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Drag the numbered corners to the page edges, or use the corner controls below. Keep the corners in order without crossing edges.',
+          'Drag a numbered corner or any edge to fit the page. You can also use the corner controls below. Keep the corners in order without crossing edges.',
         ),
         SizedBox(
           height: previewHeight,
@@ -419,6 +419,7 @@ final class _ScannerScreenState extends State<ScannerScreen>
             selected: _selectedCorner,
             onSelect: (index) => setState(() => _selectedCorner = index),
             onMove: state.editable ? widget.cubit.moveCorner : null,
+            onMoveEdge: state.editable ? widget.cubit.moveEdge : null,
             child: ScanImage(
               bytes: capture.preview,
               fit: BoxFit.contain,

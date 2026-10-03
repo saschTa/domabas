@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import '../../../domain/scanner/models/scan.dart';
+import '../models/scan_image_limits.dart';
 
 final class ScanStorageCoordinator {
   ScanStorageCoordinator(this.root, {ScanStorageUsage? usage})
@@ -68,7 +69,9 @@ final class ScanStorageCoordinator {
           final used = await _usage.bytes(owner, includeScratch: false);
           final ownerReserved = _ownerReservations[owner.path] ?? 0;
           final scratchReserved = _scratchReservations[owner.path] ?? 0;
-          if (scratch && scratchReserved + bytes > 24 * 1024 * 1024) {
+          if (scratch &&
+              scratchReserved + bytes >
+                  ScanImageLimits.scratchReservationBytes) {
             throw const ScanFailure(
               'The capture exceeds scanner scratch space.',
             );

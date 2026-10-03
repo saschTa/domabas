@@ -303,10 +303,19 @@ skipped; the production encoder still runs.
 
 `flutter test integration_test/scanner_native_fixture_test.dart -d <device-id>`
 runs the real native detector on a simulator or supported device without opening
-a physical camera. Add `--dart-define=SCANNER_FIXTURE_EXPORT=true` to write temporary
+a physical camera. Its faint-page fixtures compare ordinary and adaptive detection
+on still files and live frame layouts under even lighting and a brightness
+gradient, and verify corner positions and empty-scene rejection. Pure adapter
+tests in `test/unit/scanner_detection_independent_test.dart` also check strides,
+bounded analysis, preview reuse and cancellation between detector passes.
+Add `--dart-define=SCANNER_FIXTURE_EXPORT=true` to write temporary
 image evidence under the test app's Documents/scanner-fixture-evidence. Flutter's
 automatic test-app uninstall can remove that container; the executed pixel
 assertions and command log remain the native verification record.
+Before returning to Xcode after a native fixture, restore the app entry point
+with `task build:ios` from the repository root. The [local app build guide](build-apps.md#macos-and-ios)
+also gives a configuration-only refresh command; otherwise Xcode can retain a
+temporary test runner path that no longer exists.
 The test-only `integration_test/scanner_preview.dart` entry point supports browser
 inspection of the scanner UI without changing production platform factories.
 

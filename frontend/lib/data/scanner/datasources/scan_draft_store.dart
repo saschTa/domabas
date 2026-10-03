@@ -8,6 +8,7 @@ import 'package:image/image.dart' as img;
 
 import '../../../domain/document/models/document.dart';
 import '../../../domain/scanner/models/scan.dart';
+import '../models/scan_image_limits.dart';
 import 'scan_storage_coordinator.dart';
 
 final class ScanDraftStore {
@@ -101,15 +102,18 @@ final class ScanDraftStore {
             page['id'] is! String) {
           throw const FormatException('Invalid page revision');
         }
-        final bytes = await verifyAsset(value, page, 'file', 3 * 1024 * 1024);
+        final bytes = await verifyAsset(
+          value,
+          page,
+          'file',
+          ScanImageLimits.maxPageBytes,
+        );
         total += bytes.length;
         final header = img.JpegDecoder().startDecode(bytes);
         if (header == null ||
             header.width != page['width'] ||
             header.height != page['height'] ||
-            header.width <= 0 ||
-            header.height <= 0 ||
-            max(header.width, header.height) > 2000) {
+            !ScanImageLimits.validDimensions(header.width, header.height)) {
           throw const FormatException('Invalid saved page');
         }
         final thumb = await verifyAsset(value, page, 'thumbnail', 64 * 1024);

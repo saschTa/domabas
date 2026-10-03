@@ -6,7 +6,9 @@ import 'package:camera_platform_interface/camera_platform_interface.dart'
     as platform;
 import 'package:document_scan/document_scan.dart' as scan;
 import 'package:domabas/app/scanner_scope.dart';
+import 'package:domabas/data/scanner/datasources/adaptive_scan_detector.dart';
 import 'package:domabas/data/scanner/datasources/native_scanner_camera.dart';
+import 'package:domabas/data/scanner/datasources/scan_detection_contrast.dart';
 import 'package:domabas/domain/document/models/document.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
 import 'package:domabas/domain/scanner/models/scan.dart';
@@ -45,7 +47,7 @@ void main() {
               await file.readAsBytes(),
             );
             final input = scan.ScanInput.file(file.path);
-            final corners = await scan.DocumentDetector().detect(input);
+            final corners = await AdaptiveScanDetector().detect(input);
             expect(
               corners,
               isNotNull,
@@ -89,7 +91,7 @@ void main() {
           );
           for (final rotation in [0, 90, 180, 270]) {
             final input = NativeScannerCamera.frameInput(frame, rotation);
-            final corners = await scan.DocumentDetector().detect(input);
+            final corners = await AdaptiveScanDetector().detect(input);
             expect(
               corners,
               isNotNull,
@@ -112,6 +114,107 @@ void main() {
               corrected.bytes,
             );
           }
+        }
+      });
+    },
+  );
+
+  testWidgets(
+    'adaptive native detection finds faint pages and rejects empty scenes',
+    (tester) async {
+      await tester.runAsync(() async {
+        final root = await Directory.systemTemp.createTemp(
+          'domabas-faint-page-',
+        );
+        try {
+          var recovered = 0;
+          final missed = <String>[];
+          for (final contrast in [8, 12, 20]) {
+            for (final shadow in [false, true]) {
+              final source = _faintDocument(contrast, shadow: shadow);
+              final file = File('${root.path}/faint-$contrast-$shadow.jpg');
+              await file.writeAsBytes(img.encodeJpg(source, quality: 95));
+              final inputs = <scan.ScanInput>[
+                scan.ScanInput.file(file.path),
+                NativeScannerCamera.frameInput(
+                  CameraImage.fromPlatformInterface(
+                    _cameraFrame(
+                      source,
+                      Platform.isIOS
+                          ? ImageFormatGroup.bgra8888
+                          : ImageFormatGroup.yuv420,
+                    ),
+                  ),
+                  0,
+                ),
+              ];
+              for (final input in inputs) {
+                final baseline = await scan.DocumentDetector().detect(input);
+                final corners = await AdaptiveScanDetector().detect(
+                  input,
+                  uprightPreview: input is scan.FileScanInput
+                      ? img.encodeJpg(source, quality: 85)
+                      : null,
+                );
+                debugPrint(
+                  'Faint page contrast=$contrast shadow=$shadow ${input.runtimeType}: baseline=${baseline != null} adaptive=${corners != null}',
+                );
+                if (corners == null) {
+                  missed.add('$contrast/$shadow/${input.runtimeType}');
+                } else {
+                  _expectCorners(corners, 0);
+                  if (baseline == null) recovered++;
+                }
+              }
+              if (contrast == 8 && shadow) {
+                for (final rotation in [90, 180, 270]) {
+                  final frame = NativeScannerCamera.frameInput(
+                    CameraImage.fromPlatformInterface(
+                      _cameraFrame(source, ImageFormatGroup.bgra8888),
+                    ),
+                    rotation,
+                  );
+                  final corners = await AdaptiveScanDetector().detect(frame);
+                  expect(corners, isNotNull);
+                  _expectCorners(corners!, rotation);
+                  final enhanced = prepareScanDetectionContrast(frame);
+                  expect(enhanced, isNotNull);
+                  final fallback = await scan.DocumentDetector().detect(
+                    enhanced!,
+                    sensitivity: scan.DetectionSensitivity.lenient,
+                  );
+                  expect(fallback, isNotNull);
+                  _expectCorners(fallback!, rotation, tolerance: .03);
+                }
+              }
+              await _export(
+                'faint-$contrast-$shadow.jpg',
+                await file.readAsBytes(),
+              );
+            }
+          }
+          debugPrint(
+            'Faint page fixtures recovered by adaptive detection: $recovered',
+          );
+          expect(missed, isEmpty);
+          for (final noise in [0, 4, 16]) {
+            final empty = img.Image(width: 800, height: 1000);
+            for (final pixel in empty) {
+              final value =
+                  210 +
+                  (noise > 0 ? (pixel.x * 31 + pixel.y * 17) % (noise + 1) : 0);
+              pixel.setRgb(value, value, value);
+            }
+            final input = NativeScannerCamera.frameInput(
+              CameraImage.fromPlatformInterface(
+                _cameraFrame(empty, ImageFormatGroup.bgra8888),
+              ),
+              0,
+            );
+            expect(await AdaptiveScanDetector().detect(input), isNull);
+          }
+        } finally {
+          await root.delete(recursive: true);
         }
       });
     },
@@ -289,6 +392,19 @@ img.Image _document() {
   return image;
 }
 
+img.Image _faintDocument(int contrast, {required bool shadow}) {
+  final source = _document();
+  for (final pixel in source) {
+    final page =
+        pixel.x >= 80 && pixel.x <= 620 && pixel.y >= 90 && pixel.y <= 910;
+    final paper = pixel.r == 250 && pixel.g == 250 && pixel.b == 250;
+    final illumination = shadow ? (45 * pixel.x / source.width).round() : 0;
+    final value = (page ? (paper ? 210 + contrast : 100) : 210) - illumination;
+    pixel.setRgb(value, value, value);
+  }
+  return img.gaussianBlur(source, radius: 4);
+}
+
 platform.CameraImageData _cameraFrame(
   img.Image image,
   ImageFormatGroup format,
@@ -351,7 +467,11 @@ platform.CameraImageData _cameraFrame(
   );
 }
 
-void _expectCorners(scan.DocumentCorners corners, int rotation) {
+void _expectCorners(
+  scan.DocumentCorners corners,
+  int rotation, {
+  double tolerance = .025,
+}) {
   final expected = switch (rotation) {
     0 => [
       (x: .10, y: .09),
@@ -383,12 +503,12 @@ void _expectCorners(scan.DocumentCorners corners, int rotation) {
   for (var index = 0; index < 4; index++) {
     expect(
       actual[index].x,
-      closeTo(expected[index].x, .025),
+      closeTo(expected[index].x, tolerance),
       reason: 'rotation $rotation corner $index x',
     );
     expect(
       actual[index].y,
-      closeTo(expected[index].y, .025),
+      closeTo(expected[index].y, tolerance),
       reason: 'rotation $rotation corner $index y',
     );
   }

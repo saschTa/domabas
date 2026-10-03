@@ -26,6 +26,98 @@ void main() {
     await cubit.keepPage();
   }
 
+  for (var edge = 0; edge < 4; edge++) {
+    test(
+      'edge $edge moves both endpoints and preserves its slope at image bounds',
+      () async {
+        await cubit.restore();
+        await cubit.addPage();
+        await cubit.capture();
+        const original = [
+          ScanPoint(.15, .1),
+          ScanPoint(.85, .2),
+          ScanPoint(.8, .9),
+          ScanPoint(.2, .8),
+        ];
+        for (var i = 0; i < 4; i++) {
+          cubit.moveCorner(i, original[i]);
+        }
+        final next = (edge + 1) % 4;
+        final first = original[edge], second = original[next];
+        cubit.moveEdge(
+          edge,
+          ScanPoint(
+            (first.x + second.x) / 2 + .03,
+            (first.y + second.y) / 2 + .04,
+          ),
+        );
+        final moved = cubit.state.corners!.points;
+        for (var i = 0; i < 4; i++) {
+          if (i == edge || i == next) {
+            expect(moved[i].x, closeTo(original[i].x + .03, 1e-9));
+            expect(moved[i].y, closeTo(original[i].y + .04, 1e-9));
+          } else {
+            expect(moved[i].x, original[i].x);
+            expect(moved[i].y, original[i].y);
+          }
+        }
+        for (final target in [
+          const ScanPoint(-10, 10),
+          const ScanPoint(10, -10),
+        ]) {
+          cubit.moveEdge(edge, target);
+          final bounded = cubit.state.corners!.points;
+          expect(
+            bounded.every((p) => p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1),
+            isTrue,
+          );
+          expect(
+            bounded[next].x - bounded[edge].x,
+            closeTo(second.x - first.x, 1e-9),
+          );
+          expect(
+            bounded[next].y - bounded[edge].y,
+            closeTo(second.y - first.y, 1e-9),
+          );
+          expect([
+            bounded[edge].x,
+            bounded[next].x,
+          ], contains(closeTo(target.x < 0 ? 0 : 1, 1e-9)));
+          expect([
+            bounded[edge].y,
+            bounded[next].y,
+          ], contains(closeTo(target.y < 0 ? 0 : 1, 1e-9)));
+        }
+      },
+    );
+  }
+
+  test(
+    'edge edits reject invalid input, other stages and in-flight page saves',
+    () async {
+      await cubit.restore();
+      final review = cubit.state;
+      cubit.moveEdge(0, const ScanPoint(.5, .2));
+      expect(cubit.state, same(review));
+      await cubit.addPage();
+      await cubit.capture();
+      final correction = cubit.state;
+      cubit.moveEdge(-1, const ScanPoint(.5, .2));
+      cubit.moveEdge(4, const ScanPoint(.5, .2));
+      cubit.moveEdge(0, const ScanPoint(double.nan, .2));
+      cubit.moveEdge(0, const ScanPoint(.5, double.infinity));
+      expect(cubit.state, same(correction));
+      repository.saveGate = Completer<void>();
+      cubit.setProperties(scanProperties({'title': 'Saving page'}));
+      final keeping = cubit.keepPage();
+      final corners = cubit.state.corners;
+      cubit.moveEdge(0, const ScanPoint(.5, .2));
+      expect(cubit.state.corners, same(corners));
+      repository.saveGate!.complete();
+      await keeping;
+    },
+  );
+
   test('upload permission gates every public operation before camera or repository admission', () async {
     await cubit.close();
     cubit = ScannerCubit(

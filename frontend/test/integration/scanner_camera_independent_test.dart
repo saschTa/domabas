@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -10,6 +11,7 @@ import 'package:domabas/data/scanner/datasources/native_scanner_camera.dart';
 import 'package:domabas/data/scanner/datasources/scan_draft_store.dart';
 import 'package:domabas/data/scanner/datasources/scan_pdf_encoder.dart';
 import 'package:domabas/data/scanner/datasources/scan_storage_coordinator.dart';
+import 'package:domabas/data/scanner/models/scan_image_limits.dart';
 import 'package:domabas/data/scanner/repos/local_scan_draft_repository.dart';
 import 'package:domabas/data/scanner/repos/scan_upload_data_port.dart';
 import 'package:domabas/domain/document/models/document.dart';
@@ -275,18 +277,15 @@ void main() {
       },
     );
 
-    for (final interruption in ['suspend', 'close', 'cancel', 'orientation']) {
+    for (final interruption in ['suspend', 'close', 'cancel']) {
       test(
-        '$interruption during storage admission prevents the shutter',
+        '$interruption during startup storage admission prevents readiness',
         () async {
-          await camera.start();
           storageUsage.holdNext();
-          final capturing = expectLater(
-            camera.capture(),
-            throwsA(isA<ScanFailure>()),
-          );
+          final starting = camera.start();
           await storageUsage.entered.future;
-          cameraPlatform.emit(_liveFrame());
+          expect(camera.state.status, ScanCameraStatus.starting);
+          await expectLater(camera.capture(), throwsA(isA<ScanFailure>()));
           expect(detector.frames, isEmpty);
           expect(cameraPlatform.captureCalls, 0);
           Future<void>? lifecycle;
@@ -297,11 +296,9 @@ void main() {
               lifecycle = camera.close();
             case 'cancel':
               camera.cancelNewOperations();
-            case 'orientation':
-              cameraPlatform.orient(DeviceOrientation.landscapeLeft);
           }
           storageUsage.finishPending();
-          await capturing;
+          await starting;
           await lifecycle;
           expect(cameraPlatform.captureCalls, 0);
           expect(cameraPlatform.disposals, 1);
@@ -319,9 +316,10 @@ void main() {
     test(
       'storage admission failure releases camera ownership without a shot',
       () async {
-        await camera.start();
         storageUsage.failure = const ScanFailure('Fixture quota exhausted');
-        await expectLater(camera.capture(), throwsA(isA<ScanFailure>()));
+        await camera.start();
+        expect(camera.state.status, ScanCameraStatus.unavailable);
+        expect(camera.state.message, 'Fixture quota exhausted');
         expect(cameraPlatform.captureCalls, 0);
         expect(cameraPlatform.disposals, 1);
         expect(lease.scratchBytes, 0);
@@ -330,6 +328,46 @@ void main() {
         expect(camera.state.status, ScanCameraStatus.ready);
       },
     );
+
+    test('ready camera reaches shutter without another storage scan', () async {
+      await camera.start();
+      expect(lease.scratchBytes, ScanImageLimits.captureReservationBytes);
+      storageUsage.holdNext();
+      cameraPlatform.picture = Completer<void>();
+      final capturing = camera.capture();
+      await cameraPlatform.pictureEntered.future.timeout(
+        const Duration(seconds: 2),
+      );
+      expect(storageUsage.entered.isCompleted, isFalse);
+      cameraPlatform.finishCapture();
+      final capture = await capturing;
+      await camera.releaseCapture(capture.id);
+      expect(lease.scratchBytes, 0);
+    });
+
+    test('maximum detail settings are ready before capture', () async {
+      await camera.start();
+      expect(cameraPlatform.settings!.resolutionPreset, ResolutionPreset.max);
+      expect(cameraPlatform.settings!.enableAudio, isFalse);
+      expect(cameraPlatform.quality, 100);
+      expect(cameraPlatform.flash, FlashMode.off);
+      expect(cameraPlatform.focus, FocusMode.auto);
+      expect(cameraPlatform.exposure, ExposureMode.auto);
+      expect(cameraPlatform.exposureOffset, -1);
+      final before = List<String>.of(cameraPlatform.settingCalls);
+      final capture = await camera.capture();
+      expect(cameraPlatform.settingCalls, before);
+      await camera.releaseCapture(capture.id);
+    });
+
+    test('unsupported optional camera settings preserve capture', () async {
+      cameraPlatform.rejectSettings = true;
+      await camera.start();
+      expect(camera.state.status, ScanCameraStatus.ready);
+      final capture = await camera.capture();
+      expect(capture.preview, isNotEmpty);
+      await camera.releaseCapture(capture.id);
+    });
 
     for (final closing in [false, true]) {
       test(
@@ -366,7 +404,10 @@ void main() {
             '${lease.directory.path}/scratch-${capture.id}.jpg',
           );
           expect(await scratch.exists(), !closing);
-          expect(lease.scratchBytes, closing ? 0 : 20 * 1024 * 1024);
+          expect(
+            lease.scratchBytes,
+            closing ? 0 : ScanImageLimits.captureReservationBytes,
+          );
           if (!closing) await camera.releaseCapture(capture.id);
         },
       );
@@ -428,7 +469,7 @@ void main() {
         );
         expect(await scratch.exists(), isTrue);
         expect(await cameraPlatform.original!.exists(), isFalse);
-        expect(lease.scratchBytes, 20 * 1024 * 1024);
+        expect(lease.scratchBytes, ScanImageLimits.captureReservationBytes);
         expect(camera.currentController, isNull);
         await camera.suspend();
         expect(await scratch.exists(), isTrue);
@@ -461,27 +502,103 @@ void main() {
       },
     );
 
+    for (final (orientation, colors) in [
+      (1, ['red', 'green', 'yellow', 'blue']),
+      (2, ['green', 'red', 'blue', 'yellow']),
+      (3, ['yellow', 'blue', 'red', 'green']),
+      (4, ['blue', 'yellow', 'green', 'red']),
+      (5, ['red', 'blue', 'yellow', 'green']),
+      (6, ['blue', 'red', 'green', 'yellow']),
+      (7, ['yellow', 'green', 'red', 'blue']),
+      (8, ['green', 'yellow', 'blue', 'red']),
+    ]) {
+      test(
+        'EXIF $orientation capture and correction preserve asymmetric pixels',
+        () async {
+          cameraPlatform.orientationTag = orientation;
+          await camera.start();
+          final capture = await camera.capture();
+          final dimensions = orientation >= 5 ? (144, 96) : (96, 144);
+          expect((capture.width, capture.height), dimensions);
+          final preview = img.decodeJpg(capture.preview)!;
+          expect((preview.width, preview.height), dimensions);
+          final corrected = await camera.correct(capture, capture.corners);
+          final decoded = img.decodeJpg(corrected.bytes)!;
+          for (final image in [preview, decoded]) {
+            _expectColor(image, .25, .25, colors[0]);
+            _expectColor(image, .75, .25, colors[1]);
+            _expectColor(image, .75, .75, colors[2]);
+            _expectColor(image, .25, .75, colors[3]);
+          }
+          await camera.releaseCapture(capture.id);
+          expect(lease.scratchBytes, 0);
+          await expectLater(
+            camera.correct(capture, capture.corners),
+            throwsA(isA<ScanFailure>()),
+          );
+        },
+      );
+    }
+
     test(
-      'upright EXIF capture and correction preserve asymmetric pixels',
+      'full-resolution detail survives capture, correction, restore and PDF',
       () async {
-        cameraPlatform.orientationTag = 6;
+        const width = 2400, height = 3200;
+        final source = img.Image(width: width, height: height);
+        img.fill(source, color: img.ColorRgb8(255, 255, 255));
+        for (var x = 1100; x < 1300; x += 8) {
+          img.fillRect(
+            source,
+            x1: x,
+            y1: 1000,
+            x2: x + 2,
+            y2: 2200,
+            color: img.ColorRgb8(0, 0, 0),
+          );
+        }
+        cameraPlatform.photoBytes = img.encodeJpg(source, quality: 100);
+        final store = ScanDraftStore(lease);
+        final repository = LocalScanDraftRepository(
+          lease: lease,
+          camera: camera,
+          upload: _UnexpectedUpload(),
+          store: store,
+          encoder: ScanPdfEncoder(),
+        );
+        addTearDown(repository.close);
+        await repository.restore();
         await camera.start();
         final capture = await camera.capture();
-        expect((capture.width, capture.height), (144, 96));
-        final preview = img.decodeJpg(capture.preview)!;
-        expect((preview.width, preview.height), (144, 96));
-        final corrected = await camera.correct(capture, capture.corners);
-        final decoded = img.decodeJpg(corrected.bytes)!;
-        _expectColor(decoded, .25, .25, 'blue');
-        _expectColor(decoded, .75, .25, 'red');
-        _expectColor(decoded, .75, .75, 'green');
-        _expectColor(decoded, .25, .75, 'yellow');
-        await camera.releaseCapture(capture.id);
-        expect(lease.scratchBytes, 0);
-        await expectLater(
-          camera.correct(capture, capture.corners),
-          throwsA(isA<ScanFailure>()),
+        expect((capture.width, capture.height), (width, height));
+        final retained = await File(
+          '${lease.directory.path}/scratch-${capture.id}.jpg',
+        ).readAsBytes();
+        expect(retained, cameraPlatform.photoBytes);
+        final saved = await repository.keepPage(
+          capture,
+          ScanCorners.fullImage(),
         );
+        expect(
+          (saved.pages.single.width, saved.pages.single.height),
+          (width, height),
+        );
+        final restored = ScanDraftStore(lease);
+        await restored.initialize();
+        expect(restored.blocked, isFalse);
+        final page =
+            (restored.record!['pages'] as List).single as Map<String, dynamic>;
+        final file = restored.asset(restored.record!, page['file'] as String);
+        final corrected = img.decodeJpg(await file.readAsBytes())!;
+        expect(corrected.getPixel(1197, 1600).r, lessThan(90));
+        expect(corrected.getPixel(1201, 1600).r, greaterThan(220));
+        final pdf = await ScanPdfEncoder().encode([
+          ScanPdfPage(file.path, width, height),
+        ]);
+        final pdfObjects = latin1.decode(pdf);
+        expect(pdfObjects, contains('/Width $width'));
+        expect(pdfObjects, contains('/Height $height'));
+        expect(pdfObjects, contains('/DCTDecode'));
+        restored.release();
       },
     );
 
@@ -506,7 +623,7 @@ void main() {
           throwsA(isA<ScanFailure>()),
         );
         expect(await scratch.exists(), isTrue);
-        expect(lease.scratchBytes, 20 * 1024 * 1024);
+        expect(lease.scratchBytes, ScanImageLimits.captureReservationBytes);
         await camera.close();
         expect(await scratch.exists(), isFalse);
         expect(lease.scratchBytes, 0);
@@ -847,6 +964,14 @@ final class _CameraPlatform extends platform.CameraPlatform {
   Completer<void>? picture;
   File? original;
   Uint8List? photoBytes;
+  platform.MediaSettings? settings;
+  int? quality;
+  FlashMode? flash;
+  FocusMode? focus;
+  ExposureMode? exposure;
+  double? exposureOffset;
+  bool rejectSettings = false;
+  final settingCalls = <String>[];
   int _nextId = 0,
       disposals = 0,
       streamStarts = 0,
@@ -884,7 +1009,55 @@ final class _CameraPlatform extends platform.CameraPlatform {
   Future<int> createCameraWithSettings(
     CameraDescription description,
     platform.MediaSettings settings,
-  ) async => ++_nextId;
+  ) async {
+    this.settings = settings;
+    return ++_nextId;
+  }
+
+  void setting(String name) {
+    settingCalls.add(name);
+    if (rejectSettings) throw CameraException('unsupported', name);
+  }
+
+  @override
+  Future<void> setJpegImageQuality(int cameraId, int quality) async {
+    setting('quality');
+    this.quality = quality;
+  }
+
+  @override
+  Future<void> setFlashMode(int cameraId, FlashMode mode) async {
+    setting('flash');
+    flash = mode;
+  }
+
+  @override
+  Future<void> setFocusMode(int cameraId, FocusMode mode) async {
+    setting('focus');
+    focus = mode;
+  }
+
+  @override
+  Future<void> setExposureMode(int cameraId, ExposureMode mode) async {
+    setting('exposure');
+    exposure = mode;
+  }
+
+  @override
+  Future<double> getMinExposureOffset(int cameraId) async => -2;
+
+  @override
+  Future<double> getMaxExposureOffset(int cameraId) async => 2;
+
+  @override
+  Future<double> getExposureOffsetStepSize(int cameraId) async => .25;
+
+  @override
+  Future<double> setExposureOffset(int cameraId, double offset) async {
+    setting('offset');
+    exposureOffset = offset;
+    return offset;
+  }
 
   @override
   Stream<platform.CameraInitializedEvent> onCameraInitialized(int cameraId) =>

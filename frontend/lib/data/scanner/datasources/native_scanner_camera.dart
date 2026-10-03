@@ -11,13 +11,15 @@ import 'package:image/image.dart' as img;
 import '../../../domain/scanner/interfaces/scanner_camera.dart';
 import '../../../domain/scanner/models/scan.dart';
 import '../models/scan_assets.dart';
+import '../models/scan_image_limits.dart';
+import 'adaptive_scan_detector.dart';
 import 'scan_storage_coordinator.dart';
 
 final class NativeScannerCamera implements ScannerCamera {
   NativeScannerCamera(this.lease, {scan.DocumentDetector? detector})
-    : _detector = detector ?? scan.DocumentDetector();
+    : _detector = AdaptiveScanDetector(detector: detector);
   final ScanStorageLease lease;
-  final scan.DocumentDetector _detector;
+  final AdaptiveScanDetector _detector;
   final _states = StreamController<ScanCameraState>.broadcast();
   final _stabilizer = scan.CornerStabilizer();
   CameraController? _controller;
@@ -37,6 +39,7 @@ final class NativeScannerCamera implements ScannerCamera {
   DateTime _lastDetection = DateTime.fromMillisecondsSinceEpoch(0);
   String? _captureId, _capturePath;
   ScanReservation? _captureReservation;
+  ScanReservation? _readyReservation;
   int _width = 0, _height = 0;
 
   Future<T> _run<T>(Future<T> Function() work, {bool cleanup = false}) {
@@ -79,9 +82,14 @@ final class NativeScannerCamera implements ScannerCamera {
           await _teardown();
           return;
         }
-        final rear = cameras
-            .where((camera) => camera.lensDirection == CameraLensDirection.back)
-            .firstOrNull;
+        final rearCameras = cameras.where(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+        );
+        final rear =
+            rearCameras
+                .where((camera) => camera.lensType == CameraLensType.wide)
+                .firstOrNull ??
+            rearCameras.firstOrNull;
         if (rear == null) {
           throw const ScanFailure(
             'No rear camera is available on this device.',
@@ -89,7 +97,7 @@ final class NativeScannerCamera implements ScannerCamera {
         }
         final controller = CameraController(
           rear,
-          ResolutionPreset.veryHigh,
+          ResolutionPreset.max,
           enableAudio: false,
           imageFormatGroup: Platform.isIOS
               ? ImageFormatGroup.bgra8888
@@ -101,9 +109,24 @@ final class NativeScannerCamera implements ScannerCamera {
           await _teardown();
           return;
         }
+        await _configureCapture(controller);
+        await _releaseInput();
+        _readyReservation = await lease.reserve(
+          ScanImageLimits.captureReservationBytes,
+          scratch: true,
+        );
+        lease.scratchBytes += ScanImageLimits.captureReservationBytes;
+        if (_cancelled || !_wanted || generation != _generation) {
+          await _teardown();
+          return;
+        }
         _orientation = controller.value.deviceOrientation;
         controller.addListener(_orientationChanged);
         await controller.startImageStream(_frame);
+        if (_cancelled || !_wanted) {
+          await _teardown();
+          return;
+        }
         final size = controller.value.previewSize!;
         final portrait = _portrait(controller.value.deviceOrientation);
         _emit(
@@ -141,6 +164,28 @@ final class NativeScannerCamera implements ScannerCamera {
         );
       }
     });
+  }
+
+  Future<void> _configureCapture(CameraController controller) async {
+    for (final setting in <Future<void> Function()>[
+      () => controller.setJpegImageQuality(100),
+      () => controller.setFlashMode(FlashMode.off),
+      () => controller.setFocusMode(FocusMode.auto),
+      () => controller.setExposureMode(ExposureMode.auto),
+      () async {
+        final minimum = await controller.getMinExposureOffset();
+        final maximum = await controller.getMaxExposureOffset();
+        await controller.setExposureOffset((-1.0).clamp(minimum, maximum));
+      },
+    ]) {
+      try {
+        await setting();
+      } on CameraException {
+        continue;
+      } on UnimplementedError {
+        continue;
+      }
+    }
   }
 
   bool _portrait(DeviceOrientation value) =>
@@ -230,7 +275,7 @@ final class NativeScannerCamera implements ScannerCamera {
         }
         final detected = await _detector.detect(
           input,
-          sensitivity: scan.DetectionSensitivity.balanced,
+          isCurrent: () => generation == _generation && _wanted && !_cancelled,
         );
         if (generation != _generation || !_wanted || _cancelled) return;
         final corners = _stabilizer.add(detected);
@@ -386,14 +431,11 @@ final class NativeScannerCamera implements ScannerCamera {
     String? original;
     try {
       _checkCaptureSession(controller, generation);
-      await _releaseInput();
-      _checkCaptureSession(controller, generation);
-      _captureReservation = await lease.reserve(
-        20 * 1024 * 1024,
-        scratch: true,
-      );
-      lease.scratchBytes += 20 * 1024 * 1024;
-      _checkCaptureSession(controller, generation);
+      if (_readyReservation == null || _captureReservation != null) {
+        throw const ScanFailure('Restart the camera before capturing a page.');
+      }
+      _captureReservation = _readyReservation;
+      _readyReservation = null;
       final photo = await controller.takePicture();
       original = photo.path;
       _emitCapturePhase(ScanCameraStatus.processing);
@@ -415,7 +457,11 @@ final class NativeScannerCamera implements ScannerCamera {
       scan.DocumentCorners? detected;
       try {
         detected = await lease.coordinator.imageWork(
-          () => _detector.detect(scan.ScanInput.file(path)),
+          () => _detector.detect(
+            scan.ScanInput.file(path),
+            uprightPreview: prepared.preview,
+            isCurrent: () => !_cancelled && !lease.cancelled,
+          ),
         );
       } catch (_) {
         detected = null;
@@ -464,15 +510,28 @@ final class NativeScannerCamera implements ScannerCamera {
             'Keep four corners around a convex document area.',
           );
         }
-        final reservation = await lease.reserve(4 * 1024 * 1024, scratch: true);
-        lease.scratchBytes += 4 * 1024 * 1024;
+        final points = corners.points;
+        double edge(int a, int b) => math.sqrt(
+          math.pow((points[a].x - points[b].x) * _width, 2) +
+              math.pow((points[a].y - points[b].y) * _height, 2),
+        );
+        final width = ((edge(0, 1) + edge(3, 2)) / 2).round();
+        final height = ((edge(0, 3) + edge(1, 2)) / 2).round();
+        if (!ScanImageLimits.validDimensions(width, height)) {
+          throw const ScanFailure('This page exceeds the 50 megapixel limit.');
+        }
+        final reservation = await lease.reserve(
+          ScanImageLimits.correctionReservationBytes,
+          scratch: true,
+        );
+        lease.scratchBytes += ScanImageLimits.correctionReservationBytes;
         final input = _capturePath!;
         try {
           return await lease.coordinator.imageWork(
             () => _correctCaptureInBackground(input, corners),
           );
         } finally {
-          lease.scratchBytes -= 4 * 1024 * 1024;
+          lease.scratchBytes -= ScanImageLimits.correctionReservationBytes;
           reservation.release();
         }
       });
@@ -487,7 +546,7 @@ final class NativeScannerCamera implements ScannerCamera {
     _capturePath = null;
     _captureId = null;
     if (_captureReservation != null) {
-      lease.scratchBytes -= 20 * 1024 * 1024;
+      lease.scratchBytes -= ScanImageLimits.captureReservationBytes;
       _captureReservation!.release();
       _captureReservation = null;
     }
@@ -515,6 +574,11 @@ final class NativeScannerCamera implements ScannerCamera {
         }
       }
     } finally {
+      if (_readyReservation != null) {
+        lease.scratchBytes -= ScanImageLimits.captureReservationBytes;
+        _readyReservation!.release();
+        _readyReservation = null;
+      }
       if (identical(_controller, controller)) {
         _controller = null;
       }
@@ -585,12 +649,14 @@ Future<CorrectedScanPage> _correctCaptureInBackground(
       bottomRight: points[2],
       bottomLeft: points[3],
     ),
-    maxDimension: 2000,
-    output: const scan.ScanOutputFormat.jpegAt(85),
+    maxDimension: null,
+    output: const scan.ScanOutputFormat.jpegAt(100),
   );
-  if (corrected == null || corrected.bytes.length > 3 * 1024 * 1024) {
+  if (corrected == null ||
+      corrected.bytes.length > ScanImageLimits.maxPageBytes ||
+      !ScanImageLimits.validDimensions(corrected.width, corrected.height)) {
     throw const ScanFailure(
-      'This corrected page is too large. Capture a smaller document area.',
+      'This full-resolution page exceeds 18 MiB or 50 megapixels. Adjust the crop or scan a smaller document area.',
     );
   }
   final decoded = img.decodeJpg(corrected.bytes)!;
@@ -608,33 +674,24 @@ Future<_PreparedScanCapture> _prepareCapture(
   String target,
 ) async {
   final file = File(original);
-  if (await file.length() > 20 * 1024 * 1024) {
-    throw const ScanFailure('Captured images must be at most 20 MiB.');
+  if (await file.length() > ScanImageLimits.maxInputBytes) {
+    throw const ScanFailure('Captured images must be at most 40 MiB.');
   }
   final bytes = await file.readAsBytes();
   final header = img.JpegDecoder().startDecode(bytes);
   if (header == null ||
-      header.width <= 0 ||
-      header.height <= 0 ||
-      header.width * header.height > 20000000) {
+      !ScanImageLimits.validDimensions(header.width, header.height)) {
     throw const ScanFailure(
-      'Captured images must be JPEGs of at most 20 megapixels.',
+      'Captured images must be JPEGs of at most 50 megapixels.',
     );
   }
-  final image = img.decodeJpg(bytes);
-  if (image == null) {
+  final upright = img.decodeJpg(bytes);
+  if (upright == null) {
     throw const ScanFailure('The captured image could not be decoded.');
   }
-  final upright = img.bakeOrientation(image);
-  final encoded = img.encodeJpg(upright, quality: 90);
-  final preview = _smallJpeg(upright, 1200, 512 * 1024);
-  if (encoded.length + preview.length > 20 * 1024 * 1024) {
-    throw const ScanFailure(
-      'The upright image exceeds scanner storage limits.',
-    );
-  }
+  final preview = _smallJpeg(upright, 1200, ScanImageLimits.maxPreviewBytes);
   await file.delete();
-  await File(target).writeAsBytes(encoded, flush: true);
+  await File(target).writeAsBytes(bytes, flush: true);
   return _PreparedScanCapture(upright.width, upright.height, preview);
 }
 

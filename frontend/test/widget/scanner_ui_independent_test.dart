@@ -368,8 +368,141 @@ void main() {
       await gesture.moveBy(const Offset(20, 0));
       await gesture.up();
       expect(moved.length, greaterThanOrEqualTo(2));
-      expect(moved.last.x - moved.first.x, closeTo(20 / 272, 1e-9));
+      expect(moved.last.x, closeTo(.2 + 65 / 272, 1e-9));
+      expect(moved.last.y, closeTo(.2, 1e-9));
       expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'correction edges and corners drag without scrolling and stay in sync with sliders',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final camera = FixtureScannerCamera();
+      final repository = FixtureScanRepository();
+      final cubit = ScannerCubit(
+        camera: camera,
+        repository: repository,
+        allowed: true,
+      );
+      addTearDown(camera.close);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: ScannerScreen(
+            cubit: cubit,
+            previewBuilder: (_) => const SizedBox(),
+            canReadDocuments: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await cubit.addPage();
+      await cubit.capture();
+      await tester.pumpAndSettle();
+      final frame = find.byType(ScanFrame);
+      final geometry = ScanFrameGeometry.contain(
+        tester.getSize(frame),
+        200,
+        300,
+      );
+      final origin = tester.getTopLeft(frame);
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      final scrollOffset = scrollable.position.pixels;
+      final top = origin + geometry.position(const ScanPoint(.3, 0));
+      final edge = await tester.startGesture(top + const Offset(0, 8));
+      await edge.moveBy(const Offset(0, 25));
+      await tester.pump();
+      await edge.moveBy(const Offset(0, 15));
+      await edge.up();
+      await tester.pump();
+      final y = 40 / geometry.rect.height;
+      expect(cubit.state.corners!.points[0].y, closeTo(y, 1e-9));
+      expect(cubit.state.corners!.points[1].y, closeTo(y, 1e-9));
+      expect(cubit.state.corners!.points[2].y, 1);
+      expect(scrollable.position.pixels, scrollOffset);
+      expect(
+        tester
+            .widget<Slider>(find.byKey(const Key('scanCornerVertical')))
+            .value,
+        closeTo(y, 1e-9),
+      );
+
+      final cornerStart = tester.getCenter(
+        find.byKey(const Key('scan-corner-0')),
+      );
+      final corner = await tester.startGesture(
+        cornerStart + const Offset(8, 6),
+      );
+      await corner.moveBy(const Offset(25, 15));
+      await tester.pump();
+      await corner.moveBy(const Offset(10, 10));
+      await corner.up();
+      await tester.pump();
+      expect(
+        cubit.state.corners!.points[0].x,
+        closeTo(35 / geometry.rect.width, 1e-9),
+      );
+      expect(
+        cubit.state.corners!.points[0].y,
+        closeTo(65 / geometry.rect.height, 1e-9),
+      );
+      expect(cubit.state.corners!.points[1].x, 1);
+      expect(cubit.state.corners!.points[1].y, closeTo(y, 1e-9));
+      expect(scrollable.position.pixels, scrollOffset);
+
+      final beforeScroll = cubit.state.corners;
+      await tester.dragFrom(
+        origin + geometry.rect.center,
+        const Offset(0, -60),
+      );
+      await tester.pumpAndSettle();
+      expect(scrollable.position.pixels, greaterThan(scrollOffset));
+      expect(cubit.state.corners, same(beforeScroll));
+      await tester.ensureVisible(find.byKey(const Key('scanCornerHorizontal')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('scanCornerHorizontal')));
+      await tester.pumpAndSettle();
+      expect(cubit.state.corners!.points[0].x, closeTo(.5, .02));
+      expect(cubit.state.corners!.points[1].x, 1);
+
+      cubit.moveEdge(0, const ScanPoint(.5, 1));
+      await tester.pumpAndSettle();
+      expect(cubit.state.validCorners, isFalse);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('keepScanPage')))
+            .onPressed,
+        isNull,
+      );
+      cubit.resetCorners();
+      await tester.pumpAndSettle();
+      repository.saveGate = Completer<void>();
+      cubit.setProperties(scanProperties({'title': 'Adjusted page'}));
+      final keeping = cubit.keepPage();
+      await tester.pump();
+      await tester.pump();
+      expect(find.byKey(const Key('scan-edge-0')), findsNothing);
+      expect(find.byKey(const Key('scan-corner-0')), findsNothing);
+      expect(
+        tester
+            .widget<Slider>(find.byKey(const Key('scanCornerHorizontal')))
+            .onChanged,
+        isNull,
+      );
+      repository.saveGate!.complete();
+      await keeping;
+      await tester.pumpAndSettle();
+      expect(cubit.state.draft!.pages, hasLength(1));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
   for (final size in [const Size(320, 320), const Size(844, 390)]) {

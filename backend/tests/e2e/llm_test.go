@@ -84,7 +84,7 @@ func TestIssue27OptionalPropertiesAdminAuthorityAndDurableProcessing(t *testing.
 			_, _ = w.Write([]byte("PRIVATE provider details"))
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": map[string]string{"content": `{"description":"AI summary","sender":"LLM fixture sender","subject":"LLM fixture subject","tags":["llm-extracted"],"recipients":[],"documentDate":"2026-09-19"}`}}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": map[string]string{"content": `{"description":"AI summary","sender":"LLM fixture sender","subject":"LLM fixture subject","tags":["llm-extracted"],"recipients":null,"documentDate":"2026-09-19"}`}}}})
 	}))
 	defer func() {
 		release()
@@ -129,6 +129,9 @@ func TestIssue27OptionalPropertiesAdminAuthorityAndDurableProcessing(t *testing.
 	got := api.request(user, "GET", "/api/v1/documents/"+id, "", 200, "Document")
 	if got["sender"] != "LLM fixture sender" || got["subject"] != "LLM fixture subject" || got["description"] != "Human summary" || got["title"] != "Human title" || got["documentDate"] != "2026-09-19" {
 		t.Fatal("unexpected extracted properties", got)
+	}
+	if recipients := got["recipients"].([]any); len(recipients) != 0 {
+		t.Fatal("unknown recipients became populated metadata", recipients)
 	}
 	jobs := api.request(user, "GET", "/api/v1/document-jobs?pipeline=ai&documentId="+id, "", 200, "DocumentJobPage")
 	snapshot := jobs["items"].([]any)[0].(map[string]any)["configuration"].(map[string]any)

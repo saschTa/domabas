@@ -164,7 +164,7 @@ func TestIssue29InvoiceIngestionSourcesCurrencyCorrectionsAndIsolation(t *testin
 			fabricatedTotal = fabricatedTotal || strings.Contains(message.Content, "Fabricated total fixture")
 			fabricatedDate = fabricatedDate || strings.Contains(message.Content, "Fabricated date fixture")
 		}
-		content := `{"description":"Invoice summary\nPayment due in 14 days.","sender":"Example GmbH\nSample Street 1\n10115 Berlin","subject":"Extracted\tproperties","tags":[],"recipients":["Customer AG\r\nOther Street 2\n20095 Hamburg"],"documentDate":""}`
+		content := `{"description":"Invoice summary\nPayment due in 14 days.","sender":"Example GmbH\nSample Street 1\n10115 Berlin","subject":"Extracted\tproperties","tags":[],"recipients":["Customer AG\r\nOther Street 2\n20095 Hamburg"],"documentDate":null}`
 		if classificationRequest {
 			if body.Temperature != 0.2 {
 				t.Errorf("classification temperature: %v", body.Temperature)
@@ -357,6 +357,9 @@ func TestIssue29InvoiceIngestionSourcesCurrencyCorrectionsAndIsolation(t *testin
 	addressRecipients := addressDocument["recipients"].([]any)
 	if addressDocument["sender"] != "Example GmbH Sample Street 1 10115 Berlin" || len(addressRecipients) != 1 || addressRecipients[0] != "Customer AG Other Street 2 20095 Hamburg" || addressDocument["description"] != "Invoice summary\nPayment due in 14 days." {
 		t.Fatal("postal address properties were not saved correctly", addressDocument)
+	}
+	if _, present := addressDocument["documentDate"]; present {
+		t.Fatal("unknown document date became populated metadata", addressDocument)
 	}
 	addressInvoices := api.request(token, "GET", "/api/v1/invoices?source=structured&q=ADDRESS-2026-001", "", 200, "InvoicePage")["items"].([]any)
 	if len(addressInvoices) != 1 {

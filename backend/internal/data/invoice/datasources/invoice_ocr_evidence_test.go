@@ -37,11 +37,31 @@ func TestInvoiceOCRFormatsForEveryGroundedField(t *testing.T) {
 	} {
 		t.Run(scenario.field, func(t *testing.T) {
 			for _, classified := range []bool{false, true} {
-				fields := map[string]any{"number": "INV-1", "currency": "EUR", "seller": map[string]any{"name": "Supplier"}}
+				var response map[string]any
+				if err := json.Unmarshal([]byte(invoiceSchemaCompleteResponse), &response); err != nil {
+					t.Fatal(err)
+				}
+				fields := response["invoice"].(map[string]any)
+				for _, key := range []string{"totalNet", "totalTax", "totalGross"} {
+					fields[key] = nil
+				}
 				if err := json.Unmarshal([]byte(scenario.fields), &fields); err != nil {
 					t.Fatal(err)
 				}
-				response := map[string]any{"invoice": fields}
+				for collection, keys := range map[string][]string{
+					"lines":      {"id", "description", "quantity", "unitCode", "unitPrice", "netAmount", "taxCategory", "taxRate"},
+					"taxes":      {"category", "rate", "taxableAmount", "taxAmount", "exemptionReason"},
+					"allowances": {"charge", "reason", "amount", "taxCategory", "taxRate"},
+					"references": {"number", "issueDate"},
+				} {
+					for _, item := range fields[collection].([]any) {
+						for _, key := range keys {
+							if _, exists := item.(map[string]any)[key]; !exists {
+								item.(map[string]any)[key] = nil
+							}
+						}
+					}
+				}
 				if !classified {
 					response["isInvoice"] = true
 				}

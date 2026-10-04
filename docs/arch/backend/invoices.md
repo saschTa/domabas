@@ -35,7 +35,11 @@ Each job uses its snapshotted switches, provider, model and credential reference
 Disabling either AI step still allows structured extraction.
 The prompt treats text as untrusted data and distinguishes invoices from quotes
 and emails merely forwarding attachments. Monetary output must be decimal
-strings, with explicit currency. Missing fields remain empty. AI results carry
+strings, with explicit currency. Unknown or ambiguous facts must be returned as
+`null`, never invented, calculated or replaced with zero. Empty collections use
+`[]`. The prompt asks the model to inspect all supplied pages and totals, keep
+separate priced levies and fees, and distinguish previous invoices from orders
+and delivery notes. AI results carry
 the model name and a review label. Provider errors and malformed output become
 sanitized job failures.
 
@@ -55,10 +59,15 @@ definitive only when all source text was supplied. Text with fewer than twenty
 letters stays uncertain without inference. A negative conflicting with a prior invoice stays uncertain.
 Neither outcome deletes an existing invoice. Positive-only extraction uses an
 explicit schema containing only a required non-null `invoice` object; it has no
-`isInvoice` field. Its shared field definitions require a nonempty invoice number
-and seller name, uppercase three-letter currency syntax, and optional dates in ISO
-format, empty or null. Unknown totals, buyer and other optional details can remain
-absent or null; the adapter maps them to empty domain values. Actual
+`isInvoice` field. Both extraction schemas require every field key, including
+keys inside parties, lines, taxes, allowances, references and payment objects.
+Fact values permit `null`: requiring a key asks the model to consider it without
+forcing a value. This also prevents optional fields from being skipped by
+constrained output decoding. Populated values keep their decimal, currency and
+date syntax constraints. The adapter maps null to empty domain values and still
+accepts older sparse responses. Application validation continues to require a
+nonempty invoice number, seller name and recognized currency; reporting an
+unknown essential fact produces a visible failure rather than invented data. Actual
 calendar dates, recognized currencies and source facts still require application
 validation; schema-conforming JSON alone is insufficient. Failed grounding stays a
 visible extraction failure rather than changing the classification.

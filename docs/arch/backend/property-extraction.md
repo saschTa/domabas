@@ -106,7 +106,11 @@ administrator lookup reports the maximum without downloading a model. External
 providers manage their own context and receive no native context option.
 Instructions, schema and delimited OCR text
 share one user turn, including for models with no separate system role. Empty
-objects and missing or null properties are rejected. Cached models avoid a pull. External providers receive
+objects and missing properties are rejected. All six keys are required, but each
+value may be `null` when unknown. The adapter checks key presence separately from
+value decoding, then maps explicit nulls to empty strings or lists in the existing
+metadata model. Wrong types, unknown keys and trailing JSON remain errors.
+Cached models avoid a pull. External providers receive
 `/chat/completions` with JSON object output (or named JSON schema output in
 LM Studio compatibility mode), no streaming and a 2,048-token output
 bound when thinking is off, or 6,144 tokens when enabled. External requests send
@@ -145,7 +149,11 @@ tags, sender, recipients, document date and subject. The concise field prompt
 requires English JSON regardless of source language, preserving names, addresses
 and identifiers verbatim. It defines the document date separately from the
 payment due date and shows conversion to zero-padded `YYYY-MM-DD`; missing,
-invalid or ambiguous dates remain empty. Other unknown values also remain empty.
+invalid or ambiguous dates must be `null`. Other unknown or ambiguous values also
+use `null`; collections with no supported entries use `[]`. Required keys never
+justify inventing facts, using today's date or deriving an absent subject from a
+summary. The model is asked to inspect the entire supplied text. Nulls become
+empty metadata and cannot replace populated user fields.
 It converts whitespace in AI-generated sender, recipient, subject and tag strings
 into single spaces so postal address line breaks fit the single-line metadata
 fields. Descriptions retain their formatting. The domain still validates lengths, dates, unique list

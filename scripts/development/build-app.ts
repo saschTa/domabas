@@ -40,9 +40,9 @@ export function validateAppBuildHost(build: AppBuild, platform: NodeJS.Platform)
 
 export function appBuildArguments(build: AppBuild): string[] {
   switch (build.target) {
-    case "android": return ["build", "apk", build.release ? "--release" : "--debug", "--no-pub", "--no-android-gradle-daemon"];
-    case "ios": return ["build", "ios", ...(build.simulator ? ["--simulator", "--debug"] : ["--release", "--no-codesign"]), "--no-pub"];
-    default: return ["build", build.target, "--release", "--no-pub"];
+    case "android": return ["build", "apk", build.release ? "--release" : "--debug", "--no-android-gradle-daemon"];
+    case "ios": return ["build", "ios", ...(build.simulator ? ["--simulator", "--debug"] : ["--release", "--no-codesign"])];
+    default: return ["build", build.target, "--release"];
   }
 }
 

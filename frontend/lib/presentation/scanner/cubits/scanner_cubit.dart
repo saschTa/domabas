@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:bloc/bloc.dart';
 
@@ -312,6 +313,32 @@ final class ScannerCubit extends Cubit<ScannerState> {
     if (_canEdit && state.capture != null) {
       emit(state.copyWith(corners: ScanCorners.fullImage()));
     }
+  }
+
+  void moveEdge(int index, ScanPoint midpoint) {
+    if (!_canEdit ||
+        state.stage != ScannerStage.correction ||
+        index < 0 ||
+        index > 3 ||
+        !midpoint.x.isFinite ||
+        !midpoint.y.isFinite) {
+      return;
+    }
+    final points = [...state.corners!.points];
+    final next = (index + 1) % 4;
+    final first = points[index];
+    final second = points[next];
+    final dx = (midpoint.x - (first.x + second.x) / 2).clamp(
+      -math.min(first.x, second.x),
+      1 - math.max(first.x, second.x),
+    );
+    final dy = (midpoint.y - (first.y + second.y) / 2).clamp(
+      -math.min(first.y, second.y),
+      1 - math.max(first.y, second.y),
+    );
+    points[index] = ScanPoint(first.x + dx, first.y + dy);
+    points[next] = ScanPoint(second.x + dx, second.y + dy);
+    emit(state.copyWith(corners: ScanCorners(points), clearError: true));
   }
 
   Future<void> keepPage() async {

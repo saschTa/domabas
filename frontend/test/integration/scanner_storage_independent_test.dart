@@ -9,6 +9,7 @@ import 'package:domabas/data/scanner/datasources/native_scanner_camera.dart';
 import 'package:domabas/data/scanner/datasources/scan_draft_store.dart';
 import 'package:domabas/data/scanner/datasources/scan_pdf_encoder.dart';
 import 'package:domabas/data/scanner/datasources/scan_storage_coordinator.dart';
+import 'package:domabas/data/scanner/models/scan_image_limits.dart';
 import 'package:domabas/data/scanner/repos/local_scan_draft_repository.dart';
 import 'package:domabas/data/scanner/repos/scan_upload_data_port.dart';
 import 'package:domabas/domain/document/models/document.dart';
@@ -188,7 +189,10 @@ void main() {
     );
     first.release();
     first.release();
-    final scratch = await store.lease.reserve(24 * 1024 * 1024, scratch: true);
+    final scratch = await store.lease.reserve(
+      ScanImageLimits.scratchReservationBytes,
+      scratch: true,
+    );
     await expectLater(
       store.lease.reserve(1, scratch: true),
       throwsA(isA<ScanFailure>()),

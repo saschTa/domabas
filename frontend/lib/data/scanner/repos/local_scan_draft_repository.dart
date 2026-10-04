@@ -9,6 +9,7 @@ import '../datasources/native_scanner_camera.dart';
 import '../datasources/scan_draft_store.dart';
 import '../datasources/scan_pdf_encoder.dart';
 import '../datasources/scan_storage_coordinator.dart';
+import '../models/scan_image_limits.dart';
 import 'scan_upload_data_port.dart';
 
 final class LocalScanDraftRepository implements ScanDraftRepository {
@@ -87,7 +88,9 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
           throw const ScanFailure('A scan can contain at most 20 pages.');
         }
         await store.cleanupUnreferenced();
-        final reservation = await lease.reserve(3 * 1024 * 1024 + 64 * 1024);
+        final reservation = await lease.reserve(
+          ScanImageLimits.maxPageBytes + ScanImageLimits.maxThumbnailBytes,
+        );
         try {
           final corrected = await camera.correct(capture, corners);
           final pages = store.record!['pages'] as List;

@@ -8,19 +8,53 @@ plugins. General file selection and drag-and-drop are separate upload work.
 
 ## Capture and presentation
 
-The rear camera detects page edges during framing. After capture, the scanner
-detects the upright still again and lets the user adjust four corners before
-perspective correction. Preview geometry is never reused blindly for a different
-still image. The correction view uses a bounded preview; the original pixels stay
-behind the camera/data boundary. Users can add pages, move them earlier or later
+The rear camera detects page edges during framing. The scanner prefers the rear
+wide lens when the device identifies it, requests the highest available capture
+resolution and JPEG quality 100, and enables automatic focus while framing.
+Automatic flash is disabled to avoid its preflash sequence. Supported cameras
+use a -1 EV automatic exposure bias, accepting darker images to reduce the
+requested exposure. The camera decides how to divide that reduction between
+exposure duration and ISO; this does not enforce a maximum shutter duration.
+Unsupported optional settings fall back to the camera's defaults.
+
+After capture, the scanner detects the EXIF-oriented still again and lets the
+user adjust four corners before perspective correction. Preview geometry is never
+reused blindly for a different still image. The correction view uses a bounded preview; the original pixels stay
+behind the camera/data boundary. The original JPEG bytes are retained without
+an intermediate re-encode. Correction keeps the source-derived dimensions and
+encodes once at JPEG quality 100. Users can add pages, move them earlier or later
 in the draft and remove a page before submitting.
+
+Detection first uses the native engine's balanced settings. If no plausible page
+is found, `AdaptiveScanDetector` retries once on a detection-only grayscale image, bounded
+to 720 pixels on its longest edge. Each pixel is compared with its local mean
+brightness, so faint boundaries can remain visible under uneven illumination.
+This follows the [adaptive thresholding approach described by OpenCV](https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html).
+Both passes reject invalid, tiny, extremely thin and almost-full-frame
+quadrilaterals, and those that span opposite image borders. The fallback uses the engine's lenient
+sensitivity and skips nearly uniform images. It does not change the photo,
+corrected page colors or PDF pixels.
+
+Fallback preparation runs in an isolate. Camera input preserves BGRA/YUV row
+strides, full-image proportions and rotation; still input uses the already
+prepared upright preview. Cancellation and orientation changes prevent further
+fallback work and discard late results. The fallback remains part of the single
+in-flight detection operation, so frames cannot build up while it runs. It may
+reduce the overlay refresh rate in difficult scenes. Corner adjustment remains
+available when contrast is insufficient or another rectangular object is found.
 
 The live camera uses the available screen body independently of the review form's
 width limits. Bounded, scrollable guidance and safe-area actions leave the rest
 for a contained camera image and its outline. The live image has no correction
 handle inset. Different sensor and screen proportions can leave dark bands;
 the full framing area remains visible in portrait and landscape. Correction
-retains its whole-image geometry and accessible corner controls.
+retains its whole-image geometry and accessible corner controls. Users can drag
+the numbered corners or any side of the correction outline. Each side has a
+visible midpoint grip and a 48-point-wide touch region; corner targets take
+priority where they overlap. Dragging a side moves its two corners together,
+preserving its angle and length at the image bounds. The bottom sliders remain
+available for precise corner adjustment. Invalid or crossed selections disable
+Keep page until corrected.
 
 `ScannerCamera` and `ScanDraftRepository` are the scanner's domain ports.
 Immutable domain values describe camera state, captures, geometry, pages and
@@ -41,8 +75,11 @@ active work before deleting its input. Generation and orientation checks reject
 stale frame results. App composition coordinates camera handoff across sessions.
 Capture stops admitting live detection immediately and requests the photograph
 before stopping the stream or draining the current detector. Storage admission
-still precedes the shutter, with cancellation and ownership checked again after
-asynchronous storage work. Camera state distinguishes capturing (hold steady)
+and camera settings complete before the capture button becomes ready. The
+reserved scratch allocation transfers to the captured image at shutter time,
+so pressing capture does not wait for a filesystem capacity scan. Startup
+interruption releases unused reservations; correction retains its own capture
+allocation across camera suspension. Camera state distinguishes capturing (hold steady)
 from processing (the platform has returned the still file). The live detector
 still drains before still detection and camera disposal. These phases do not
 measure sensor exposure time or promise a particular device shutter latency.
@@ -92,13 +129,20 @@ This uses application storage isolation, not an additional encryption scheme.
 
 ## Limits and submission
 
-The scanner accepts at most 20 pages. Input stills are checked against 20 MiB and
-20 million pixels before decoding. Corrected JPEGs have a longest edge of 2,000
-pixels, at most 3 MiB per page and 18 MiB combined. Thumbnails and correction
+The scanner accepts at most 20 pages. Input stills are checked against 40 MiB and
+50 million pixels before decoding. Corrected JPEGs preserve the dimensions
+derived from the selected corners, with at most 50 million pixels and 18 MiB per
+page and 18 MiB combined. Oversized pages fail explicitly instead of being
+silently downsampled or compressed at lower quality. More detailed pages can
+therefore fill a draft with fewer pages. Thumbnails and correction
 previews are bounded separately. The PDF preserves image proportions and page
-order, with a physical longest edge at most 842 points and a 20 MiB file ceiling.
+order and embeds the corrected JPEG pixels without another lossy encode, with a
+physical longest edge at most 842 points and a 20 MiB file ceiling.
 Storage admission accounts for durable files, temporary work and pending cleanup;
-it never evicts another owner's draft.
+it never evicts another owner's draft. Scratch admission covers one 40 MiB input,
+one 18 MiB corrected image and their bounded previews. Image work is serialized;
+full-resolution decoding and perspective correction still need memory
+proportional to the camera's negotiated image size.
 
 The form supports title, description, tags, kind, sender, recipients, CC, BCC,
 document date, subject and message ID. The initial title, local date and document

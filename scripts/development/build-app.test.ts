@@ -60,14 +60,17 @@ describe("local app builds", () => {
     expect(appBuildOutput(simulator, "arm64").path).toContain("iphonesimulator");
   });
 
-  test("resolves locked dependencies before a no-pub build and announces actual output", async () => {
+  test("resolves locked dependencies and permits mode-specific plugin regeneration during build", async () => {
     const { deps, calls, logs } = fixture();
     await buildApp(parseAppBuild(["android"])!, deps);
     expect(calls).toEqual([
       ["/tools/flutter", "pub", "get", "--enforce-lockfile"],
-      ["/tools/flutter", "build", "apk", "--debug", "--no-pub", "--no-android-gradle-daemon"],
+      ["/tools/flutter", "build", "apk", "--debug", "--no-android-gradle-daemon"],
     ]);
     expect(logs.at(-1)).toContain(join(deps.root, "frontend/build/app/outputs/flutter-apk/app-debug.apk"));
+    for (const args of [["android", "--release"], ["ios"], ["ios", "--simulator"], ["macos"], ["windows"]]) {
+      expect(appBuildArguments(parseAppBuild(args)!)).not.toContain("--no-pub");
+    }
   });
 
   test("stops on missing or mismatched Flutter without resolving dependencies", async () => {
@@ -91,12 +94,15 @@ describe("local app builds", () => {
   });
 
   test("refuses a changed lockfile or missing artifact", async () => {
-    const { deps, calls, logs } = fixture();
-    const read = deps.read;
-    deps.read = path => path.endsWith("pubspec.lock") && calls.length > 0 ? "changed" : read(path);
-    await expect(buildApp(parseAppBuild(["android"])!, deps)).rejects.toThrow("changed frontend/pubspec.lock");
-    expect(calls).toHaveLength(1);
-    deps.read = read;
+    for (const changedAfter of [1, 2]) {
+      const { deps, calls, logs } = fixture();
+      const read = deps.read;
+      deps.read = path => path.endsWith("pubspec.lock") && calls.length >= changedAfter ? "changed" : read(path);
+      await expect(buildApp(parseAppBuild(["android"])!, deps)).rejects.toThrow("changed frontend/pubspec.lock");
+      expect(calls).toHaveLength(changedAfter);
+      expect(logs.some(line => line.includes("Build complete"))).toBe(false);
+    }
+    const { deps, logs } = fixture();
     deps.exists = () => false;
     await expect(buildApp(parseAppBuild(["android"])!, deps)).rejects.toThrow("expected app is missing");
     expect(logs.some(line => line.includes("Build complete"))).toBe(false);

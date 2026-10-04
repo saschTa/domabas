@@ -32,11 +32,14 @@ describes the user-facing selector and prerequisites. The
 The native app build helper in `scripts/development/build-app.ts` backs
 `task build:app` and the Android, iOS, macOS and Windows build tasks. It checks
 the host and pinned Flutter version, checks Xcode selection and SDK availability
-for Apple targets, resolves the committed Dart lockfile, and builds with
-`--no-pub`. It rejects lockfile changes and missing output before announcing
+for Apple targets, resolves the committed Dart lockfile, and lets the Flutter
+build regenerate platform files for the selected build mode. Skipping that
+step with `--no-pub` can leave development-only plugin registrations in a release
+build. It rejects lockfile changes after dependency resolution and after the
+build, and rejects missing output before announcing
 success. It uses the caller's environment without loading backend defaults.
 Builds use the shared process scope with cancellation and a one-hour deadline;
-Android disables the persistent Gradle daemon. No server, generation, signing
+Android disables the persistent Gradle daemon. No server, API generation, signing
 credential installation or publication is part of these tasks. The
 [local app build guide](../development/build-apps.md) documents required setup
 and the distinction between unsigned iOS, simulator and installable desktop/APK

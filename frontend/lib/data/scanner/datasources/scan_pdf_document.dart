@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../../domain/scanner/models/scan.dart';
+import '../models/scan_image_limits.dart';
 
 final class ScanPdfImage {
   const ScanPdfImage(this.bytes, this.width, this.height);
@@ -18,9 +19,7 @@ Future<Uint8List> encodeScanPdf(List<ScanPdfImage> pages) async {
   }
   final pdf = pw.Document(compress: false);
   for (final page in pages) {
-    if (page.width <= 0 ||
-        page.height <= 0 ||
-        math.max(page.width, page.height) > 2000) {
+    if (!ScanImageLimits.validDimensions(page.width, page.height)) {
       throw const ScanFailure('Invalid PDF page dimensions.');
     }
     final scale = 842 / math.max(page.width, page.height);

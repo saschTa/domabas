@@ -98,6 +98,19 @@ A CocoaPods-only warning in `flutter doctor` can be ignored for this checkout.
 Run one Flutter build or test command at a time in this folder; they share
 generated plugin files.
 
+Native integration tests also replace Xcode's generated Dart entry point with
+a temporary test runner. Before returning to Xcode after those tests, run
+`task build:ios` again to restore and verify the normal application entry point.
+For a configuration-only refresh without compiling, run this from `frontend/`:
+
+```sh
+flutter build ios --config-only --release --no-codesign --target lib/main.dart
+```
+
+Use `--simulator --debug` instead of `--release --no-codesign` when preparing an
+iOS simulator. Regenerate these files through Flutter rather than editing
+`Generated.xcconfig` or generated plugin registration files by hand.
+
 See Flutter's [Mac setup](https://docs.flutter.dev/platform-integration/macos/setup),
 [iOS setup](https://docs.flutter.dev/platform-integration/ios/setup), and
 [Swift Package Manager guide](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers).

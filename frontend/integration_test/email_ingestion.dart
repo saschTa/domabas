@@ -1,4 +1,5 @@
-import 'workspace_actions.dart' show revealWorkspaceAction;
+import 'workspace_actions.dart'
+    show revealWorkspaceAction, revealWorkspaceHeader;
 
 import 'package:domabas_api/api.dart' as api;
 import 'package:domabas/ui/domabas_ui.dart';
@@ -211,7 +212,9 @@ Future<void> exerciseEmailIngestion(
     find.text('Attachments: 2 accepted · 0 reused · 0 skipped · 0 failed'),
     findsOneWidget,
   );
-  await tester.tap(find.text('Back to jobs'));
+  final back = find.text('Back to jobs');
+  await revealWorkspaceHeader(tester, back);
+  await tester.tap(back);
   await tester.pumpAndSettle();
   await _emailSettings(tester);
 

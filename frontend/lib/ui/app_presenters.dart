@@ -93,30 +93,28 @@ final class AppPage extends StatelessWidget {
         0.0,
         constraints.maxHeight,
       );
-      return Align(
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: EdgeInsets.only(top: top, bottom: insetBody ? bottom : 0),
+      return Padding(
+        padding: EdgeInsets.only(bottom: insetBody ? bottom : 0),
+        child: _AppPageScroll(
+          key: ValueKey((title, child.key)),
+          storageId: (AppPage, title, child.key),
+          header: SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Flexible(
-                  flex: 0,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: contentHeight * (compact ? .25 : .5),
-                    ),
-                    child: SingleChildScrollView(
-                      primary: false,
-                      padding: EdgeInsets.symmetric(horizontal: inset),
-                      child: _PageHeader(
-                        title: title,
-                        eyebrow: eyebrow,
-                        description: description,
-                        actions: actions,
-                      ),
+                SizedBox(height: top),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: contentHeight * (compact ? .25 : .5),
+                  ),
+                  child: SingleChildScrollView(
+                    primary: false,
+                    padding: EdgeInsets.symmetric(horizontal: inset),
+                    child: _PageHeader(
+                      title: title,
+                      eyebrow: eyebrow,
+                      description: description,
+                      actions: actions,
                     ),
                   ),
                 ),
@@ -125,21 +123,92 @@ final class AppPage extends StatelessWidget {
                   indent: inset,
                   endIndent: inset,
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: insetBody ? inset : 0,
-                    ),
-                    child: child,
-                  ),
-                ),
               ],
             ),
+          ),
+          body: Padding(
+            padding: EdgeInsets.symmetric(horizontal: insetBody ? inset : 0),
+            child: child,
           ),
         ),
       );
     },
   );
+}
+
+final class _AppPageScroll extends StatefulWidget {
+  const _AppPageScroll({
+    super.key,
+    required this.storageId,
+    required this.header,
+    required this.body,
+  });
+
+  final Object storageId;
+  final Widget header, body;
+
+  @override
+  State<_AppPageScroll> createState() => _AppPageScrollState();
+}
+
+final class _AppPageScrollState extends State<_AppPageScroll> {
+  final _nested = GlobalKey<NestedScrollViewState>();
+  final _outer = ScrollController(keepScrollOffset: false);
+  PageStorageBucket? _storage;
+  bool _initialized = false;
+  bool _restoring = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialized) return;
+    _initialized = true;
+    _storage = PageStorage.maybeOf(context);
+    final saved = _storage?.readState(context, identifier: widget.storageId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final nested = _nested.currentState;
+      if (saved is (double, double) && nested != null && _outer.hasClients) {
+        final inner = nested.innerController;
+        if (saved.$2 > 0 && inner.positions.length == 1) {
+          inner.jumpTo(saved.$2);
+        } else {
+          _outer.jumpTo(saved.$1.clamp(0, _outer.position.maxScrollExtent));
+        }
+      }
+      _restoring = false;
+    });
+  }
+
+  bool _remember(ScrollNotification notification) {
+    final nested = _nested.currentState;
+    if (_restoring || nested == null || !_outer.hasClients) return false;
+    final inner = nested.innerController;
+    if (inner.positions.length > 1) return false;
+    _storage?.writeState(context, (
+      _outer.offset,
+      inner.hasClients ? inner.offset : 0.0,
+    ), identifier: widget.storageId);
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _outer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      NotificationListener<ScrollNotification>(
+        onNotification: _remember,
+        child: NestedScrollView(
+          key: _nested,
+          controller: _outer,
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [widget.header],
+          body: widget.body,
+        ),
+      );
 }
 
 final class _PageHeader extends StatelessWidget {

@@ -22,6 +22,8 @@ closed Cubit.
 Successful saves use a brief accessible SnackBar outside the scrolling form.
 Resource fields keep their controllers when the saved response arrives, and
 capacity guidance keeps the same layout when a lower limit starts draining jobs.
+Saved limits and active counts use separate labeled cells so changing the number
+of digits does not reflow a shared status line and move later controls.
 Saving does not insert a banner above the controls or reset the scroll position.
 
 Resource IDs remain strings, so the UI accepts additional provider identities

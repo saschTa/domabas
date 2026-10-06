@@ -2,6 +2,8 @@ import 'package:domabas_api/api.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'workspace_actions.dart' show revealWorkspaceHeader;
+
 Future<void> exerciseDocumentProcessing(
   WidgetTester tester, {
   required api.DocumentsApi documents,
@@ -111,7 +113,9 @@ Future<void> exerciseDocumentProcessing(
   expect(reindexed.textSource.toString(), 'manual');
   expect(jobs.length, greaterThan(oldJobs.items.length));
 
-  await tester.tap(find.byTooltip('Refresh processing'));
+  final refresh = find.byTooltip('Refresh processing');
+  await revealWorkspaceHeader(tester, refresh);
+  await tester.tap(refresh);
   await tester.pumpAndSettle();
   await _reveal(tester, find.byKey(Key('batch-$batchId')));
   expect(find.text('2 succeeded'), findsOneWidget);

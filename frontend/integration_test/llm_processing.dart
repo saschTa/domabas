@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 import 'document_fixtures.dart';
+import 'workspace_actions.dart' show revealWorkspacePageContent;
 
 Future<void> exerciseLLMProcessing(
   WidgetTester tester, {
@@ -138,8 +139,6 @@ Future<void> exerciseLLMProcessing(
         'The complete external provider draft must be saveable. Error: ${settings.state.error}; valid: ${settings.state.llm.valid}; enabled: ${settings.state.llm.enabled}; provider: ${settings.state.llm.provider}; key present: ${settings.state.llm.apiKey.isNotEmpty}; busy: ${settings.state.loading || settings.state.saving}',
   );
   final saveControl = find.byKey(const Key('saveLLMSettings'));
-  await Scrollable.ensureVisible(tester.element(saveControl), alignment: .5);
-  await tester.pumpAndSettle();
   final saveBounds = tester.getRect(saveControl);
   await tester.tap(saveControl);
   await _wait(
@@ -612,26 +611,9 @@ Future<void> _wait(
   expect(ready(), isTrue, reason: reason);
 }
 
-Future<void> _reveal(WidgetTester tester, Finder target) async {
-  if (target.evaluate().isNotEmpty) {
-    await Scrollable.ensureVisible(tester.element(target), alignment: .5);
-    await tester.pumpAndSettle();
-    return;
-  }
-  final scroll = find
-      .descendant(
-        of: find.byType(ListView).first,
-        matching: find.byType(Scrollable),
-      )
-      .first;
-  tester.state<ScrollableState>(scroll).position.jumpTo(0);
-  await tester.pumpAndSettle();
-  await tester.scrollUntilVisible(
-    target,
-    160,
-    scrollable: scroll,
-    maxScrolls: 100,
-  );
-  await Scrollable.ensureVisible(tester.element(target), alignment: .5);
-  await tester.pumpAndSettle();
-}
+Future<void> _reveal(WidgetTester tester, Finder target) =>
+    revealWorkspacePageContent(
+      tester,
+      target,
+      list: find.byType(ListView).first,
+    );

@@ -117,6 +117,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: 'selected transcript');
         if (width < 600) {
+          await tester.drag(
+            find.byKey(const Key('chatTranscript')),
+            const Offset(0, 600),
+          );
+          await tester.pumpAndSettle();
           await tester.tap(find.byKey(const Key('chatHistory')));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: 'history');

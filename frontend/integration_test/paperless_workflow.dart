@@ -3,6 +3,17 @@ import 'package:domabas/app/job_activity_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'workspace_actions.dart'
+    show revealWorkspaceHeader, revealWorkspacePageContent;
+
+Future<void> _reveal(WidgetTester tester, Finder target) =>
+    revealWorkspacePageContent(
+      tester,
+      target,
+      list: find.byType(ListView).first,
+      center: false,
+    );
+
 Future<void> exercisePaperlessSettings(
   WidgetTester tester,
   Future<void> Function(String) navigate,
@@ -14,15 +25,13 @@ Future<void> exercisePaperlessSettings(
     await tester.pump(const Duration(milliseconds: 100));
   }
   expect(field, findsOneWidget);
-  await Scrollable.ensureVisible(tester.element(field), alignment: .5);
-  await tester.pumpAndSettle();
+  await _reveal(tester, field);
   await tester.tap(field);
   await tester.pumpAndSettle();
   await tester.tap(find.text('3').last);
   await tester.pumpAndSettle();
   final save = find.byKey(const Key('savePaperlessSettings'));
-  await Scrollable.ensureVisible(tester.element(save), alignment: .5);
-  await tester.pumpAndSettle();
+  await _reveal(tester, save);
   await tester.tap(save);
   await tester.pumpAndSettle();
   final saved = find.text('Paperless retrieval settings saved.');
@@ -67,15 +76,10 @@ Future<void> exercisePaperlessWorkflow(
     await tester.pump(const Duration(milliseconds: 100));
   }
   expect(serverField, findsOneWidget, reason: 'Paperless options have loaded');
-  await tester.ensureVisible(serverField);
-  await tester.pumpAndSettle();
+  await _reveal(tester, serverField);
   await tester.enterText(serverField, server);
   await tester.enterText(find.byKey(const Key('paperlessToken')), token);
-  await Scrollable.ensureVisible(
-    tester.element(find.byKey(const Key('paperlessStart'))),
-    alignment: .5,
-  );
-  await tester.pumpAndSettle();
+  await _reveal(tester, find.byKey(const Key('paperlessStart')));
   await tester.tap(find.byKey(const Key('paperlessStart')));
   await tester.pumpAndSettle();
   final acceptedDeadline = DateTime.now().add(const Duration(seconds: 15));
@@ -141,8 +145,7 @@ Future<void> exercisePaperlessWorkflow(
     find.text('2 discovered · 1 imported · 0 duplicates · 1 failed'),
     findsOneWidget,
   );
-  await tester.ensureVisible(find.text('Show document results'));
-  await tester.pumpAndSettle();
+  await _reveal(tester, find.text('Show document results'));
   await tester.tap(find.text('Show document results'));
   await tester.pumpAndSettle();
   expect(find.textContaining('Paperless browser invoice'), findsOneWidget);
@@ -151,8 +154,7 @@ Future<void> exercisePaperlessWorkflow(
     findsOneWidget,
   );
   final failedOutcomes = find.widgetWithText(ChoiceChip, 'Failed');
-  await tester.ensureVisible(failedOutcomes);
-  await tester.pumpAndSettle();
+  await _reveal(tester, failedOutcomes);
   await tester.tap(failedOutcomes);
   final filteredDeadline = DateTime.now().add(const Duration(seconds: 15));
   while ((find
@@ -171,24 +173,15 @@ Future<void> exercisePaperlessWorkflow(
   expect(find.textContaining('Unsupported browser original'), findsOneWidget);
   expect(find.textContaining('Error code:'), findsOneWidget);
   await navigate('processingNavigation');
+  await revealWorkspaceHeader(tester, find.byTooltip('Refresh processing'));
   if (find.text('Back to jobs').evaluate().isNotEmpty) {
     await tester.tap(find.text('Back to jobs'));
     await tester.pumpAndSettle();
   }
-  await tester.scrollUntilVisible(
-    find.text('Paperless import pipeline'),
-    -300,
-    scrollable: find.byType(Scrollable).last,
-  );
+  await _reveal(tester, find.text('Paperless import pipeline'));
   expect(find.text('Paperless import pipeline'), findsOneWidget);
   final filter = find.byKey(const Key('pipeline-filter-paperless'));
-  await tester.scrollUntilVisible(
-    filter,
-    300,
-    scrollable: find.byType(Scrollable).last,
-  );
-  await Scrollable.ensureVisible(tester.element(filter), alignment: .5);
-  await tester.pumpAndSettle();
+  await _reveal(tester, filter);
   await tester.tap(filter);
   await tester.pumpAndSettle();
   final jobsDeadline = DateTime.now().add(const Duration(seconds: 30));
@@ -206,8 +199,7 @@ Future<void> exercisePaperlessWorkflow(
     of: importRows(),
     matching: find.text('Details'),
   );
-  await Scrollable.ensureVisible(tester.element(details), alignment: .5);
-  await tester.pumpAndSettle();
+  await _reveal(tester, details);
   await tester.tap(details);
   await tester.pumpAndSettle();
   expect(find.text('Job details'), findsOneWidget);
@@ -216,18 +208,16 @@ Future<void> exercisePaperlessWorkflow(
     find.text('2 discovered · 1 imported · 0 duplicates · 1 failed'),
     findsOneWidget,
   );
-  await tester.scrollUntilVisible(
-    find.text('Document results'),
-    300,
-    scrollable: find.byType(Scrollable).last,
-  );
-  await tester.pumpAndSettle();
+  await _reveal(tester, find.text('Document results'));
   expect(
     find.textContaining('Only PDF, PNG, JPEG and EML originals are supported.'),
     findsOneWidget,
   );
-  await tester.tap(find.text('Back to jobs'));
+  final back = find.text('Back to jobs');
+  await revealWorkspaceHeader(tester, back);
+  await tester.tap(back);
   await tester.pumpAndSettle();
+  await _reveal(tester, filter);
   expect(tester.widget<ChoiceChip>(filter).selected, isTrue);
   await navigate('manageLibraries');
 }

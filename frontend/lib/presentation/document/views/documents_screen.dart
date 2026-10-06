@@ -35,6 +35,7 @@ final class DocumentsScreen extends StatefulWidget {
 final class _DocumentsScreenState extends State<DocumentsScreen>
     with WidgetsBindingObserver {
   final _term = TextEditingController();
+  final _termFocus = FocusNode();
   final _scroll = ScrollController();
   final _filtersFocus = FocusNode();
   RawDialogRoute<void>? _filterRoute;
@@ -69,6 +70,7 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
       });
     }
     _term.dispose();
+    _termFocus.dispose();
     _scroll.dispose();
     _filtersFocus.dispose();
     super.dispose();
@@ -82,7 +84,13 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
     );
   }
 
-  void _submit() => unawaited(widget.cubit.submitSearch());
+  void _submit() {
+    final composing = _term.value.composing;
+    if (composing.isValid && !composing.isCollapsed) return;
+    _termFocus.unfocus();
+    unawaited(widget.cubit.submitSearch());
+  }
+
   void _clear() {
     _term.clear();
     unawaited(widget.cubit.clearSearch());
@@ -193,6 +201,8 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
               child: CustomScrollView(
                 key: const Key('documentCollectionScroll'),
                 controller: _scroll,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 scrollCacheExtent: const ScrollCacheExtent.pixels(0),
                 slivers: [
                   SliverPadding(
@@ -205,6 +215,7 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
                               widget.cubit.capabilities.search) ...[
                             DocumentSearchControls(
                               term: _term,
+                              termFocus: _termFocus,
                               termError: state.termError,
                               state: state,
                               filtersFocus: _filtersFocus,

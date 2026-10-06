@@ -109,10 +109,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('openNavigation')), findsNothing);
-      expect(
-        find.byKey(const Key('navigation-admin-settings')),
-        systemRole == SystemRole.admin ? findsOneWidget : findsNothing,
-      );
+      expect(find.byKey(const Key('navigation-admin-settings')), findsNothing);
 
       final select = tester
           .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
@@ -132,7 +129,7 @@ void main() {
       );
       expect((members, invitations, accounts, users), (0, 0, 0, 0));
 
-      await tester.tap(find.byKey(const Key('navigation-user-settings')));
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(find.text('a@example.com'), findsOneWidget);
       expect(
@@ -153,7 +150,7 @@ void main() {
       expect(
         tester
             .widget<AppNavigationButton>(
-              find.byKey(const Key('navigation-user-settings')),
+              find.byKey(const Key('navigation-more')),
             )
             .selected,
         isTrue,
@@ -207,7 +204,7 @@ void main() {
       );
       await navigateWorkspace(tester, 'changePassword');
       expect(find.byKey(const Key('currentPassword')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('navigation-user-settings')));
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -265,10 +262,9 @@ void main() {
         await tester.tap(next);
         await tester.pumpAndSettle();
         expect(documents.offsets.last, DocumentsCubit.pageSize);
-        expect(
-          documents.offsets.where((offset) => offset != 0),
-          [DocumentsCubit.pageSize],
-        );
+        expect(documents.offsets.where((offset) => offset != 0), [
+          DocumentsCubit.pageSize,
+        ]);
         await revealWorkspaceContent(
           tester,
           find.text('Page 2 of 2'),

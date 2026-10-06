@@ -201,17 +201,8 @@ void main() {
           findsOneWidget,
         );
         expect(find.byKey(const Key('openNavigation')), findsNothing);
-        expect(
-          find.byKey(const Key('navigation-more')),
-          administerSystem ? findsOneWidget : findsNothing,
-        );
-        await tester.tap(
-          find.byKey(
-            Key(
-              administerSystem ? 'navigation-more' : 'navigation-user-settings',
-            ),
-          ),
-        );
+        expect(find.byKey(const Key('navigation-more')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('navigation-more')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('changePassword')), findsOneWidget);
         expect(

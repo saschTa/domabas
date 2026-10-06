@@ -2,18 +2,20 @@
 
 Below 600 logical pixels, the workspace uses a floating bottom bar with Documents
 fixed in the center. Its raised primary-action circle and curved surface remain the
-normal layout when the permitted navigation has at most five groups.
+normal layout, with up to five entries after secondary groups are collected in More.
 
-The standard five entries are Invoices, Jobs, Documents, AI chat and Settings.
+The standard native entries are Invoices, Scanner, Documents, AI chat and More.
 App composition supplies the primary order and filters destinations by claims;
 the shared shell receives presentation values and never checks permissions itself.
-Users without a primary claim see only their permitted destinations.
+Users without a primary claim see only their permitted destinations. Scanner
+requires upload permission and the native Android or iOS scanner capability. It
+opens the existing scanner route while preserving the selected workspace; closing
+the scanner returns to that workspace. Other platforms omit this bottom entry.
 
-When a sixth group is present, such as Admin, keep Invoices, Jobs, Documents and
-AI chat in the bar and replace secondary groups with one More button. Settings,
-Admin and every future group outside the primary set belong in More. Adding
-another secondary destination must never add a sixth bottom-bar button. With
-five or fewer groups, retain the normal layout without introducing More.
+Jobs, Settings, Admin and every future group outside the primary set belong in
+More, including when there are fewer than five visible entries. Adding another
+secondary destination must never add a sixth bottom-bar button. Desktop and
+tablet navigation retain their permitted groups without a Scanner entry.
 
 Licenses is a leaf in User settings, available to every workspace role. It uses
 the existing Settings chooser or More sidebar and adds no bottom-bar group.

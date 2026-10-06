@@ -855,6 +855,16 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   bool get _canAct =>
       mounted && ModalRoute.of(context)?.isCurrent == true && !_coveredRoute;
 
+  void _selectNavigation(String destination) {
+    if (destination == 'scanner') {
+      if (_canAct && widget.dependencies.scanner != null) {
+        unawaited(_openScanner());
+      }
+      return;
+    }
+    _select(destination);
+  }
+
   Widget _shell(
     BuildContext context,
     Identity identity,
@@ -869,7 +879,31 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
         if (!didPop) _select('documents');
       },
       child: AppWorkspaceShell(
-        mobilePrimaryGroupIds: const ['invoices', 'jobs', 'documents', 'chat'],
+        mobilePrimaryGroupIds: const [
+          'invoices',
+          'scanner',
+          'documents',
+          'chat',
+        ],
+        mobileGroups: [
+          ..._groups,
+          if (identity.allows(IdentityPermission.uploadDocuments) &&
+              widget.dependencies.scanner != null)
+            AppNavigationGroup(
+              id: 'scanner',
+              label: 'Scanner',
+              icon: Icons.document_scanner_outlined,
+              collapsible: false,
+              items: const [
+                AppNavigationItem(
+                  id: 'scanner',
+                  label: 'Scanner',
+                  icon: Icons.document_scanner_outlined,
+                  key: Key('scannerNavigation'),
+                ),
+              ],
+            ),
+        ],
         activityIndicator: JobActivityIndicator(
           cubit: _jobActivity,
           uploads: widget.dependencies.uploads,
@@ -877,7 +911,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
           onSelectFiles: widget.onUpload,
         ),
         selectedId: _destination,
-        onSelected: _select,
+        onSelected: _selectNavigation,
         libraryPicker: LibrarySwitcher(
           cubit: _libraries,
           contextLabel: _destination == 'documents'

@@ -71,16 +71,16 @@ void main() {
         find.byKey(const Key('chatNavigation')),
         canChat ? findsOneWidget : findsNothing,
       );
+      expect(find.byKey(const Key('navigation-more')), findsOneWidget);
+      expect(find.byKey(const Key('navigation-admin-settings')), findsNothing);
+      await tester.tap(find.byKey(const Key('navigation-more')));
+      await tester.pumpAndSettle();
       expect(
-        find.byKey(
-          Key(
-            permissions.length == 4
-                ? 'navigation-more'
-                : 'navigation-admin-settings',
-          ),
-        ),
+        find.byKey(const Key('manageChat')),
         canManage ? findsOneWidget : findsNothing,
       );
+      await tester.tap(find.byKey(const Key('closeNavigationChooser')));
+      await tester.pumpAndSettle();
       if (canChat) {
         await tester.ensureVisible(find.byKey(const Key('chatNavigation')));
         await tester.tap(find.byKey(const Key('chatNavigation')));

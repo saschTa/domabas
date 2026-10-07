@@ -23,11 +23,9 @@ final class ChatMessageCard extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 760),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: user
-                ? scheme.surfaceContainerHigh
-                : scheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: scheme.outline),
+            color: user ? scheme.surfaceContainerHigh : scheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: scheme.outlineVariant),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),

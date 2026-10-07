@@ -14,12 +14,14 @@ import '../domain/paperless/models/paperless.dart';
 import '../domain/realtime/models/realtime.dart';
 import '../presentation/invoice/cubits/invoices_cubit.dart';
 import '../presentation/invoice/views/invoices_screen.dart';
+import '../presentation/invoice/widgets/invoices_workspace_toolbar.dart';
 import '../presentation/licenses/cubits/licenses_cubit.dart';
 import '../presentation/licenses/views/licenses_screen.dart';
 import '../presentation/realtime/cubits/realtime_cubit.dart';
 import '../presentation/realtime/widgets/realtime_status_action.dart';
 import '../presentation/identity/cubits/current_identity_cubit.dart';
 import '../presentation/document/views/documents_screen.dart';
+import '../presentation/document/widgets/documents_workspace_toolbar.dart';
 import '../presentation/document/cubits/documents_cubit.dart';
 import '../presentation/document/cubits/document_processing_cubit.dart';
 import '../presentation/document/cubits/document_processing_settings_cubit.dart';
@@ -108,6 +110,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   late final LibrariesCubit _libraries;
   late final SystemUsersCubit _systemUsers;
   late final DocumentProcessingCubit _processing;
+  late final ProcessingJobsFiltersCubit _jobFilters;
   late final EmailProvidersCubit _email;
   late final EmailJobsCubit _emailJobs;
   late final PaperlessJobsCubit _paperlessJobs;
@@ -177,6 +180,11 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
       widget.dependencies.processing,
       canReadJobs: identity.allows(IdentityPermission.readDocumentJobs),
       canReindex: identity.allows(IdentityPermission.reindexDocuments),
+    );
+    _jobFilters = ProcessingJobsFiltersCubit(
+      documents: _processing,
+      email: _emailJobs,
+      paperless: _paperlessJobs,
     );
     _processingSettings = DocumentProcessingSettingsCubit(
       widget.dependencies.processing,
@@ -272,6 +280,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_jobFilters.close());
     widget.dependencies.uploads?.onAccepted = null;
     unawaited(
       _releaseScanner(_scannerCubit, _scannerScope).catchError((Object _) {}),
@@ -918,6 +927,31 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
               ? 'Documents'
               : 'Current library',
         ),
+        toolbarBuilder: switch (_destination) {
+          'documents' =>
+            (context, library, actions) => DocumentsWorkspaceToolbar(
+              cubit: _documents,
+              vocabulary: widget.dependencies.vocabulary,
+              libraryPicker: library,
+              workspaceActions: actions,
+            ),
+          'invoices' => (context, library, actions) => InvoicesWorkspaceToolbar(
+            cubit: _invoices,
+            libraryPicker: library,
+            workspaceActions: actions,
+          ),
+          'jobs' => (context, library, actions) => ProcessingJobsToolbar(
+            filters: _jobFilters,
+            libraryPicker: library,
+            workspaceActions: actions,
+          ),
+          'licenses' => (context, library, actions) => LicensesWorkspaceToolbar(
+            cubit: _licenses,
+            libraryPicker: library,
+            workspaceActions: actions,
+          ),
+          _ => null,
+        },
         utilityActions: [?widget.appearanceWorkspaceAction, realtime, activity],
         actions: [
           if (_destination == 'documents' &&
@@ -1006,8 +1040,12 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
               ),
             Expanded(
               child: switch (_destination) {
-                'licenses' => LicensesScreen(cubit: _licenses),
+                'licenses' => LicensesScreen(
+                  cubit: _licenses,
+                  shellToolbar: true,
+                ),
                 'invoices' => InvoicesScreen(
+                  shellToolbar: true,
                   cubit: _invoices,
                   onOpenDocument:
                       identity.allows(IdentityPermission.readDocuments)
@@ -1048,6 +1086,11 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                               key: ValueKey('activity-view-$_activityView'),
                               initialBatches: _activityBatches,
                               cubit: _processing,
+                              refreshing:
+                                  emailJobs.loading ||
+                                  emailJobs.countsRefreshing ||
+                                  paperlessJobs.loading ||
+                                  paperlessJobs.countsRefreshing,
                               onEditExtraction:
                                   identity.allows(
                                     IdentityPermission.manageDocumentProcessing,
@@ -1069,6 +1112,8 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                                       ],
                                     ),
                               jobsList: ProcessingJobsList(
+                                filters: _jobFilters,
+                                shellToolbar: true,
                                 documents: _processing,
                                 email: _emailJobs,
                                 paperless: _paperlessJobs,
@@ -1124,8 +1169,8 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                                 _emailJobs.clearSelection();
                                 _paperlessJobs.clearSelection();
                               },
-                              onRefresh: () => unawaited(
-                                Future.wait([
+                              onRefresh: () async {
+                                await Future.wait([
                                   if (identity.allows(
                                         IdentityPermission.readDocumentJobs,
                                       ) ||
@@ -1139,8 +1184,8 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                                     _emailJobs.load(),
                                   if (_paperlessJobs.allowed)
                                     _paperlessJobs.load(),
-                                ]),
-                              ),
+                                ]);
+                              },
                               canReadDocuments: identity.allows(
                                 IdentityPermission.readDocuments,
                               ),
@@ -1169,6 +1214,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                 _ =>
                   identity.allows(IdentityPermission.readDocuments)
                       ? DocumentsScreen(
+                          shellToolbar: true,
                           vocabulary: widget.dependencies.vocabulary,
                           appearanceAction: widget.appearanceAction,
                           cubit: _documents,

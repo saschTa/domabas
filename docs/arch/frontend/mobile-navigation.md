@@ -25,15 +25,24 @@ its permitted leaf destinations directly, with a fixed Close control and a
 scrollable list. Selecting a leaf closes the sidebar and highlights More in the
 bar. Opening or dismissing the sidebar does not change the current destination.
 Escape, system Back and the outside scrim dismiss it. Account utilities remain in
-the header's separate More actions menu.
+the same sidebar: Appearance, live updates, Your jobs and Sign out. The current
+workspace's actions, including upload, scanning, metadata creation and upload
+history when permitted, appear above its destinations. The phone header keeps
+the upload shortcut and has no separate overflow button. More remains available
+even when there are no secondary destinations.
 
 The sidebar shares the shell's exact-route ownership, stale callback protection,
 permission-change invalidation and reduced-motion behavior. Crossing a responsive
 breakpoint closes it without selecting a page. Focus returns only to a mounted
-trigger. Tablet and desktop navigation continue to expose all permitted groups.
+trigger. Action rows update with current busy state, connection details and
+badges. Selecting an action removes the sidebar before invoking its current
+callback; focus returns after the action completes. Tablet and desktop navigation
+continue to expose all permitted groups and their existing action menus.
 
 Retain at least 48-pixel targets, system safe insets and the user's text scale.
-The five-button bar is 92 pixels high before outer spacing and safe insets. Only
+The five-button bar is 92 pixels high before outer spacing and safe insets, with
+an eight-pixel bottom margin above the system safe area. Its surface has no
+painted shadow. Only
 use the accessible stacked fallback when measured labels do not fit, such as
 narrow screens or enlarged text; cap its scrolling height at 40 percent of usable
 height. Hide the bar while the software keyboard is open without replacing the

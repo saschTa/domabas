@@ -173,64 +173,69 @@ final class _AppWorkspaceActionMenuState extends State<AppWorkspaceActionMenu> {
         valueListenable: _updates,
         builder: (context, _, _) => !mounted || _route != route
             ? const SizedBox.shrink()
-            : Dialog(
-                insetPadding: const EdgeInsets.all(16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 380),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                widget.label,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: 'Close actions',
-                              onPressed: () {
-                                if (_route == route && route.isCurrent) {
-                                  route.navigator?.pop();
-                                }
-                              },
-                              icon: const Icon(Icons.close),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Flexible(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
+            : SafeArea(
+                child: Dialog(
+                  insetPadding: const EdgeInsets.all(16),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 380),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                          child: Row(
                             children: [
-                              for (final action in widget.actions)
-                                _item(context, action, route, generation),
-                              if (widget.utilities.isNotEmpty) ...[
-                                if (widget.actions.isNotEmpty) const Divider(),
-                                if (widget.accountLabel != null)
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Text(
-                                      widget.accountLabel!,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                  ),
-                                for (final action in widget.utilities)
-                                  _item(context, action, route, generation),
-                              ],
+                              Expanded(
+                                child: Text(
+                                  widget.label,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Close actions',
+                                onPressed: () {
+                                  if (_route == route && route.isCurrent) {
+                                    route.navigator?.pop();
+                                  }
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (final action in widget.actions)
+                                  _item(context, action, route, generation),
+                                if (widget.utilities.isNotEmpty) ...[
+                                  if (widget.actions.isNotEmpty)
+                                    const Divider(),
+                                  if (widget.accountLabel != null)
+                                    Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Text(
+                                        widget.accountLabel!,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                    ),
+                                  for (final action in widget.utilities)
+                                    _item(context, action, route, generation),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -9,8 +9,11 @@ import 'app/native_server_app.dart';
 void main() {
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(const [
-      'Lora',
-    ], await rootBundle.loadString('assets/licenses/lora-ofl.txt'));
+      'Barlow Condensed',
+    ], await rootBundle.loadString('assets/licenses/barlow-ofl.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'DM Sans',
+    ], await rootBundle.loadString('assets/licenses/dmsans-ofl.txt'));
   });
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(const [

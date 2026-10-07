@@ -10,28 +10,19 @@ final class LicensesScreen extends StatefulWidget {
     super.key,
     required this.cubit,
     this.eyebrow = 'User settings',
+    this.shellToolbar = false,
   });
 
   final LicensesCubit cubit;
   final String eyebrow;
+  final bool shellToolbar;
 
   @override
   State<LicensesScreen> createState() => _LicensesScreenState();
 }
 
 final class _LicensesScreenState extends State<LicensesScreen> {
-  late final _search = TextEditingController(text: widget.cubit.state.query);
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  void _clearSearch() {
-    _search.clear();
-    widget.cubit.search('');
-  }
+  void _clearSearch() => widget.cubit.search('');
 
   @override
   Widget build(
@@ -43,6 +34,7 @@ final class _LicensesScreenState extends State<LicensesScreen> {
       return AppPage(
         key: const Key('licensesScreen'),
         title: 'Licenses',
+        showHeading: !widget.shellToolbar,
         eyebrow: widget.eyebrow,
         description:
             'Domabas and the libraries, tools and other components behind it. '
@@ -64,32 +56,10 @@ final class _LicensesScreenState extends State<LicensesScreen> {
                 key: const Key('licensesScroll'),
                 padding: AppLayout.cardListPadding(context),
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 640),
-                      child: TextField(
-                        key: const Key('licenseSearch'),
-                        controller: _search,
-                        onChanged: widget.cubit.search,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          labelText: 'Search licenses',
-                          hintText: 'Component, name or license',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: state.query.isEmpty
-                              ? null
-                              : IconButton(
-                                  key: const Key('clearLicenseSearch'),
-                                  tooltip: 'Clear search',
-                                  onPressed: _clearSearch,
-                                  icon: const Icon(Icons.close),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  if (!widget.shellToolbar) ...[
+                    LicensesWorkspaceToolbar(cubit: widget.cubit),
+                    const SizedBox(height: 16),
+                  ],
                   if (state.error case final error?) ...[
                     AppNotice(
                       message: error,
@@ -227,4 +197,58 @@ final class _LicenseRecord extends StatelessWidget {
     ),
     onTap: onOpen,
   );
+}
+
+final class LicensesWorkspaceToolbar extends StatefulWidget {
+  const LicensesWorkspaceToolbar({
+    super.key,
+    required this.cubit,
+    this.libraryPicker,
+    this.workspaceActions,
+  });
+  final LicensesCubit cubit;
+  final Widget? libraryPicker, workspaceActions;
+  @override
+  State<LicensesWorkspaceToolbar> createState() =>
+      _LicensesWorkspaceToolbarState();
+}
+
+final class _LicensesWorkspaceToolbarState
+    extends State<LicensesWorkspaceToolbar> {
+  late final _search = TextEditingController(text: widget.cubit.state.query);
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocConsumer<LicensesCubit, LicensesState>(
+        bloc: widget.cubit,
+        listener: (_, state) {
+          if (_search.text != state.query) {
+            _search.value = TextEditingValue(
+              text: state.query,
+              selection: TextSelection.collapsed(offset: state.query.length),
+            );
+          }
+        },
+        builder: (context, _) => AppCollectionToolbar(
+          libraryPicker: widget.libraryPicker,
+          workspaceActions: widget.workspaceActions,
+          search: AppSearchField(
+            fieldKey: const Key('licenseSearch'),
+            clearKey: const Key('clearLicenseSearch'),
+            controller: _search,
+            hintText: 'Search licenses',
+            onChanged: widget.cubit.search,
+            onSubmitted: widget.cubit.search,
+            onClear: () {
+              _search.clear();
+              widget.cubit.search('');
+            },
+          ),
+        ),
+      );
 }

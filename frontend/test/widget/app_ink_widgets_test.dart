@@ -21,16 +21,20 @@ Widget _app(
   ),
 );
 
-Future<ByteData> _pixels(WidgetTester tester, Finder owner) async {
+Future<ByteData> _pixels(
+  WidgetTester tester,
+  Finder owner, {
+  double height = 10,
+}) async {
   final paint = tester.widget<CustomPaint>(
     find.descendant(of: owner, matching: find.byType(CustomPaint)),
   );
   return (await tester.runAsync(() async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(3);
-    paint.painter!.paint(canvas, const Size(100, 10));
+    paint.painter!.paint(canvas, Size(100, height));
     final picture = recorder.endRecording();
-    final image = await picture.toImage(300, 30);
+    final image = await picture.toImage(300, (height * 3).round());
     final bytes = await image.toByteData();
     image.dispose();
     picture.dispose();
@@ -45,20 +49,28 @@ int _alpha(ByteData bytes, int x, int y) =>
 
 void main() {
   for (final dark in [false, true]) {
-    testWidgets('stripes have ink and transparent gaps dark=$dark', (
+    testWidgets('section dividers paint one fine solid rule dark=$dark', (
       tester,
     ) async {
       await tester.pumpWidget(
-        _app(const AppStripedDivider(thickness: 10), dark: dark),
+        _app(const AppStripedDivider(thickness: 11), dark: dark),
       );
-      final pixels = await _pixels(tester, find.byType(AppStripedDivider));
+      final pixels = await _pixels(
+        tester,
+        find.byType(AppStripedDivider),
+        height: 11,
+      );
       final row = List.generate(80, (i) => _alpha(pixels, i + 10, 5));
-      expect(row.where((alpha) => alpha == 0).length, greaterThan(10));
-      expect(row.where((alpha) => alpha == 255).length, greaterThan(10));
+      expect(row, everyElement(255));
+      for (var x = 0; x < 100; x++) {
+        expect(_alpha(pixels, x, 3), 0);
+        expect(_alpha(pixels, x, 6), 0);
+      }
       expect(_alpha(pixels, 0, 0), 0);
       final x = 10 + row.indexOf(255);
-      final ink =
-          (dark ? AppTheme.dark() : AppTheme.light()).colorScheme.onSurface;
+      final ink = (dark ? AppTheme.dark() : AppTheme.light())
+          .colorScheme
+          .outlineVariant;
       expect(pixels.getUint8(_pixelOffset(x, 5)), (ink.r * 255).round());
       expect(pixels.getUint8(_pixelOffset(x, 5) + 1), (ink.g * 255).round());
       expect(pixels.getUint8(_pixelOffset(x, 5) + 2), (ink.b * 255).round());

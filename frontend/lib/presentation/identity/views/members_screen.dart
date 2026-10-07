@@ -26,14 +26,12 @@ final class MembersScreen extends StatelessWidget {
       description: invitations
           ? 'Invite people to ${cubit.identity.accountName} and manage the access you share.'
           : 'Manage who can use ${cubit.identity.accountName} and what they can do.',
+      onRefresh: cubit.saving || cubit.loading || cubit.loadingInvitations
+          ? null
+          : invitations
+          ? () => cubit.loadInvitations()
+          : () => cubit.load(),
       actions: [
-        IconButton(
-          tooltip: invitations ? 'Refresh invitations' : 'Refresh members',
-          onPressed: cubit.loading || cubit.loadingInvitations || cubit.saving
-              ? null
-              : () => invitations ? cubit.loadInvitations() : cubit.load(),
-          icon: const Icon(Icons.refresh),
-        ),
         FilledButton.icon(
           key: const Key('inviteMember'),
           onPressed:
@@ -63,76 +61,75 @@ final class MembersScreen extends StatelessWidget {
       Expanded(
         child: AppSurface(
           padding: EdgeInsets.zero,
-          child: cubit.members.isEmpty && !cubit.loading
-              ? const AppEmptyState(
-                  icon: Icons.people_outline,
-                  title: 'No members to display',
-                  message: 'Refresh this library to see its members.',
-                )
-              : ListView.separated(
-                  itemCount: cubit.members.length + (cubit.canLoadMore ? 1 : 0),
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    if (index == cubit.members.length) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: TextButton(
-                          onPressed: cubit.loading
-                              ? null
-                              : () => cubit.load(more: true),
-                          child: const Text('Load more members'),
-                        ),
+          child: ListView.separated(
+            itemCount: cubit.members.isEmpty
+                ? 1
+                : cubit.members.length + (cubit.canLoadMore ? 1 : 0),
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (cubit.members.isEmpty) {
+                return cubit.loading
+                    ? const SizedBox.shrink()
+                    : const AppEmptyState(
+                        icon: Icons.people_outline,
+                        title: 'No members to display',
+                        message: 'Pull down to refresh this library’s members.',
                       );
-                    }
-                    final member = cubit.members[index];
-                    final additional = member.claims
-                        .difference(cubit.roleClaims(member.role))
-                        .length;
-                    return AppRecordRow(
-                      key: Key('member-${member.id}'),
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.person_outline),
-                      ),
-                      title: member.email,
-                      subtitle: Text(
-                        member.isOwner
-                            ? 'Owns this library'
-                            : additional == 0
-                            ? '${_roleLabel(member.role)} permissions'
-                            : '${_roleLabel(member.role)} with $additional additional permissions',
-                      ),
-                      metadata: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          AppStatusBadge(
-                            label: member.isOwner
-                                ? 'Owner'
-                                : _roleLabel(member.role),
-                          ),
-                          AppStatusBadge(
-                            label: member.enabled ? 'Active' : 'Disabled',
-                            tone: member.enabled
-                                ? AppTone.success
-                                : AppTone.neutral,
-                          ),
-                        ],
-                      ),
-                      trailing: member.isOwner
-                          ? null
-                          : IconButton(
-                              tooltip: 'Edit ${member.email}',
-                              icon: const Icon(Icons.edit_outlined),
-                              onPressed:
-                                  cubit.saving ||
-                                      cubit.loading ||
-                                      cubit.loadingInvitations
-                                  ? null
-                                  : () => _edit(context, member),
-                            ),
-                    );
-                  },
+              }
+              if (index == cubit.members.length) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextButton(
+                    onPressed: cubit.loading
+                        ? null
+                        : () => cubit.load(more: true),
+                    child: const Text('Load more members'),
+                  ),
+                );
+              }
+              final member = cubit.members[index];
+              final additional = member.claims
+                  .difference(cubit.roleClaims(member.role))
+                  .length;
+              return AppRecordRow(
+                key: Key('member-${member.id}'),
+                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                title: member.email,
+                subtitle: Text(
+                  member.isOwner
+                      ? 'Owns this library'
+                      : additional == 0
+                      ? '${_roleLabel(member.role)} permissions'
+                      : '${_roleLabel(member.role)} with $additional additional permissions',
                 ),
+                metadata: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AppStatusBadge(
+                      label: member.isOwner ? 'Owner' : _roleLabel(member.role),
+                    ),
+                    AppStatusBadge(
+                      label: member.enabled ? 'Active' : 'Disabled',
+                      tone: member.enabled ? AppTone.success : AppTone.neutral,
+                    ),
+                  ],
+                ),
+                trailing: member.isOwner
+                    ? null
+                    : IconButton(
+                        tooltip: 'Edit ${member.email}',
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed:
+                            cubit.saving ||
+                                cubit.loading ||
+                                cubit.loadingInvitations
+                            ? null
+                            : () => _edit(context, member),
+                      ),
+              );
+            },
+          ),
         ),
       ),
     ],
@@ -155,65 +152,66 @@ final class MembersScreen extends StatelessWidget {
       Expanded(
         child: AppSurface(
           padding: EdgeInsets.zero,
-          child: !cubit.loadingInvitations && cubit.invitations.isEmpty
-              ? const AppEmptyState(
-                  icon: Icons.mark_email_unread_outlined,
-                  title: 'No invitations yet',
-                  message: 'Invite someone and share their code to give them access to this library.',
-                )
-              : ListView.separated(
-                  itemCount:
-                      cubit.invitations.length +
+          child: ListView.separated(
+            itemCount: cubit.invitations.isEmpty
+                ? 1
+                : cubit.invitations.length +
                       (cubit.canLoadMoreInvitations ? 1 : 0),
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    if (index == cubit.invitations.length) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: TextButton(
-                          onPressed: cubit.loadingInvitations
-                              ? null
-                              : () => cubit.loadInvitations(more: true),
-                          child: const Text('Load more invitations'),
-                        ),
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              if (cubit.invitations.isEmpty) {
+                return cubit.loadingInvitations
+                    ? const SizedBox.shrink()
+                    : const AppEmptyState(
+                        icon: Icons.mark_email_unread_outlined,
+                        title: 'No invitations yet',
+                        message: 'Invite someone and share their code to give them access to this library.',
                       );
-                    }
-                    final invite = cubit.invitations[index];
-                    return AppRecordRow(
-                      key: Key('invitation-${invite.id}'),
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.mail_outline),
-                      ),
-                      title: invite.email,
-                      subtitle: Text('Expires ${_date(invite.expiresAt)}'),
-                      metadata: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          AppStatusBadge(label: _roleLabel(invite.role)),
-                          AppStatusBadge(
-                            label: _statusLabel(invite.status),
-                            tone: invite.status == InvitationStatus.pending
-                                ? AppTone.warning
-                                : invite.status == InvitationStatus.accepted
-                                ? AppTone.success
-                                : AppTone.neutral,
-                          ),
-                        ],
-                      ),
-                      trailing: invite.status == InvitationStatus.pending
-                          ? TextButton(
-                              key: Key('revoke-${invite.id}'),
-                              onPressed:
-                                  cubit.saving || cubit.loadingInvitations
-                                  ? null
-                                  : () => _revoke(context, invite),
-                              child: const Text('Revoke'),
-                            )
-                          : null,
-                    );
-                  },
+              }
+              if (index == cubit.invitations.length) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextButton(
+                    onPressed: cubit.loadingInvitations
+                        ? null
+                        : () => cubit.loadInvitations(more: true),
+                    child: const Text('Load more invitations'),
+                  ),
+                );
+              }
+              final invite = cubit.invitations[index];
+              return AppRecordRow(
+                key: Key('invitation-${invite.id}'),
+                leading: const CircleAvatar(child: Icon(Icons.mail_outline)),
+                title: invite.email,
+                subtitle: Text('Expires ${_date(invite.expiresAt)}'),
+                metadata: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AppStatusBadge(label: _roleLabel(invite.role)),
+                    AppStatusBadge(
+                      label: _statusLabel(invite.status),
+                      tone: invite.status == InvitationStatus.pending
+                          ? AppTone.warning
+                          : invite.status == InvitationStatus.accepted
+                          ? AppTone.success
+                          : AppTone.neutral,
+                    ),
+                  ],
                 ),
+                trailing: invite.status == InvitationStatus.pending
+                    ? TextButton(
+                        key: Key('revoke-${invite.id}'),
+                        onPressed: cubit.saving || cubit.loadingInvitations
+                            ? null
+                            : () => _revoke(context, invite),
+                        child: const Text('Revoke'),
+                      )
+                    : null,
+              );
+            },
+          ),
         ),
       ),
     ],

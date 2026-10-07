@@ -71,14 +71,7 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         eyebrow: 'ADMIN SETTINGS',
         title: 'AI chat',
         description: 'Choose the model people use to ask questions about their documents.',
-        actions: [
-          IconButton(
-            key: const Key('refreshChatSettings'),
-            tooltip: 'Refresh chat settings',
-            onPressed: state.loading || state.saving ? null : cubit.load,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        onRefresh: state.loading || state.saving ? null : cubit.load,
         child: ListView(
           key: const Key('chatSettingsScroll'),
           padding: AppLayout.cardListPadding(context),

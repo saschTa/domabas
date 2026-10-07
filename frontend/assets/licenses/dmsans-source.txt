@@ -1,0 +1,12 @@
+DM Sans font
+Version: 4.004 (Google Fonts v17)
+
+These unmodified fonts are bundled locally with Domabas.
+
+DMSans-Regular.ttf
+Source: https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAopxhTg.ttf
+SHA-256: b0ae3e89a7d3ef2b1838bb4b1ceb0b17cc3435af061eee809d76aa623ff116e9
+
+DMSans-SemiBold.ttf
+Source: https://fonts.gstatic.com/s/dmsans/v17/rP2tp2ywxg089UriI5-g4vlH9VoD8CmcqZG40F9JadbnoEwAfJthTg.ttf
+SHA-256: b79a2ea7a38f33fd96a282fadb9ce97626bb0724a44d21075859f0e50239993a

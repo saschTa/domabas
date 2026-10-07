@@ -85,8 +85,8 @@ final class _AppStripedProgressIndicatorState
       width: double.infinity,
       height: widget.minHeight,
       child: CustomPaint(
-        painter: _AppStripePainter(
-          ink: Theme.of(context).colorScheme.onSurface,
+        painter: _AppProgressPainter(
+          ink: Theme.of(context).colorScheme.primary,
           value: widget.value,
           direction: Directionality.of(context),
           motion: _motion,
@@ -100,7 +100,7 @@ final class AppStripedDivider extends StatelessWidget {
   const AppStripedDivider({
     super.key,
     this.height = 16,
-    this.thickness = 8,
+    this.thickness = 1,
     this.indent = 0,
     this.endIndent = 0,
   }) : assert(height >= 0),
@@ -124,10 +124,8 @@ final class AppStripedDivider extends StatelessWidget {
             width: double.infinity,
             height: thickness,
             child: CustomPaint(
-              painter: _AppStripePainter(
-                ink: Theme.of(context).colorScheme.onSurface,
-                value: 1,
-                direction: Directionality.of(context),
+              painter: _AppDividerPainter(
+                color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
           ),
@@ -137,8 +135,8 @@ final class AppStripedDivider extends StatelessWidget {
   );
 }
 
-final class _AppStripePainter extends CustomPainter {
-  _AppStripePainter({
+final class _AppProgressPainter extends CustomPainter {
+  _AppProgressPainter({
     required this.ink,
     required this.value,
     required this.direction,
@@ -162,27 +160,34 @@ final class _AppStripePainter extends CustomPainter {
         ? offset
         : size.width - offset - width;
     final bounds = Rect.fromLTWH(left, 0, width, size.height);
-    final paint = Paint()
-      ..color = ink
-      ..strokeWidth = 2;
-    canvas.save();
-    canvas.clipRRect(
+    canvas.drawRRect(
       RRect.fromRectAndRadius(bounds, Radius.circular(size.height / 2)),
+      Paint()..color = ink,
     );
-    for (var x = left - size.height; x < bounds.right + size.height; x += 5) {
-      canvas.drawLine(
-        Offset(x, size.height),
-        Offset(x + size.height, 0),
-        paint,
-      );
-    }
-    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_AppStripePainter oldDelegate) =>
+  bool shouldRepaint(_AppProgressPainter oldDelegate) =>
       ink != oldDelegate.ink ||
       value != oldDelegate.value ||
       direction != oldDelegate.direction ||
       motion != oldDelegate.motion;
+}
+
+final class _AppDividerPainter extends CustomPainter {
+  const _AppDividerPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, (size.height - 1) / 2, size.width, 1),
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_AppDividerPainter oldDelegate) =>
+      color != oldDelegate.color;
 }

@@ -170,15 +170,16 @@ void main() {
         await tester.pumpAndSettle();
         final collection = find.byKey(const Key('documentCollectionScroll'));
         final navigation = find.byKey(const Key('workspaceBottomNavigation'));
-        expect(tester.getRect(collection).bottom, height);
+        expect(tester.getRect(collection).bottom, height - 8 - safeBottom);
         expect(tester.getRect(navigation).bottom, height);
-        final scroll = find.descendant(
-          of: collection,
-          matching: find.byType(Scrollable),
-        );
+        final scroll = find
+            .descendant(of: collection, matching: find.byType(Scrollable))
+            .first;
         final next = find.byKey(const Key('loadMoreDocuments'));
+        final count = find.byKey(const Key('documentCount'));
+        final footer = find.byKey(const Key('documentCollectionFooter'));
         final position = tester.state<ScrollableState>(scroll).position;
-        final dragStart = Offset(6, tester.getRect(navigation).top + 32);
+        final dragStart = Offset(10, tester.getRect(navigation).top + 32);
         for (
           var attempt = 0;
           attempt < DocumentsCubit.pageSize * 4 && next.evaluate().isEmpty;
@@ -190,6 +191,12 @@ void main() {
         expect(next, findsOneWidget);
         position.jumpTo(position.maxScrollExtent);
         await tester.pumpAndSettle();
+        expect(count, findsOneWidget);
+        expect(tester.widget<Text>(count).data, '49 documents');
+        expect(
+          tester.getRect(count).bottom,
+          lessThanOrEqualTo(tester.getRect(next).top),
+        );
         expect(
           tester.getRect(next).bottom,
           lessThan(tester.getRect(navigation).top),
@@ -203,6 +210,13 @@ void main() {
           Key('document-overlay-${DocumentsCubit.pageSize}'),
         );
         position.jumpTo(position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        position.jumpTo(
+          (position.maxScrollExtent - tester.getSize(footer).height).clamp(
+            0,
+            position.maxScrollExtent,
+          ),
+        );
         await tester.pumpAndSettle();
         expect(
           tester.getRect(last).bottom,
@@ -491,7 +505,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(details, findsOneWidget);
         expect(outline().color, primary);
-        expect(outline().width, 2);
+        expect(outline().width, 1.5);
         reduced.value = true;
         await tester.pump();
         expect(tester.getTopLeft(card), origin);

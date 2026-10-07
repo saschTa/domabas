@@ -108,6 +108,9 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
       title: 'Email accounts',
       description:
           'Your private account connections import into the current library.',
+      onRefresh: state.loading || state.saving
+          ? null
+          : () => widget.cubit.load(),
       child: ListView(
         padding: AppLayout.cardListPadding(context),
         children: [
@@ -132,14 +135,6 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
                   icon: const Icon(Icons.arrow_back),
                   label: const Text('All email accounts'),
                 ),
-              OutlinedButton.icon(
-                key: const Key('email-refresh'),
-                onPressed: state.loading || state.saving
-                    ? null
-                    : () => widget.cubit.load(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Refresh'),
-              ),
               if (state.selectedId == null)
                 FilledButton.icon(
                   key: const Key('email-add'),
@@ -271,7 +266,7 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
             ),
             if (state.browsingHistory)
               const AppNotice(
-                message: 'Older imports stay in place while active outcomes update. Refresh to see new imports.',
+                message: 'Older imports stay in place while active outcomes update. Pull down to see new imports.',
               ),
             AppPagedList(
               key: PageStorageKey('email-runs-${provider.id}'),

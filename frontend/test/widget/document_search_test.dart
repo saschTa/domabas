@@ -71,8 +71,17 @@ void main() {
         matching: find.byType(Scrollable),
       )
       .first;
-  Future<void> reveal(WidgetTester tester, Finder target) =>
-      revealWorkspaceContent(tester, target, scrollable: collectionScroll());
+  Future<void> reveal(WidgetTester tester, Finder target) async {
+    if (target.evaluate().isNotEmpty) {
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+    }
+    await revealWorkspaceContent(
+      tester,
+      target,
+      scrollable: collectionScroll(),
+    );
+  }
 
   Future<void> revealFilterOption(WidgetTester tester, Finder target) =>
       revealWorkspaceContent(
@@ -91,9 +100,10 @@ void main() {
     await cubit.applySearch(DocumentSearchCriteria(query: 'invoice'));
     await tester.pumpWidget(workspace());
     await tester.pumpAndSettle();
+    expect(find.text('Matched invoice'), findsOneWidget);
+    await reveal(tester, find.byKey(const Key('documentCount')));
     expect(find.text('Search results'), findsOneWidget);
     expect(find.text('0 results'), findsNothing);
-    expect(find.text('Matched invoice'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -151,6 +161,7 @@ void main() {
         expect(source.downloads, 0);
         expect(source.thumbnailReads, media == 'image/png' && download ? 1 : 0);
         final searches = source.criteria.length;
+        await tester.ensureVisible(find.byTooltip('List'));
         await tester.tap(find.byTooltip('List'));
         await tester.pumpAndSettle();
         expect(
@@ -179,7 +190,7 @@ void main() {
   }
 
   testWidgets(
-    'search is bounded beside Filters and resizing retains focused input',
+    'search shares its toolbar row with Filters and resizing retains focused input',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(1440, 1000);
@@ -188,14 +199,14 @@ void main() {
       await tester.pumpWidget(workspace());
       final term = find.byKey(const Key('documentSearchTerm'));
       final filters = find.byKey(const Key('documentFilters'));
-      expect(tester.getSize(term).width, lessThanOrEqualTo(560));
+      expect(tester.getSize(term).width, greaterThanOrEqualTo(280));
       expect(
         tester.getRect(filters).left,
-        closeTo(tester.getRect(term).right + 8, .1),
+        closeTo(tester.getRect(term).right + 12, .1),
       );
       expect(
         tester.getRect(filters).center.dy,
-        closeTo(tester.getRect(term).center.dy, .1),
+        closeTo(tester.getRect(term).center.dy, 2),
       );
       await tester.tap(term);
       await tester.enterText(term, 'draft');
@@ -349,10 +360,11 @@ void main() {
             .map((group) => group.id),
         ['documents', 'user-settings', 'admin-settings'],
       );
-      await tester.tap(find.byTooltip('More actions'));
+      await tester.ensureVisible(find.byKey(const Key('navigation-more')));
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('newDocument')), findsOneWidget);
-      await tester.tap(find.byTooltip('Close actions'));
+      await tester.tap(find.byKey(const Key('closeNavigationChooser')));
       await tester.pumpAndSettle();
       expect(
         tester

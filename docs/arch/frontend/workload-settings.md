@@ -11,7 +11,8 @@ draining jobs remain counted. Saving a smaller limit lets running jobs finish;
 new work waits. Unsaved edits are preserved through validation or save failures,
 and stale revisions require a reload before another save.
 
-Refresh updates the saved values and usage while preserving each edited field,
+Pull down at the top of the form to refresh saved values and usage while
+preserving each edited field,
 including an empty or newly out-of-range draft. Save remains disabled until all
 limits are positive whole numbers within the current server-provided bounds.
 Conflicts and uncertain writes require an explicit refresh; reset restores the
@@ -37,6 +38,7 @@ their original requirements, and provider resource rows from earlier settings ca
 remain visible independently of the current matrix.
 
 Paperless retrieval parallelism remains in its own settings as source protection.
+That settings form also supports pull-to-refresh and preserves an unsaved choice.
 Paperless and email retrieval reserve worker capacity; accepted originals enter
 the separate ingestion pipeline. Document AI and chat use the selected provider
 resource. Pipeline screens no longer describe ingestion preemption or show the

@@ -196,6 +196,7 @@ Future<void> exerciseDocumentSearch(
   }
   await tester.tap(find.byKey(const Key('closeDocumentFilters')));
   await tester.pumpAndSettle();
+  await reveal(find.byKey(const Key('documentCount')), 'search result count');
   expect(
     tester.widget<Text>(find.byKey(const Key('documentCount'))).data,
     'Search results',

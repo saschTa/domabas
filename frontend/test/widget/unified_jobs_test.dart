@@ -18,6 +18,7 @@ import '../support/fake_identity_repository.dart';
 import '../support/fake_processing_repository.dart';
 import '../support/fake_realtime_repository.dart';
 import '../support/mock_paperless_repository.dart';
+import '../support/navigation_fonts.dart';
 import '../support/workspace_navigation.dart';
 
 EmailRun run(
@@ -61,6 +62,29 @@ final class PagedEmailRepository extends FakeEmailRepository {
 }
 
 void main() {
+  setUpAll(loadNavigationFonts);
+
+  Future<void> openJobFilters(WidgetTester tester) async {
+    if (find.text('Filter jobs').evaluate().isNotEmpty) return;
+    await tester.ensureVisible(find.byKey(const Key('jobFilters')));
+    await tester.tap(find.byKey(const Key('jobFilters')));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> closeJobFilters(WidgetTester tester) async {
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> selectJobFilter(WidgetTester tester, String key) async {
+    await openJobFilters(tester);
+    final filter = find.byKey(Key(key));
+    await tester.ensureVisible(filter);
+    await tester.tap(filter);
+    await tester.pumpAndSettle();
+    await closeJobFilters(tester);
+  }
+
   Future<void> revealJobContent(WidgetTester tester, Finder target) =>
       revealWorkspacePageContent(
         tester,
@@ -158,8 +182,11 @@ void main() {
       await tester.pumpAndSettle();
       await navigateWorkspace(tester, 'processingNavigation');
       await tester.pumpAndSettle();
+      await setWorkspacePipelineSetup(tester, expanded: true);
       expect(find.text('Thumbnail generation pipeline'), findsOneWidget);
+      await setWorkspacePipelineSetup(tester, expanded: false);
       final filter = find.byKey(const Key('pipeline-filter-thumbnail'));
+      await openJobFilters(tester);
       await tester.ensureVisible(filter);
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('job-thumbnail')), findsOneWidget);
@@ -170,6 +197,7 @@ void main() {
       );
       await tester.tap(filter);
       await tester.pumpAndSettle();
+      await closeJobFilters(tester);
       expect(processing.jobPipelines.last, 'thumbnail');
       expect(find.byKey(const Key('job-ingestion')), findsNothing);
       final details = find.descendant(
@@ -184,7 +212,9 @@ void main() {
       expect(find.byType(ProcessingConfigurationDetails), findsNothing);
       expect(find.text('Thumbnail renderer revision 1'), findsOneWidget);
       await backToJobs(tester);
+      await openJobFilters(tester);
       expect(tester.widget<ChoiceChip>(filter).selected, isTrue);
+      await closeJobFilters(tester);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
@@ -357,18 +387,16 @@ void main() {
       await tester.pumpAndSettle();
       await navigateWorkspace(tester, 'processingNavigation');
       await tester.pumpAndSettle();
+      await setWorkspacePipelineSetup(tester, expanded: true);
       expect(find.text('Paperless import pipeline'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.byKey(const Key('pipeline-filter-document')),
-        200,
-        scrollable: find
-            .descendant(
-              of: find.byKey(const PageStorageKey('processingPage')),
-              matching: find.byType(Scrollable),
-            )
-            .first,
+      await setWorkspacePipelineSetup(tester, expanded: false);
+      await revealJobContent(
+        tester,
+        find.descendant(
+          of: find.byKey(const Key('email-job-new-mail')),
+          matching: find.text('Details'),
+        ),
       );
-      await tester.pumpAndSettle();
       expect(find.byKey(const Key('email-job-new-mail')), findsOneWidget);
       expect(
         find.byKey(const Key('paperless-job-paperless')),
@@ -395,28 +423,17 @@ void main() {
         const Key('job-document'),
         const Key('email-job-old-mail'),
       ]);
-      await tester.ensureVisible(
-        find.byKey(const Key('pipeline-filter-document')),
-      );
-      await tester.tap(find.byKey(const Key('pipeline-filter-document')));
-      await tester.pumpAndSettle();
+      await selectJobFilter(tester, 'pipeline-filter-document');
       expect(find.byKey(const Key('job-document')), findsOneWidget);
       expect(find.byKey(const Key('email-job-new-mail')), findsNothing);
       expect(find.byKey(const Key('paperless-job-paperless')), findsNothing);
-      await revealJobContent(
-        tester,
-        find.byKey(const Key('pipeline-filter-paperless')),
-      );
-      await tester.tap(find.byKey(const Key('pipeline-filter-paperless')));
-      await tester.pumpAndSettle();
+      await selectJobFilter(tester, 'pipeline-filter-paperless');
       expect(find.byKey(const Key('job-document')), findsNothing);
       expect(find.byKey(const Key('email-job-new-mail')), findsNothing);
       expect(find.byKey(const Key('paperless-job-paperless')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('job-filter-succeeded')));
-      await tester.pumpAndSettle();
+      await selectJobFilter(tester, 'job-filter-succeeded');
       expect(find.byKey(const Key('paperless-job-paperless')), findsNothing);
-      await tester.tap(find.byKey(const Key('job-filter-partial')));
-      await tester.pumpAndSettle();
+      await selectJobFilter(tester, 'job-filter-partial');
       final paperlessDetail = find.descendant(
         of: find.byKey(const Key('paperless-job-paperless')),
         matching: find.text('Details'),
@@ -442,10 +459,7 @@ void main() {
         findsOneWidget,
       );
       await backToJobs(tester);
-      await revealJobContent(
-        tester,
-        find.byKey(const Key('pipeline-filter-paperless')),
-      );
+      await openJobFilters(tester);
       expect(
         tester
             .widget<ChoiceChip>(
@@ -457,6 +471,7 @@ void main() {
       await tester.tap(find.byKey(const Key('job-filter-all')));
       await tester.tap(find.byKey(const Key('pipeline-filter-email')));
       await tester.pumpAndSettle();
+      await closeJobFilters(tester);
       expect(find.byKey(const Key('job-document')), findsNothing);
       final detail = find.descendant(
         of: find.byKey(const Key('email-job-new-mail')),
@@ -477,12 +492,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AppPipelineDiagram), findsOneWidget);
       await backToJobs(tester);
+      await openJobFilters(tester);
       expect(
         tester
             .widget<ChoiceChip>(find.byKey(const Key('pipeline-filter-email')))
             .selected,
         isTrue,
       );
+      await closeJobFilters(tester);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       dependencies.dispose();
@@ -528,24 +545,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(paperless.lists, canImport ? greaterThan(0) : 0);
       await navigateWorkspace(tester, 'processingNavigation');
+      await setWorkspacePipelineSetup(tester, expanded: true);
       expect(
         find.text('Paperless import pipeline'),
         canImport ? findsOneWidget : findsNothing,
       );
-      if (canImport) {
-        await revealWorkspaceContent(
-          tester,
-          find.byKey(const Key('pipeline-filter-paperless')),
-          scrollable: find.descendant(
-            of: find.byKey(const PageStorageKey('processingPage')),
-            matching: find.byType(Scrollable),
-          ),
-        );
-      }
+      await setWorkspacePipelineSetup(tester, expanded: false);
+      await openJobFilters(tester);
       expect(
         find.byKey(const Key('pipeline-filter-paperless')),
         canImport ? findsOneWidget : findsNothing,
       );
+      await closeJobFilters(tester);
       expect(paperless.lists, canImport ? greaterThan(0) : 0);
       if (canImport) {
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);

@@ -166,7 +166,12 @@ void main() {
           'manageSystemUsers',
           group: 'Admin settings',
         );
-        expect(find.text('System users'), findsOneWidget);
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is AppPage && widget.title == 'System users',
+          ),
+          findsOneWidget,
+        );
         expect(users, 1);
         expect((members, invitations), (0, 0));
       }
@@ -244,7 +249,10 @@ void main() {
           padding: const EdgeInsets.only(top: 12, bottom: 24),
         );
         expect(tester.takeException(), isNull);
-        expect(find.byKey(const Key('documentCount')), findsOneWidget);
+        expect(
+          find.byKey(const Key('documentCollectionScroll')),
+          findsOneWidget,
+        );
         final next = find.byKey(const Key('loadMoreDocuments'));
         final collectionScroll = find
             .descendant(
@@ -258,6 +266,7 @@ void main() {
           scrollable: collectionScroll,
           maxAttempts: DocumentsCubit.pageSize * 4,
         );
+        expect(find.byKey(const Key('documentCount')), findsOneWidget);
         expect(next.hitTestable(), findsOneWidget);
         await tester.tap(next);
         await tester.pumpAndSettle();
@@ -298,10 +307,19 @@ void main() {
             'manageSystemUsers',
             group: 'Admin settings',
           );
-          expect(find.text('System users'), findsOneWidget);
+          expect(
+            find.byWidgetPredicate(
+              (widget) => widget is AppPage && widget.title == 'System users',
+            ),
+            findsOneWidget,
+          );
         }
         await navigateWorkspace(tester, 'documentsNavigation');
-        expect(find.byKey(const Key('documentCount')), findsOneWidget);
+        expect(
+          find.byKey(const Key('documentCollectionScroll')),
+          findsOneWidget,
+        );
+        expect(find.text('Page 2 of 2'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

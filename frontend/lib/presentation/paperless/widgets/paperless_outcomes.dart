@@ -54,14 +54,7 @@ final class _PaperlessOutcomesState extends State<PaperlessOutcomes> {
     builder: (context, state) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppSectionHeader(
-          title: 'Document results',
-          trailing: IconButton(
-            tooltip: 'Refresh document results',
-            onPressed: state.loading ? null : () => _cubit.load(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ),
+        const AppSectionHeader(title: 'Document results'),
         Wrap(
           spacing: 8,
           runSpacing: 8,

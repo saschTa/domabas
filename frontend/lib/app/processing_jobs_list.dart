@@ -22,7 +22,11 @@ final class ProcessingJobsList extends StatefulWidget {
     required this.email,
     required this.paperless,
     required this.onOpenEmailJob,
+    this.filters,
+    this.shellToolbar = false,
   });
+  final ProcessingJobsFiltersCubit? filters;
+  final bool shellToolbar;
   final DocumentProcessingCubit documents;
   final EmailJobsCubit email;
   final PaperlessJobsCubit paperless;
@@ -33,49 +37,56 @@ final class ProcessingJobsList extends StatefulWidget {
 }
 
 final class _ProcessingJobsListState extends State<ProcessingJobsList> {
-  String _pipeline = 'all';
-  String? _status;
+  late final ProcessingJobsFiltersCubit _filters;
+  late final StreamSubscription<ProcessingJobsFiltersState>
+  _filtersSubscription;
+  String get _pipeline => _filters.pipeline;
+  String? get _status => _filters.status;
   bool _restored = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _filters =
+        widget.filters ??
+        ProcessingJobsFiltersCubit(
+          documents: widget.documents,
+          email: widget.email,
+          paperless: widget.paperless,
+        );
+    _filtersSubscription = _filters.stream.listen((_) => _changed());
+  }
+
+  void _changed() {
+    PageStorage.maybeOf(context)
+        ?.writeState(context, (_pipeline, _status), identifier: 'jobFilters');
+    setState(() {});
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_restored) return;
+    if (_restored || widget.filters != null) return;
     _restored = true;
     final saved = PageStorage.maybeOf(context)
         ?.readState(context, identifier: 'jobFilters');
-    if (saved is (String, String?)) {
-      _pipeline = saved.$1;
-      _status = saved.$2;
-    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _applyStatus();
+      if (!mounted) return;
+      if (saved is (String, String?)) {
+        _filters.filter(
+          pipeline: saved.$1,
+          status: saved.$2,
+          changeStatus: true,
+        );
+      }
     });
   }
 
-  void _applyStatus() {
-    widget.documents.filter(
-      _status == 'partial' ? null : _status,
-      pipeline: switch (_pipeline) {
-        'document' => 'ingestion',
-        'ai' => 'ai',
-        'thumbnail' => 'thumbnail',
-        _ => null,
-      },
-    );
-    widget.email.filter(_status == 'skipped' ? null : _status);
-    widget.paperless.filter(
-      {'superseded', 'skipped'}.contains(_status) ? null : _status,
-    );
-  }
-
-  void _filter({String? pipeline, String? status, bool changeStatus = false}) {
-    setState(() {
-      if (pipeline != null) _pipeline = pipeline;
-      if (changeStatus) _status = status;
-    });
-    PageStorage.maybeOf(context)
-        ?.writeState(context, (_pipeline, _status), identifier: 'jobFilters');
-    if (changeStatus || pipeline != null) _applyStatus();
+  @override
+  void dispose() {
+    unawaited(_filtersSubscription.cancel());
+    if (widget.filters == null) unawaited(_filters.close());
+    super.dispose();
   }
 
   @override
@@ -88,35 +99,7 @@ final class _ProcessingJobsListState extends State<ProcessingJobsList> {
       builder: (context, email) => BlocBuilder<PaperlessJobsCubit, PaperlessJobsState>(
         bloc: widget.paperless,
         builder: (context, paperless) {
-          final countSources = <String, ProcessingJobCountSnapshot>{
-            if (widget.documents.canReadJobs)
-              for (final pipeline in ['ingestion', 'ai', 'thumbnail'])
-                pipeline == 'ingestion'
-                    ? 'document'
-                    : pipeline: ProcessingJobCountSnapshot(
-                  counts: documents.counts == null
-                      ? null
-                      : {
-                          for (final entry in documents.counts!.entries)
-                            if (entry.key.$1 == pipeline)
-                              entry.key.$2: entry.value,
-                        },
-                  refreshing: documents.countsRefreshing,
-                  error: documents.countsError,
-                ),
-            if (widget.email.allowed)
-              'email': ProcessingJobCountSnapshot(
-                counts: email.counts,
-                refreshing: email.countsRefreshing,
-                error: email.countsError,
-              ),
-            if (widget.paperless.allowed)
-              'paperless': ProcessingJobCountSnapshot(
-                counts: paperless.counts,
-                refreshing: paperless.countsRefreshing,
-                error: paperless.countsError,
-              ),
-          };
+          final countSources = processingJobsCountSources(_filters);
           final totals = processingJobCount(countSources);
           final showDocuments =
               widget.documents.canReadJobs &&
@@ -175,87 +158,8 @@ final class _ProcessingJobsListState extends State<ProcessingJobsList> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final (id, label) in [
-                    ('all', 'All pipelines'),
-                    if (widget.documents.canReadJobs)
-                      ('document', 'Document ingestion'),
-                    if (widget.documents.canReadJobs) ('ai', 'AI processing'),
-                    if (widget.documents.canReadJobs)
-                      ('thumbnail', 'Thumbnail generation'),
-                    if (widget.email.allowed) ('email', 'Email import'),
-                    if (widget.paperless.allowed)
-                      ('paperless', 'Paperless import'),
-                  ])
-                    ChoiceChip(
-                      key: Key('pipeline-filter-$id'),
-                      label: _countLabel(
-                        label,
-                        processingJobCount(
-                          countSources,
-                          pipeline: id,
-                          status: _status,
-                        ),
-                      ),
-                      selected: _pipeline == id,
-                      onSelected: (_) => _filter(pipeline: id),
-                    ),
-                  IconButton(
-                    tooltip: 'Refresh jobs',
-                    onPressed: loading
-                        ? null
-                        : () => unawaited(
-                            Future.wait([
-                              if (widget.documents.canReadJobs)
-                                widget.documents.load(),
-                              if (widget.email.allowed) widget.email.load(),
-                              if (widget.paperless.allowed)
-                                widget.paperless.load(),
-                            ]),
-                          ),
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final status in <String?>[
-                    null,
-                    'queued',
-                    'running',
-                    'succeeded',
-                    'partial',
-                    'failed',
-                    'superseded',
-                    'cancelled',
-                    'skipped',
-                  ])
-                    ChoiceChip(
-                      key: Key('job-filter-${status ?? 'all'}'),
-                      label: _countLabel(
-                        status == null
-                            ? 'All jobs'
-                            : status == 'partial'
-                            ? 'Partially completed'
-                            : processingLabel(status),
-                        processingJobCount(
-                          countSources,
-                          pipeline: _pipeline,
-                          status: status,
-                        ),
-                      ),
-                      selected: _status == status,
-                      onSelected: (_) =>
-                          _filter(status: status, changeStatus: true),
-                    ),
-                ],
-              ),
+              if (!widget.shellToolbar)
+                ProcessingJobsFilterFields(filters: _filters),
               if (totals.error)
                 const AppNotice(
                   message: 'Job totals could not be refreshed. Numbers marked * are from the last successful update; — means unavailable.',
@@ -282,7 +186,10 @@ final class _ProcessingJobsListState extends State<ProcessingJobsList> {
                   ),
               ],
               const SizedBox(height: 16),
-              if (visible.isEmpty && !loading)
+              if (visible.isEmpty &&
+                  (!loading ||
+                      documents.pipeline != null ||
+                      totals.count != null))
                 AppEmptyState(
                   icon: Icons.work_history_outlined,
                   title: 'No jobs to show',
@@ -393,48 +300,6 @@ final class _ProcessingJobsListState extends State<ProcessingJobsList> {
     ),
   );
 
-  Widget _countLabel(
-    String label,
-    ({int? count, bool refreshing, bool error}) total,
-  ) {
-    final number = total.count?.toString() ?? '—';
-    final suffix = total.error && total.count != null ? '*' : '';
-    final description = total.count == null
-        ? 'Count unavailable'
-        : '${total.count} jobs${total.error
-              ? ', last successful update'
-              : total.refreshing
-              ? ', updating'
-              : ''}';
-    return Semantics(
-      label: '$label, $description',
-      excludeSemantics: true,
-      child: Tooltip(
-        message:
-            '$description. Counts include all history matching the other filter.',
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(child: Text(label)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface
-                    .withValues(alpha: .08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$number$suffix',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   static String _reason(String value) => switch (value) {
     'scheduled' => 'Automatic check',
     'manual' => 'Import now',
@@ -476,4 +341,346 @@ final class _WorkspaceJobRow {
     final date = b.createdAt.compareTo(a.createdAt);
     return date == 0 ? b.id.compareTo(a.id) : date;
   }
+}
+
+@immutable
+final class ProcessingJobsFiltersState {
+  const ProcessingJobsFiltersState({this.pipeline = 'all', this.status});
+  final String pipeline;
+  final String? status;
+}
+
+final class ProcessingJobsFiltersCubit
+    extends Cubit<ProcessingJobsFiltersState> {
+  ProcessingJobsFiltersCubit({
+    required this.documents,
+    required this.email,
+    required this.paperless,
+  }) : super(const ProcessingJobsFiltersState());
+  final DocumentProcessingCubit documents;
+  final EmailJobsCubit email;
+  final PaperlessJobsCubit paperless;
+  String get pipeline => state.pipeline;
+  String? get status => state.status;
+  int get count => (pipeline == 'all' ? 0 : 1) + (status == null ? 0 : 1);
+  void filter({String? pipeline, String? status, bool changeStatus = false}) {
+    if (isClosed) return;
+    emit(
+      ProcessingJobsFiltersState(
+        pipeline: pipeline ?? state.pipeline,
+        status: changeStatus ? status : state.status,
+      ),
+    );
+    _applyStatus();
+  }
+
+  void _applyStatus() {
+    documents.filter(
+      status == 'partial' ? null : status,
+      pipeline: switch (pipeline) {
+        'document' => 'ingestion',
+        'ai' => 'ai',
+        'thumbnail' => 'thumbnail',
+        _ => null,
+      },
+    );
+    email.filter(status == 'skipped' ? null : status);
+    paperless.filter(
+      {'superseded', 'skipped'}.contains(status) ? null : status,
+    );
+  }
+}
+
+Map<String, ProcessingJobCountSnapshot> processingJobsCountSources(
+  ProcessingJobsFiltersCubit filters,
+) {
+  final documents = filters.documents.state;
+  final email = filters.email.state;
+  final paperless = filters.paperless.state;
+  return <String, ProcessingJobCountSnapshot>{
+    if (filters.documents.canReadJobs)
+      for (final pipeline in ['ingestion', 'ai', 'thumbnail'])
+        pipeline == 'ingestion'
+            ? 'document'
+            : pipeline: ProcessingJobCountSnapshot(
+          counts: documents.counts == null
+              ? null
+              : {
+                  for (final entry in documents.counts!.entries)
+                    if (entry.key.$1 == pipeline) entry.key.$2: entry.value,
+                },
+          refreshing: documents.countsRefreshing,
+          error: documents.countsError,
+        ),
+    if (filters.email.allowed)
+      'email': ProcessingJobCountSnapshot(
+        counts: email.counts,
+        refreshing: email.countsRefreshing,
+        error: email.countsError,
+      ),
+    if (filters.paperless.allowed)
+      'paperless': ProcessingJobCountSnapshot(
+        counts: paperless.counts,
+        refreshing: paperless.countsRefreshing,
+        error: paperless.countsError,
+      ),
+  };
+}
+
+final class ProcessingJobsFilterFields extends StatelessWidget {
+  const ProcessingJobsFilterFields({super.key, required this.filters});
+  final ProcessingJobsFiltersCubit filters;
+  @override
+  Widget build(BuildContext context) =>
+      BlocBuilder<ProcessingJobsFiltersCubit, ProcessingJobsFiltersState>(
+        bloc: filters,
+        builder: (context, _) =>
+            BlocBuilder<DocumentProcessingCubit, DocumentProcessingState>(
+              bloc: filters.documents,
+              builder: (context, documents) =>
+                  BlocBuilder<EmailJobsCubit, EmailJobsState>(
+                    bloc: filters.email,
+                    builder: (context, email) =>
+                        BlocBuilder<PaperlessJobsCubit, PaperlessJobsState>(
+                          bloc: filters.paperless,
+                          builder: (context, paperless) {
+                            final countSources = processingJobsCountSources(
+                              filters,
+                            );
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    for (final (id, label) in [
+                                      ('all', 'All pipelines'),
+                                      if (filters.documents.canReadJobs)
+                                        ('document', 'Document ingestion'),
+                                      if (filters.documents.canReadJobs)
+                                        ('ai', 'AI processing'),
+                                      if (filters.documents.canReadJobs)
+                                        ('thumbnail', 'Thumbnail generation'),
+                                      if (filters.email.allowed)
+                                        ('email', 'Email import'),
+                                      if (filters.paperless.allowed)
+                                        ('paperless', 'Paperless import'),
+                                    ])
+                                      ChoiceChip(
+                                        key: Key('pipeline-filter-$id'),
+                                        label: _countLabel(
+                                          context,
+                                          label,
+                                          processingJobCount(
+                                            countSources,
+                                            pipeline: id,
+                                            status: filters.status,
+                                          ),
+                                        ),
+                                        selected: filters.pipeline == id,
+                                        onSelected: (_) =>
+                                            filters.filter(pipeline: id),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    for (final status in <String?>[
+                                      null,
+                                      'queued',
+                                      'running',
+                                      'succeeded',
+                                      'partial',
+                                      'failed',
+                                      'superseded',
+                                      'cancelled',
+                                      'skipped',
+                                    ])
+                                      ChoiceChip(
+                                        key: Key(
+                                          'job-filter-${status ?? 'all'}',
+                                        ),
+                                        label: _countLabel(
+                                          context,
+                                          status == null
+                                              ? 'All jobs'
+                                              : status == 'partial'
+                                              ? 'Partially completed'
+                                              : processingLabel(status),
+                                          processingJobCount(
+                                            countSources,
+                                            pipeline: filters.pipeline,
+                                            status: status,
+                                          ),
+                                        ),
+                                        selected: filters.status == status,
+                                        onSelected: (_) => filters.filter(
+                                          status: status,
+                                          changeStatus: true,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                  ),
+            ),
+      );
+  Widget _countLabel(
+    BuildContext context,
+    String label,
+    ({int? count, bool refreshing, bool error}) total,
+  ) {
+    final number = total.count?.toString() ?? '—';
+    final suffix = total.error && total.count != null ? '*' : '';
+    final description = total.count == null
+        ? 'Count unavailable'
+        : '${total.count} jobs${total.error
+              ? ', last successful update'
+              : total.refreshing
+              ? ', updating'
+              : ''}';
+    return Semantics(
+      label: '$label, $description',
+      excludeSemantics: true,
+      child: Tooltip(
+        message:
+            '$description. Counts include all history matching the other filter.',
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(label)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface
+                    .withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$number$suffix',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final class ProcessingJobsToolbar extends StatefulWidget {
+  const ProcessingJobsToolbar({
+    super.key,
+    required this.filters,
+    this.libraryPicker,
+    this.workspaceActions,
+  });
+  final ProcessingJobsFiltersCubit filters;
+  final Widget? libraryPicker, workspaceActions;
+  @override
+  State<ProcessingJobsToolbar> createState() => _ProcessingJobsToolbarState();
+}
+
+final class _ProcessingJobsToolbarState extends State<ProcessingJobsToolbar> {
+  RawDialogRoute<void>? _route;
+  @override
+  void dispose() {
+    final route = _route;
+    final navigator = route?.navigator;
+    if (route != null && navigator != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (navigator.mounted && route.navigator == navigator) {
+          navigator.removeRoute(route);
+        }
+      });
+    }
+    super.dispose();
+  }
+
+  Future<void> _open() async {
+    if (_route != null) return;
+    final filters = widget.filters;
+    final navigator = Navigator.of(context);
+    late final RawDialogRoute<void> route;
+    route = RawDialogRoute<void>(
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: Duration.zero,
+      pageBuilder: (context, _, _) => AppDialog(
+        title: 'Filter jobs',
+        description: 'Choose a pipeline and recorded status.',
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (route.isCurrent) navigator.pop();
+            },
+            child: const Text('Done'),
+          ),
+        ],
+        child: ProcessingJobsFilterFields(filters: filters),
+      ),
+    );
+    _route = route;
+    await navigator.push(route);
+    if (mounted && _route == route) setState(() => _route = null);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocBuilder<ProcessingJobsFiltersCubit, ProcessingJobsFiltersState>(
+        bloc: widget.filters,
+        builder: (context, _) => AppCollectionToolbar(
+          libraryPicker: widget.libraryPicker,
+          workspaceActions: widget.workspaceActions,
+          actions: [
+            OutlinedButton.icon(
+              key: const Key('jobFilters'),
+              onPressed: _open,
+              icon: const Icon(Icons.tune, size: 18),
+              label: Text(
+                widget.filters.count == 0
+                    ? 'Filters'
+                    : 'Filters (${widget.filters.count})',
+              ),
+            ),
+            if (widget.filters.count > 0)
+              TextButton(
+                onPressed: () => widget.filters.filter(
+                  pipeline: 'all',
+                  status: null,
+                  changeStatus: true,
+                ),
+                child: const Text('Clear filters'),
+              ),
+          ],
+          summary: widget.filters.count == 0
+              ? null
+              : Text(
+                  [
+                    if (widget.filters.pipeline != 'all')
+                      switch (widget.filters.pipeline) {
+                        'document' => 'Document ingestion',
+                        'ai' => 'AI processing',
+                        'thumbnail' => 'Thumbnail generation',
+                        'email' => 'Email import',
+                        _ => 'Paperless import',
+                      },
+                    if (widget.filters.status != null)
+                      widget.filters.status == 'partial'
+                          ? 'Partially completed'
+                          : processingLabel(widget.filters.status!),
+                  ].join(' · '),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+        ),
+      );
 }

@@ -83,7 +83,8 @@ void main() {
         'go:github.com/air-verse/air',
         'dart:dbus',
         'npm:sharp',
-        'extra:Lora font',
+        'extra:Barlow Condensed font',
+        'extra:DM Sans font',
         'maven:org.opencv:opencv',
       ]) {
         expect(

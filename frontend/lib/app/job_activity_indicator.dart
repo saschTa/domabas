@@ -144,6 +144,7 @@ Future<void> showJobActivity(
           });
         return AppDialog(
           title: 'Activity',
+          onRefresh: jobs.loading ? null : cubit.refresh,
           description: 'Uploads, document processing and reindex progress',
           width: 560,
           actions: [

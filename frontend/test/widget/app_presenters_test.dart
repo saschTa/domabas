@@ -135,7 +135,8 @@ void main() {
         tester.getSize(find.byKey(const Key('workspaceHeader'))).height,
         lessThanOrEqualTo(80),
       );
-      await tester.tap(find.byTooltip('More actions'));
+      expect(find.byKey(const Key('workspaceMore')), findsNothing);
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('workspaceAction')));
       await tester.pumpAndSettle();
@@ -146,7 +147,7 @@ void main() {
       await tester.tap(find.byKey(const Key('workspaceAction')));
       expect(activated, isTrue);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('More actions'));
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('logout')));
       await tester.pumpAndSettle();
@@ -274,38 +275,37 @@ void main() {
     );
   }
 
-  testWidgets(
-    'page header and empty state remain scrollable in short windows',
-    (tester) async {
-      await viewport(tester, const Size(390, 320));
-      await tester.pumpWidget(
-        app(
-          shell(
-            child: AppPage(
-              eyebrow: 'User settings',
-              title: 'Library members',
-              description: 'Manage people and their access to this library.',
-              actions: [
-                FilledButton(
-                  onPressed: () {},
-                  child: const Text('Invite member'),
-                ),
-              ],
-              child: const AppSurface(
-                child: AppEmptyState(
-                  icon: Icons.people_outline,
-                  title: 'No invitations',
-                  message: 'Invite someone to share documents in this library.',
-                ),
+  testWidgets('fixed page controls and empty state fit short windows', (
+    tester,
+  ) async {
+    await viewport(tester, const Size(390, 320));
+    await tester.pumpWidget(
+      app(
+        shell(
+          child: AppPage(
+            eyebrow: 'User settings',
+            title: 'Library members',
+            description: 'Manage people and their access to this library.',
+            actions: [
+              FilledButton(
+                onPressed: () {},
+                child: const Text('Invite member'),
+              ),
+            ],
+            child: const AppSurface(
+              child: AppEmptyState(
+                icon: Icons.people_outline,
+                title: 'No invitations',
+                message: 'Invite someone to share documents in this library.',
               ),
             ),
           ),
-          scale: 2,
         ),
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+        scale: 2,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'wide dialog scrolls its body and wraps actions in a narrow viewport',

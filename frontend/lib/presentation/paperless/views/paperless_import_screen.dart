@@ -65,14 +65,7 @@ final class _PaperlessImportScreenState extends State<PaperlessImportScreen>
         eyebrow: 'USER SETTINGS',
         title: 'Paperless import',
         description: 'Import into ${widget.libraryName} in the background.',
-        actions: [
-          IconButton(
-            key: const Key('paperlessRefresh'),
-            tooltip: 'Refresh imports',
-            onPressed: state.busy ? null : () => _cubit.load(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        onRefresh: state.busy ? null : _cubit.load,
         child: ListView(
           padding: AppLayout.cardListPadding(context),
           key: const Key('paperlessScroll'),

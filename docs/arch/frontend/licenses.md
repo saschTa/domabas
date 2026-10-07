@@ -30,8 +30,8 @@ entries reachable. Changing the search resets pagination. A responsive `AppDialo
 shows selectable full notices and source addresses with a fixed Close action.
 Read/decode failures expose a retry state and disposal ignores late completions.
 
-The existing PDF viewer's Flutter license page and registrations for Lora,
-PDFium and OpenCV are retained. The new reader also includes backend, tooling,
+The PDF viewer's Flutter license page includes registrations for the bundled
+DM Sans and Barlow Condensed fonts, PDFium and OpenCV. The reader also includes backend, tooling,
 models and infrastructure evidence that Flutter cannot collect automatically.
 
 The canonical retained catalog and supplement manifest live under

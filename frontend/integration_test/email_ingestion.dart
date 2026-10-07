@@ -1,7 +1,14 @@
 import 'workspace_actions.dart'
-    show revealWorkspaceAction, revealWorkspaceHeader;
+    show
+        refreshWorkspacePage,
+        revealWorkspaceAction,
+        revealWorkspaceHeader,
+        revealWorkspacePageContent,
+        selectWorkspaceJobFilters,
+        setWorkspacePipelineSetup;
 
 import 'package:domabas_api/api.dart' as api;
+import 'package:domabas/presentation/email/views/email_providers_screen.dart';
 import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -165,42 +172,46 @@ Future<void> exerciseEmailIngestion(
   expect(search.items.any((value) => value.document.id == mail.id), isTrue);
 
   await _openWorkspaceDestination(tester, 'processingNavigation');
-  await _wait(
+  await setWorkspacePipelineSetup(tester, expanded: true);
+  await revealWorkspacePageContent(
     tester,
-    () => find.text('Email import pipeline').evaluate().isNotEmpty,
-    'email pipeline visible',
+    find.text('Email import pipeline'),
+    list: find.byKey(const PageStorageKey('processingPage')),
+    center: false,
   );
   await tester.tap(find.text('Email import pipeline'));
   await tester.pumpAndSettle();
   expect(find.text('Email originals'), findsOneWidget);
   expect(find.text('Attachments'), findsOneWidget);
+  await revealWorkspacePageContent(
+    tester,
+    find.text('Email import pipeline'),
+    list: find.byKey(const PageStorageKey('processingPage')),
+    center: false,
+  );
   await tester.tap(find.text('Email import pipeline'));
   await tester.pumpAndSettle();
-  for (final key in ['pipeline-filter-email', 'job-filter-all']) {
-    final filter = find.byKey(Key(key));
-    await tester.scrollUntilVisible(
-      filter,
-      300,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await Scrollable.ensureVisible(tester.element(filter), alignment: .5);
-    await tester.pumpAndSettle();
-    await tester.tap(filter);
-    await tester.pumpAndSettle();
-  }
+  await setWorkspacePipelineSetup(tester, expanded: false);
+  await selectWorkspaceJobFilters(tester, [
+    'pipeline-filter-email',
+    'job-filter-all',
+  ]);
   await _wait(
     tester,
     () => find.byKey(Key('email-job-${run!.id}')).evaluate().isNotEmpty,
     'automatic email job visible',
   );
-  await tester.ensureVisible(find.byKey(Key('email-job-${run.id}')));
-  await tester.pumpAndSettle();
-  await tester.tap(
-    find.descendant(
-      of: find.byKey(Key('email-job-${run.id}')),
-      matching: find.text('Details'),
-    ),
+  final emailJobDetails = find.descendant(
+    of: find.byKey(Key('email-job-${run.id}')),
+    matching: find.text('Details'),
   );
+  await revealWorkspacePageContent(
+    tester,
+    emailJobDetails,
+    list: find.byKey(const PageStorageKey('processingPage')),
+    center: false,
+  );
+  await tester.tap(emailJobDetails);
   await tester.pumpAndSettle();
   expect(find.text('Job details'), findsOneWidget);
   expect(find.text('Pipeline for this attempt'), findsOneWidget);
@@ -218,9 +229,15 @@ Future<void> exerciseEmailIngestion(
   await tester.pumpAndSettle();
   await _emailSettings(tester);
 
-  await tester.ensureVisible(find.byKey(const Key('email-refresh')));
-  await tester.tap(find.byKey(const Key('email-refresh')));
-  await tester.pumpAndSettle();
+  await refreshWorkspacePage(
+    tester,
+    list: find
+        .descendant(
+          of: find.byType(EmailProvidersScreen),
+          matching: find.byType(ListView),
+        )
+        .first,
+  );
   await tester.ensureVisible(find.byKey(const Key('email-import')));
   await tester.tap(find.byKey(const Key('email-import')));
   await _wait(
@@ -285,23 +302,33 @@ Future<void> exerciseEmailIngestion(
     await tester.pumpAndSettle();
   }
   await _revealDocumentToolbar(tester);
-  await tester.tap(find.byKey(const Key('refreshDocuments')));
+  await refreshWorkspacePage(
+    tester,
+    list: find.byKey(const Key('documentCollectionScroll')),
+  );
   await _wait(
     tester,
     () => find.text(mail.title).evaluate().isNotEmpty,
     'imported email visible',
   );
+  await tester.ensureVisible(find.text(mail.title));
+  await tester.pumpAndSettle();
   await tester.tap(find.text(mail.title));
   await _wait(
     tester,
     () => find.byKey(const Key('email-body')).evaluate().isNotEmpty,
     'email body view loaded',
   );
-  final attachment = find
-      .byKey(Key('email-attachment-${links.attachments.first.part_}'))
-      .last;
-  await tester.ensureVisible(attachment);
-  await tester.tap(attachment);
+  final attachment = find.byKey(
+    Key('email-attachment-${links.attachments.first.part_}'),
+  );
+  await _wait(
+    tester,
+    () => attachment.evaluate().isNotEmpty,
+    'email attachment links loaded',
+  );
+  await tester.ensureVisible(attachment.last);
+  await tester.tap(attachment.last);
   await _wait(
     tester,
     () =>
@@ -375,25 +402,7 @@ Future<void> _revealDocumentToolbar(WidgetTester tester) async {
   final position = tester.state<ScrollableState>(scrollable).position;
   position.jumpTo(position.minScrollExtent);
   await tester.pumpAndSettle();
-  final refresh = find.byKey(const Key('refreshDocuments'));
-  for (
-    var attempt = 0;
-    attempt < 12 && refresh.hitTestable().evaluate().isEmpty;
-    attempt++
-  ) {
-    if (refresh.evaluate().isNotEmpty) {
-      await tester.ensureVisible(refresh);
-    } else {
-      await tester.drag(scrollable, const Offset(0, -100));
-    }
-    await tester.pumpAndSettle();
-  }
-  expect(
-    refresh.hitTestable(),
-    findsOneWidget,
-    reason:
-        'The document toolbar is reachable after restoring collection scroll.',
-  );
+  expect(collection.hitTestable(), findsOneWidget);
 }
 
 Future<void> _emailSettings(WidgetTester tester) async {

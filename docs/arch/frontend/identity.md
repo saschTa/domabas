@@ -21,10 +21,10 @@ are shown as immutable. System administrators have a separate user-management
 screen for promotion and demotion, with no automatic access to foreign libraries.
 
 `AccountWorkspace` owns navigation and feature Cubit lifetimes. The top bar
-switches the active library and signs out. In Documents, the active library is
-the page heading and the top bar offers Upload files and Create metadata under
-their separate claims. A compact count and
-refresh row starts the list; settings retain their own page headings.
+switches the active library. The library picker stays on the right;
+the top bar offers document search, filters and actions under their separate
+claims. Selected navigation identifies the destination without a repeated page
+heading. Fixed content surfaces fill the workspace and their lists scroll internally.
 User settings contains Libraries,
 Members, Invitations and Password; Admin settings contains System users. These
 destinations use the shared [presenter library](components.md), with a desktop
@@ -32,6 +32,12 @@ sidebar, tablet menus and mobile bottom navigation. Mobile Settings and Admin op
 choosers for their permitted leaves and expose the current account identity.
 Selection follows the current leaf; opening or cancelling a chooser preserves it.
 Navigation does not animate between pages.
+
+Libraries, Members, Invitations and System users refresh when the user pulls down
+at the top of their list. Empty lists support the same gesture. Refresh retains
+invitation drafts and existing controls while awaiting the server response;
+ordinary refresh buttons are omitted. Failed reads keep their explicit Retry
+actions, and permission changes still use their guarded confirmation flows.
 
 The app derives its allowed leaf IDs from the same groups supplied to the shell.
 It rejects unknown, forbidden, initial-password and post-disposal callbacks before

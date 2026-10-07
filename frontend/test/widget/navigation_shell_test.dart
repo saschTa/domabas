@@ -210,7 +210,7 @@ void main() {
       final key = await mountMobileNavigation(tester, admin: admin);
       expect(button('workspaceNotchedNavigation'), findsOneWidget);
       expect(button('workspaceNavigationFallback'), findsNothing);
-      expect(tester.getSize(button('workspaceBottomNavigation')).height, 96);
+      expect(tester.getSize(button('workspaceBottomNavigation')).height, 104);
       expect(tester.getCenter(button('navigationDocumentsCircle')).dx, 195);
       final slots = [
         'invoicesNavigation',
@@ -307,6 +307,21 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('phone bar clears the home indicator with a bottom margin', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+    tester.view.viewPadding = const FakeViewPadding(top: 59, bottom: 34);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
+    await mountMobileNavigation(tester);
+    final bar = tester.getRect(button('workspaceNotchedNavigation'));
+    expect(bar.bottom, 844 - 34 - 8);
+    expect(bar.left, 12);
+    expect(bar.right, 390 - 12);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('More remains reachable at large text and narrow width', (
     tester,
@@ -830,7 +845,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           decoration().color,
-          Theme.of(tester.element(leaf)).colorScheme.primaryContainer,
+          Theme.of(tester.element(leaf)).colorScheme.onSurface,
         );
         expect(find.text('Page: libraries'), findsOneWidget);
         expect((decoration().border! as Border).top.color.a, 0);

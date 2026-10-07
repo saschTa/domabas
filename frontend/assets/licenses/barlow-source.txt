@@ -1,0 +1,8 @@
+Barlow Condensed font
+Version: 1.408 (Google Fonts v13)
+
+These unmodified fonts are bundled locally with Domabas.
+
+BarlowCondensed-Bold.ttf
+Source: https://fonts.gstatic.com/s/barlowcondensed/v13/HTxwL3I-JCGChYJ8VI-L6OO_au7B46r2_3E.ttf
+SHA-256: 7dde307fa887fc65ff5830cfada77a7decc5dae8d3c816c9d39ba3f1af1c4ed7

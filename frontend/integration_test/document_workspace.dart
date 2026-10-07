@@ -1,5 +1,10 @@
 import 'workspace_actions.dart'
-    show revealWorkspaceAction, revealWorkspaceHeader;
+    show
+        refreshWorkspacePage,
+        revealWorkspaceAction,
+        revealWorkspaceHeader,
+        openWorkspaceJobFilters,
+        selectWorkspaceJobFilters;
 
 import 'dart:convert';
 import 'dart:js_interop';
@@ -16,6 +21,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:web/web.dart' as web;
 
 import 'document_fixtures.dart';
+import 'document_workspace_pdf_selection.dart';
 import 'document_search.dart';
 import 'document_processing.dart';
 import 'email_ingestion.dart';
@@ -59,7 +65,10 @@ Future<void> exerciseDocumentWorkspace(
   );
   await _ready(documents, pdfId);
   await _ready(documents, imageId);
-  await tester.tap(find.byKey(const Key('refreshDocuments')));
+  await refreshWorkspacePage(
+    tester,
+    list: find.byKey(const Key('documentCollectionScroll')),
+  );
   await _until(
     tester,
     () => find.text(title).evaluate().isNotEmpty,
@@ -143,6 +152,7 @@ Future<void> exerciseDocumentWorkspace(
   expect(controls.top, lessThan(viewport.bottom));
   expect(controls.bottom, lessThan(viewport.bottom));
   expect(visiblePage.bottom + viewport.top, lessThan(controls.top));
+  await exercisePdfTouchSelection(tester, initialController);
   expect(find.byKey(const Key('documentWindow')), findsOneWidget);
   await tester.tap(find.byTooltip('Next document page'));
   await tester.pumpAndSettle();
@@ -453,9 +463,7 @@ Future<void> _exerciseThumbnailJobs(
   }
 
   final filter = find.byKey(const Key('pipeline-filter-thumbnail'));
-  await reveal(filter);
-  await tester.tap(filter);
-  await tester.pumpAndSettle();
+  await selectWorkspaceJobFilters(tester, ['pipeline-filter-thumbnail']);
   final row = find.byKey(Key('job-${job.id}'));
   await reveal(row);
   await tester.tap(find.descendant(of: row, matching: find.text('Details')));
@@ -473,12 +481,9 @@ Future<void> _exerciseThumbnailJobs(
   await revealWorkspaceHeader(tester, back);
   await tester.tap(back);
   await tester.pumpAndSettle();
-  await reveal(filter);
+  await openWorkspaceJobFilters(tester);
   expect(tester.widget<ChoiceChip>(filter).selected, isTrue);
-  final all = find.byKey(const Key('pipeline-filter-all'));
-  await reveal(all);
-  await tester.tap(all);
-  await tester.pumpAndSettle();
+  await selectWorkspaceJobFilters(tester, ['pipeline-filter-all']);
   await revealWorkspaceAction(tester, 'documentsNavigation');
   await tester.tap(find.byKey(const Key('documentsNavigation')));
   await tester.pumpAndSettle();
@@ -503,7 +508,10 @@ Future<void> _exercisePasswordPdf(
     if (attempt == 119) fail('Password requirement was not detected');
     await Future<void>.delayed(const Duration(milliseconds: 500));
   }
-  await tester.tap(find.byKey(const Key('refreshDocuments')));
+  await refreshWorkspacePage(
+    tester,
+    list: find.byKey(const Key('documentCollectionScroll')),
+  );
   await _until(
     tester,
     () => find.text('Password protected fixture').evaluate().isNotEmpty,
@@ -556,6 +564,9 @@ Future<void> _exercisePasswordPdf(
   await tester.tap(find.byKey(const Key('closeDocument')));
   await tester.pumpAndSettle();
   await documents.deleteDocument(id);
-  await tester.tap(find.byKey(const Key('refreshDocuments')));
+  await refreshWorkspacePage(
+    tester,
+    list: find.byKey(const Key('documentCollectionScroll')),
+  );
   await tester.pumpAndSettle();
 }

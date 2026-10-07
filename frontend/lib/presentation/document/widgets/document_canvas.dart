@@ -11,6 +11,7 @@ import 'package:pdfrx/pdfrx.dart';
 import '../models/document_previews.dart';
 import 'document_canvas_layout.dart';
 import 'document_pdf_sizing.dart';
+import 'document_pdf_selection_menu.dart';
 
 final class DocumentPdfCanvas extends StatefulWidget {
   const DocumentPdfCanvas({
@@ -196,6 +197,10 @@ final class _DocumentPdfCanvasState extends State<DocumentPdfCanvas> {
         controller: _controller,
         params: PdfViewerParams(
           sizeDelegateProvider: _sizing,
+          textSelectionParams: const PdfTextSelectionParams(
+            magnifier: PdfViewerSelectionMagnifierParams(enabled: false),
+          ),
+          buildContextMenu: documentPdfSelectionMenuBuilder,
           underflowAnchor: PdfPageAnchor.topCenter,
           maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
           backgroundColor: AppSemanticColors.of(context).documentCanvas,

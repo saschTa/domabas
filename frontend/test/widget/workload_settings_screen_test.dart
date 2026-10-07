@@ -154,7 +154,7 @@ void main() {
             'manageWorkloads',
             group: 'Admin settings',
           );
-          expect(find.text('Workload limits'), findsWidgets);
+          expect(find.byType(WorkloadSettingsScreen), findsOneWidget);
           expect(repository.reads, 1);
         } else {
           expect(find.byKey(const Key('manageWorkloads')), findsNothing);

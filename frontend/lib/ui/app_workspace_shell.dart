@@ -4,9 +4,14 @@ import 'package:flutter/services.dart';
 import 'app_navigation_button.dart';
 import 'app_navigation_motion.dart';
 import 'app_presenters.dart';
-import 'app_paper_canvas.dart';
 import 'app_theme.dart';
 import 'app_workspace_action.dart';
+
+typedef AppWorkspaceToolbarBuilder = Widget Function(
+  BuildContext context,
+  Widget libraryPicker,
+  Widget workspaceActions,
+);
 
 @immutable
 final class AppNavigationItem {
@@ -58,6 +63,7 @@ final class AppWorkspaceShell extends StatefulWidget {
     this.activityIndicator,
     this.mobileGroups,
     this.mobilePrimaryGroupIds,
+    this.toolbarBuilder,
   });
 
   final List<AppNavigationGroup> groups;
@@ -72,16 +78,23 @@ final class AppWorkspaceShell extends StatefulWidget {
   final Widget? activityIndicator;
   final List<AppNavigationGroup>? mobileGroups;
   final List<String>? mobilePrimaryGroupIds;
+  final AppWorkspaceToolbarBuilder? toolbarBuilder;
 
   @override
   State<AppWorkspaceShell> createState() => _AppWorkspaceShellState();
 }
 
 final class _WorkspaceMenuInteraction {
-  _WorkspaceMenuInteraction(this.generation, this.groupId, this.navigator);
+  _WorkspaceMenuInteraction(
+    this.generation,
+    this.groupId,
+    this.navigator,
+    this.ownerRoute,
+  );
   final int generation;
   final String groupId;
   final NavigatorState navigator;
+  final ModalRoute<dynamic>? ownerRoute;
   Route<String>? route;
 }
 
@@ -91,12 +104,16 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
   final Map<String, FocusNode> _triggers = {};
   final ScrollController _bottomScroll = ScrollController();
   final GlobalKey _activityKey = GlobalKey();
+  final ValueNotifier<int> _menuUpdates = ValueNotifier(0);
   double _activityHeight = 0;
   bool _measuringActivity = false;
   _WorkspaceMenuInteraction? _menu;
   int _generation = 0;
   int? _layout;
   bool _reduceMotion = false;
+  bool _activatingAction = false;
+  Size? _viewport;
+  TextScaler? _textScaler;
 
   List<AppNavigationGroup> get _groups =>
       widget.groups.where((group) => group.items.isNotEmpty).toList();
@@ -106,17 +123,20 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       (group) => group.items.isNotEmpty,
     );
     final primary = shell.mobilePrimaryGroupIds;
-    if (primary == null) return groups.toList();
-    final remaining = groups.where((group) => !primary.contains(group.id));
+    final remaining = primary == null
+        ? const <AppNavigationGroup>[]
+        : groups.where((group) => !primary.contains(group.id));
     return [
-      for (final id in primary) ...groups.where((group) => group.id == id),
-      if (remaining.isNotEmpty)
-        AppNavigationGroup(
-          id: 'more',
-          label: 'More',
-          icon: Icons.menu_rounded,
-          items: [for (final group in remaining) ...group.items],
-        ),
+      if (primary == null)
+        ...groups
+      else
+        for (final id in primary) ...groups.where((group) => group.id == id),
+      AppNavigationGroup(
+        id: 'more',
+        label: 'More',
+        icon: Icons.menu_rounded,
+        items: [for (final group in remaining) ...group.items],
+      ),
     ];
   }
 
@@ -154,6 +174,14 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final viewport = MediaQuery.sizeOf(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    if (_viewport != null &&
+        (_viewport != viewport || _textScaler != textScaler)) {
+      _invalidateMenu();
+    }
+    _viewport = viewport;
+    _textScaler = textScaler;
     _updateMotion();
   }
 
@@ -183,7 +211,17 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       final after = _currentGroups(widget)
           .where((group) => group.id == current.groupId)
           .firstOrNull;
-      if (before == null ||
+      final previousActions = [
+        ...oldWidget.actions,
+        ...oldWidget.utilityActions,
+      ].map((action) => action.id).join('/');
+      final currentActions = [
+        ...widget.actions,
+        ...widget.utilityActions,
+      ].map((action) => action.id).join('/');
+      if (oldWidget.selectedId != widget.selectedId ||
+          (current.groupId == 'more' && previousActions != currentActions) ||
+          before == null ||
           after == null ||
           before.collapsible != after.collapsible ||
           before.items.length != after.items.length ||
@@ -191,6 +229,10 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
             (item) => after.items.any((other) => other.id == item.id),
           )) {
         _invalidateMenu();
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _menu == current) _menuUpdates.value++;
+        });
       }
     }
     _syncTriggers();
@@ -215,6 +257,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       node.dispose();
     }
     _bottomScroll.dispose();
+    _menuUpdates.dispose();
     super.dispose();
   }
 
@@ -232,7 +275,13 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
 
   void _restoreFocus(String groupId, int generation) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || generation != _generation || _menu != null) return;
+      if (!mounted ||
+          generation != _generation ||
+          _menu != null ||
+          _activatingAction ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
       final node = _triggers[groupId];
       final triggerContext = node?.context;
       if (triggerContext == null || !triggerContext.mounted) return;
@@ -276,6 +325,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
     if (!mounted ||
         !triggerContext.mounted ||
         _menu != null ||
+        _activatingAction ||
         _layout != (mobile ? 0 : 1)) {
       return;
     }
@@ -315,7 +365,12 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       );
     }
     FocusManager.instance.primaryFocus?.unfocus();
-    final menu = _WorkspaceMenuInteraction(++_generation, group.id, navigator);
+    final menu = _WorkspaceMenuInteraction(
+      ++_generation,
+      group.id,
+      navigator,
+      ModalRoute.of(context),
+    );
     setState(() => _menu = menu);
     String? result;
     if (mobile && group.id == 'more') {
@@ -345,7 +400,12 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                   left: Radius.circular(24),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: SafeArea(child: _chooser(context, group, menu)),
+                child: SafeArea(
+                  child: ValueListenableBuilder(
+                    valueListenable: _menuUpdates,
+                    builder: (context, _, _) => _chooser(context, group, menu),
+                  ),
+                ),
               ),
             ),
           ),
@@ -506,6 +566,11 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
+                if (group.id == 'more' && widget.actions.isNotEmpty) ...[
+                  for (final action in widget.actions)
+                    _drawerAction(context, action, menu),
+                  const Divider(),
+                ],
                 for (final item in group.items) ...[
                   if (group.id == 'more' &&
                       (widget.mobileGroups ?? widget.groups).any(
@@ -547,6 +612,11 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                     ),
                   ),
                 ],
+                if (group.id == 'more') ...[
+                  if (group.items.isNotEmpty) const Divider(),
+                  for (final action in _utilities)
+                    _drawerAction(context, action, menu),
+                ],
               ],
             ),
           ),
@@ -554,6 +624,73 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       ],
     ),
   );
+
+  Widget _drawerAction(
+    BuildContext context,
+    AppWorkspaceAction action,
+    _WorkspaceMenuInteraction menu,
+  ) => TextButton(
+    key: Key(action.id),
+    style: TextButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      alignment: Alignment.centerLeft,
+    ),
+    onPressed: action.onPressed == null
+        ? null
+        : () => _activateDrawerAction(action.id, menu),
+    child: Row(
+      children: [
+        action.visual,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(action.label),
+              if (action.detail != null)
+                Text(
+                  action.detail!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _activateDrawerAction(
+    String id,
+    _WorkspaceMenuInteraction menu,
+  ) async {
+    final route = menu.route;
+    if (!mounted ||
+        _activatingAction ||
+        _menu != menu ||
+        menu.generation != _generation ||
+        route == null ||
+        route.navigator != menu.navigator ||
+        !route.isCurrent) {
+      return;
+    }
+    final action = [
+      ...widget.actions,
+      ..._utilities,
+    ].where((action) => action.id == id).firstOrNull;
+    if (action?.onPressed == null) return;
+    _activatingAction = true;
+    setState(() => _menu = null);
+    menu.navigator.removeRoute(route);
+    try {
+      await action!.onPressed!();
+    } finally {
+      _activatingAction = false;
+      if (mounted && menu.ownerRoute?.isCurrent == true) {
+        _restoreFocus(menu.groupId, menu.generation);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -572,7 +709,6 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       final usableHeight =
           (constraints.maxHeight - media.padding.top - media.viewInsets.bottom)
               .clamp(0.0, constraints.maxHeight);
-      final inset = mobile ? 12.0 : 16.0;
       _measureActivity();
       return Scaffold(
         extendBody: true,
@@ -594,28 +730,33 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
         bottomNavigationBar: showBottom
             ? _bottomNavigation(usableHeight * .4)
             : null,
-        body: AppPaperCanvas(
+        body: ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: SafeArea(
             bottom: !showBottom,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (!mobile)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(inset, inset, 0, inset),
-                    child: SizedBox(
-                      width: desktop ? 256 : 88,
-                      child: desktop ? _sidebar() : _rail(),
-                    ),
+                  SizedBox(
+                    width: desktop ? 224 : 80,
+                    child: desktop ? _sidebar() : _rail(),
                   ),
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, bodyConstraints) => Column(
                       children: [
-                        _header(mobile, inset),
+                        _header(mobile, bodyConstraints.maxHeight),
                         Expanded(
                           child: MediaQuery(
                             data: MediaQuery.of(context).copyWith(
+                              viewPadding: MediaQuery.viewPaddingOf(context)
+                                  .copyWith(
+                                    bottom: showBottom
+                                        ? media.viewPadding.bottom
+                                        : MediaQuery.viewPaddingOf(context)
+                                              .bottom,
+                                  ),
                               padding: MediaQuery.paddingOf(context).copyWith(
                                 bottom:
                                     MediaQuery.paddingOf(context).bottom +
@@ -649,11 +790,16 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
     ),
   ];
 
-  Widget _header(bool mobile, double inset) => Padding(
-    padding: EdgeInsets.fromLTRB(inset, inset, inset, 0),
-    child: AppSurface(
+  Widget _header(bool mobile, double availableHeight) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(
+        bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+    ),
+    child: Padding(
       key: const Key('workspaceHeader'),
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 8 : 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: mobile ? 16 : 24, vertical: 8),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
@@ -661,10 +807,15 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
               .where((action) => action.id == 'uploadFiles')
               .firstOrNull;
           final showPrimary = primary != null && constraints.maxWidth >= 320;
-          final labeled = constraints.maxWidth >= 620 && !largeText;
+          final labeled =
+              widget.toolbarBuilder == null &&
+              constraints.maxWidth >= 620 &&
+              !largeText;
           final visible = <AppWorkspaceAction>[
             if (showPrimary) primary,
-            if (constraints.maxWidth >= 800 && !largeText)
+            if (widget.toolbarBuilder == null &&
+                constraints.maxWidth >= 800 &&
+                !largeText)
               ...widget.actions.where(
                 (action) =>
                     action.id == 'scanDocument' || action.id == 'newDocument',
@@ -673,28 +824,51 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
           final overflow = widget.actions
               .where((action) => !visible.contains(action))
               .toList();
-          return Row(
-            key: const Key('workspaceHeaderRow'),
+          final actions = Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(child: widget.libraryPicker),
-              for (final action in visible) ...[
-                const SizedBox(width: 8),
+              for (final action in visible)
                 AppWorkspaceActionButton(
                   action: action,
                   primary: identical(action, primary),
                   labeled: labeled,
                 ),
-              ],
-              if (overflow.isNotEmpty || mobile) ...[
+              if (!mobile && overflow.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 AppWorkspaceActionMenu(
                   key: const Key('workspaceMore'),
                   owner: widget.selectedId,
                   actions: overflow,
-                  utilities: mobile ? _utilities : const [],
-                  accountLabel: mobile ? widget.accountLabel : null,
                 ),
               ],
+            ],
+          );
+          if (widget.toolbarBuilder case final builder?) {
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (availableHeight * .4 - 16).clamp(48, 240),
+              ),
+              child: SingleChildScrollView(
+                key: const Key('workspaceToolbarScroll'),
+                primary: false,
+                child: builder(context, widget.libraryPicker, actions),
+              ),
+            );
+          }
+          return Row(
+            key: const Key('workspaceHeaderRow'),
+            children: [
+              actions,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 280),
+                    child: widget.libraryPicker,
+                  ),
+                ),
+              ),
             ],
           );
         },
@@ -702,7 +876,20 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
     ),
   );
 
-  Widget _sidebar() => AppSurface(
+  Widget _navigationSurface({
+    required Widget child,
+    required EdgeInsets padding,
+  }) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(
+        right: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+    ),
+    child: Padding(padding: padding, child: child),
+  );
+
+  Widget _sidebar() => _navigationSurface(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -715,7 +902,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Domabas',
+                  'DOMABAS',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge,
@@ -734,7 +921,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                   if (!group.collapsible ||
                       !_collapsedGroups.contains(group.id))
                     for (final item in group.items) _destination(item, group),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                 ],
               ],
             ),
@@ -831,6 +1018,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
           key: item.key,
           label: item.label,
           selected: item.id == widget.selectedId,
+          strongSelection: true,
           focusNode: group.collapsible ? null : _triggers[group.id],
           outlinedHover: true,
           reduceMotion: _reduceMotion,
@@ -851,8 +1039,8 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
     ],
   );
 
-  Widget _rail() => AppSurface(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+  Widget _rail() => _navigationSurface(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
     child: Column(
       children: [
         const _BrandMark(),
@@ -875,6 +1063,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                           label: group.label,
                           outlinedHover: true,
                           selected: _active(group),
+                          strongSelection: true,
                           expanded: group.collapsible
                               ? _menu?.groupId == group.id
                               : null,
@@ -919,7 +1108,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
           child: Scrollbar(
             controller: _bottomScroll,
             child: SingleChildScrollView(
@@ -997,7 +1186,6 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                         key: const Key('workspaceNotchedNavigation'),
                         painter: _WorkspaceNavigationSurfacePainter(
                           surface: colors.surface,
-                          shadow: AppElevation.materialShadow(colors),
                         ),
                         child: FocusTraversalGroup(
                           policy: ReadingOrderTraversalPolicy(),
@@ -1184,13 +1372,9 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
 }
 
 final class _WorkspaceNavigationSurfacePainter extends CustomPainter {
-  const _WorkspaceNavigationSurfacePainter({
-    required this.surface,
-    required this.shadow,
-  });
+  const _WorkspaceNavigationSurfacePainter({required this.surface});
 
   final Color surface;
-  final Color shadow;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1202,13 +1386,12 @@ final class _WorkspaceNavigationSurfacePainter extends CustomPainter {
       Rect.fromCircle(center: Offset(size.width / 2, 30), radius: 32),
     );
     final path = Path.combine(PathOperation.intersect, rounded, cutout);
-    canvas.drawShadow(path, shadow, 12, true);
     canvas.drawPath(path, Paint()..color = surface);
   }
 
   @override
   bool shouldRepaint(_WorkspaceNavigationSurfacePainter oldDelegate) =>
-      surface != oldDelegate.surface || shadow != oldDelegate.shadow;
+      surface != oldDelegate.surface;
 }
 
 final class _BrandMark extends StatelessWidget {
@@ -1218,12 +1401,12 @@ final class _BrandMark extends StatelessWidget {
     width: 40,
     height: 40,
     decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primary,
+      color: Theme.of(context).colorScheme.onSurface,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Image.asset(
       'assets/branding/domabas-mark.png',
-      color: Theme.of(context).colorScheme.onPrimary,
+      color: Theme.of(context).colorScheme.surface,
       excludeFromSemantics: true,
       filterQuality: FilterQuality.high,
     ),

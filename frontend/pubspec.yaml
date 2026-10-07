@@ -48,9 +48,17 @@ flutter:
     - assets/branding/domabas-mark.png
     - assets/licenses/frontend-pdfium.txt
     - assets/licenses/scanner-opencv.txt
-    - assets/licenses/lora-ofl.txt
+    - assets/licenses/barlow-ofl.txt
+    - assets/licenses/dmsans-ofl.txt
     - assets/licenses/third-party.json
   fonts:
-    - family: DomabasSerif
+    - family: BarlowCondensed
       fonts:
-        - asset: assets/fonts/Lora-Variable.ttf
+        - asset: assets/fonts/BarlowCondensed-Bold.ttf
+          weight: 700
+    - family: DMSans
+      fonts:
+        - asset: assets/fonts/DMSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/DMSans-SemiBold.ttf
+          weight: 600

@@ -20,6 +20,7 @@ final class DocumentProcessingScreen extends StatefulWidget {
     this.selectedSourceDetails,
     this.onClearSourceSelection,
     this.onRefresh,
+    this.refreshing = false,
     this.onEditExtraction,
     this.initialBatches = false,
   });
@@ -29,7 +30,9 @@ final class DocumentProcessingScreen extends StatefulWidget {
   final void Function(String) onOpenDocument;
   final Widget? sourcePipeline, jobsList, selectedSourceDetails;
   final String? selectedSourceId, selectedSourceTitle;
-  final VoidCallback? onClearSourceSelection, onRefresh;
+  final VoidCallback? onClearSourceSelection;
+  final Future<void> Function()? onRefresh;
+  final bool refreshing;
   final VoidCallback? onEditExtraction;
   @override
   State<DocumentProcessingScreen> createState() =>
@@ -50,11 +53,21 @@ final class _DocumentProcessingScreenState
       final details = selected != null || widget.selectedSourceDetails != null;
       return AppPage(
         insetBody: false,
+        showHeading: details,
         eyebrow: 'CURRENT LIBRARY',
         title: !details ? 'Jobs & pipeline' : 'Job details',
         description: !details
             ? 'Track imports, document processing and reindexing.'
             : selected?.label ?? widget.selectedSourceTitle,
+        onRefresh:
+            widget.refreshing ||
+                state.loading ||
+                state.saving ||
+                state.countsRefreshing ||
+                state.detailLoading
+            ? null
+            : widget.onRefresh ??
+                  (cubit.canReadJobs || cubit.canReindex ? cubit.load : null),
         actions: [
           if (details)
             TextButton.icon(
@@ -63,14 +76,6 @@ final class _DocumentProcessingScreenState
                   : widget.onClearSourceSelection,
               icon: const Icon(Icons.arrow_back),
               label: const Text('Back to jobs'),
-            ),
-          if (widget.onRefresh != null || cubit.canReadJobs || cubit.canReindex)
-            IconButton(
-              tooltip: 'Refresh processing',
-              onPressed: state.loading || state.saving
-                  ? null
-                  : widget.onRefresh ?? () => cubit.load(),
-              icon: const Icon(Icons.refresh),
             ),
         ],
         child: ListView(
@@ -107,7 +112,7 @@ final class _DocumentProcessingScreenState
                         onPressed: state.loading || state.saving
                             ? null
                             : () => cubit.load(),
-                        child: const Text('Refresh'),
+                        child: const Text('Retry'),
                       ),
               ),
               const SizedBox(height: 16),
@@ -118,7 +123,7 @@ final class _DocumentProcessingScreenState
             ],
             if (state.browsingHistory && !details) ...[
               const AppNotice(
-                message: 'Older history stays in place while active outcomes update. Refresh to see the newest records.',
+                message: 'Older history stays in place while active outcomes update. Pull down to see the newest records.',
               ),
               const SizedBox(height: 16),
             ],
@@ -131,71 +136,6 @@ final class _DocumentProcessingScreenState
             else if (widget.selectedSourceDetails case final sourceDetails?)
               sourceDetails
             else ...[
-              DocumentSchedulingSummary(scheduling: state.pipeline?.scheduling),
-              const SizedBox(height: 20),
-              if (widget.sourcePipeline case final pipeline?) ...[
-                pipeline,
-                const SizedBox(height: 20),
-              ],
-              if (state.pipeline
-                  case final DocumentProcessingPipeline pipeline) ...[
-                AppSurface(
-                  child: ExpansionTile(
-                    key: const PageStorageKey('namespacePipeline'),
-                    tilePadding: EdgeInsets.zero,
-                    title: const Text('Document ingestion pipeline'),
-                    subtitle: Text(
-                      '${pipeline.configuration.embeddingModel} · ${processingLabel(pipeline.configuration.language)}',
-                    ),
-                    children: [
-                      const SizedBox(height: 16),
-                      PipelineDiagram(
-                        configuration: pipeline.configuration,
-                        onEditExtraction: widget.onEditExtraction,
-                      ),
-                      ProcessingConfigurationDetails(
-                        configuration: pipeline.configuration,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                AppSurface(
-                  child: ExpansionTile(
-                    key: const PageStorageKey('namespaceAIPipeline'),
-                    tilePadding: EdgeInsets.zero,
-                    title: const Text('AI processing pipeline'),
-                    subtitle: const Text(
-                      'Runs after ingestion. Documents stay searchable if optional processing fails.',
-                    ),
-                    children: [
-                      const SizedBox(height: 16),
-                      DocumentAIPipelineDiagram(
-                        configuration: pipeline.configuration,
-                        onEditExtraction: widget.onEditExtraction,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-              if (cubit.canReadJobs) ...[
-                AppSurface(
-                  child: ExpansionTile(
-                    key: const PageStorageKey('namespaceThumbnailPipeline'),
-                    tilePadding: EdgeInsets.zero,
-                    title: const Text('Thumbnail generation pipeline'),
-                    subtitle: const Text(
-                      'Creates collection previews automatically. Uses worker capacity without OCR or AI.',
-                    ),
-                    children: const [
-                      SizedBox(height: 16),
-                      DocumentThumbnailPipelineDiagram(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
               if (cubit.canReadJobs ||
                   (cubit.canReindex && widget.sourcePipeline != null)) ...[
                 Wrap(
@@ -226,7 +166,8 @@ final class _DocumentProcessingScreenState
                   description: 'Requests started for this library. All-library requests and automatic pipeline changes appear in Admin document processing. Their individual document attempts appear in Jobs.',
                 ),
                 const SizedBox(height: 16),
-                if (state.batches.isEmpty && !state.loading)
+                if (state.batches.isEmpty &&
+                    (!state.loading || state.pipeline != null))
                   const AppEmptyState(
                     icon: Icons.restart_alt,
                     title: 'No reindex requests yet',
@@ -298,7 +239,8 @@ final class _DocumentProcessingScreenState
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (state.jobs.isEmpty && !state.loading)
+                if (state.jobs.isEmpty &&
+                    (!state.loading || state.pipeline != null))
                   const AppEmptyState(
                     icon: Icons.work_history_outlined,
                     title: 'No jobs to show',
@@ -351,12 +293,90 @@ final class _DocumentProcessingScreenState
                   },
                 ),
               ],
+              const SizedBox(height: 20),
+              _pipelineSetup(state),
             ],
           ],
         ),
       );
     },
   );
+  Widget _pipelineSetup(DocumentProcessingState state) => AppSurface(
+    padding: EdgeInsets.zero,
+    child: ExpansionTile(
+      key: const PageStorageKey('pipelineSetup'),
+      tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      title: const Text('Pipeline setup'),
+      children: [
+        DocumentSchedulingSummary(scheduling: state.pipeline?.scheduling),
+        const SizedBox(height: 20),
+        if (widget.sourcePipeline case final pipeline?) ...[
+          pipeline,
+          const SizedBox(height: 20),
+        ],
+        if (state.pipeline case final DocumentProcessingPipeline pipeline) ...[
+          AppSurface(
+            child: ExpansionTile(
+              key: const PageStorageKey('namespacePipeline'),
+              tilePadding: EdgeInsets.zero,
+              title: const Text('Document ingestion pipeline'),
+              subtitle: Text(
+                '${pipeline.configuration.embeddingModel} · ${processingLabel(pipeline.configuration.language)}',
+              ),
+              children: [
+                const SizedBox(height: 16),
+                PipelineDiagram(
+                  configuration: pipeline.configuration,
+                  onEditExtraction: widget.onEditExtraction,
+                ),
+                ProcessingConfigurationDetails(
+                  configuration: pipeline.configuration,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          AppSurface(
+            child: ExpansionTile(
+              key: const PageStorageKey('namespaceAIPipeline'),
+              tilePadding: EdgeInsets.zero,
+              title: const Text('AI processing pipeline'),
+              subtitle: const Text(
+                'Runs after ingestion. Documents stay searchable if optional processing fails.',
+              ),
+              children: [
+                const SizedBox(height: 16),
+                DocumentAIPipelineDiagram(
+                  configuration: pipeline.configuration,
+                  onEditExtraction: widget.onEditExtraction,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+        if (widget.cubit.canReadJobs) ...[
+          AppSurface(
+            child: ExpansionTile(
+              key: const PageStorageKey('namespaceThumbnailPipeline'),
+              tilePadding: EdgeInsets.zero,
+              title: const Text('Thumbnail generation pipeline'),
+              subtitle: const Text(
+                'Creates collection previews automatically. Uses worker capacity without OCR or AI.',
+              ),
+              children: const [
+                SizedBox(height: 16),
+                DocumentThumbnailPipelineDiagram(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ],
+    ),
+  );
+
   List<Widget> _details(BuildContext context, DocumentProcessingJob job) => [
     AppSurface(
       child: Column(

@@ -143,6 +143,8 @@ when newer successful results occupy the first page. Switching filters resets
 pagination and cancels/fences earlier requests. Refresh and continuation retain
 the selected filter; background updates preserve loaded history. Failed result
 rows include the source ID, title, readable failure and selectable error code.
+Pulling down on the owning import or job page refreshes its run snapshot and
+opened results. Results do not add a separate refresh button or scroll region.
 
 Import lists omit embedded outcomes. The UI reads
 `GET /api/v1/paperless-import/runs/{runId}/outcomes` when results are opened,

@@ -113,7 +113,10 @@ void main() {
       await mount(tester);
       await tester.enterText(term, 'invoice');
       await tester.pump();
-      await tester.tap(find.byKey(const Key('documentCount')));
+      await tester.tapAt(
+        tester.getTopLeft(find.byType(DocumentCollectionCard).first) -
+            const Offset(4, 4),
+      );
       await tester.pumpAndSettle();
       expect(editor(tester).focusNode.hasFocus, isFalse);
       expect(tester.testTextInput.isVisible, isFalse);

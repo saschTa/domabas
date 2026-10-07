@@ -4,7 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'workspace_actions.dart'
-    show revealWorkspaceHeader, revealWorkspacePageContent;
+    show
+        revealWorkspaceHeader,
+        revealWorkspacePageContent,
+        openWorkspaceJobFilters,
+        closeWorkspaceJobFilters,
+        selectWorkspaceJobFilters,
+        setWorkspacePipelineSetup;
 
 Future<void> _reveal(WidgetTester tester, Finder target) =>
     revealWorkspacePageContent(
@@ -173,17 +179,17 @@ Future<void> exercisePaperlessWorkflow(
   expect(find.textContaining('Unsupported browser original'), findsOneWidget);
   expect(find.textContaining('Error code:'), findsOneWidget);
   await navigate('processingNavigation');
-  await revealWorkspaceHeader(tester, find.byTooltip('Refresh processing'));
   if (find.text('Back to jobs').evaluate().isNotEmpty) {
+    await revealWorkspaceHeader(tester, find.text('Back to jobs'));
     await tester.tap(find.text('Back to jobs'));
     await tester.pumpAndSettle();
   }
+  await setWorkspacePipelineSetup(tester, expanded: true);
   await _reveal(tester, find.text('Paperless import pipeline'));
   expect(find.text('Paperless import pipeline'), findsOneWidget);
   final filter = find.byKey(const Key('pipeline-filter-paperless'));
-  await _reveal(tester, filter);
-  await tester.tap(filter);
-  await tester.pumpAndSettle();
+  await setWorkspacePipelineSetup(tester, expanded: false);
+  await selectWorkspaceJobFilters(tester, ['pipeline-filter-paperless']);
   final jobsDeadline = DateTime.now().add(const Duration(seconds: 30));
   Finder importRows() => find.byWidgetPredicate(
     (widget) =>
@@ -217,7 +223,8 @@ Future<void> exercisePaperlessWorkflow(
   await revealWorkspaceHeader(tester, back);
   await tester.tap(back);
   await tester.pumpAndSettle();
-  await _reveal(tester, filter);
+  await openWorkspaceJobFilters(tester);
   expect(tester.widget<ChoiceChip>(filter).selected, isTrue);
+  await closeWorkspaceJobFilters(tester);
   await navigate('manageLibraries');
 }

@@ -319,11 +319,16 @@ Future<void> exerciseEmailIngestion(
     () => find.byKey(const Key('email-body')).evaluate().isNotEmpty,
     'email body view loaded',
   );
-  final attachment = find
-      .byKey(Key('email-attachment-${links.attachments.first.part_}'))
-      .last;
-  await tester.ensureVisible(attachment);
-  await tester.tap(attachment);
+  final attachment = find.byKey(
+    Key('email-attachment-${links.attachments.first.part_}'),
+  );
+  await _wait(
+    tester,
+    () => attachment.evaluate().isNotEmpty,
+    'email attachment links loaded',
+  );
+  await tester.ensureVisible(attachment.last);
+  await tester.tap(attachment.last);
   await _wait(
     tester,
     () =>

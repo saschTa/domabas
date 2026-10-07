@@ -87,31 +87,34 @@ final class _LicensesScreenState extends State<LicensesScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    AppSurface(
-                      padding: EdgeInsets.zero,
-                      child: entries.isEmpty
-                          ? AppEmptyState(
-                              icon: Icons.search_off_outlined,
-                              title: 'No matching licenses',
-                              message: 'Try a component name or a license such as MIT.',
-                              action: state.query.isEmpty
-                                  ? null
-                                  : TextButton(
-                                      onPressed: _clearSearch,
-                                      child: const Text('Clear search'),
-                                    ),
-                            )
-                          : AppPagedList(
-                              key: ObjectKey(state),
-                              itemCount: entries.length,
-                              loadMoreKey: const Key('nextLicensesPage'),
-                              loadMoreLabel: 'Next',
-                              itemBuilder: (context, index) => _LicenseRecord(
-                                entry: entries[index],
-                                onOpen: () => _openLicense(entries[index]),
+                    entries.isEmpty
+                        ? AppEmptyState(
+                            icon: Icons.search_off_outlined,
+                            title: 'No matching licenses',
+                            message: 'Try a component name or a license such as MIT.',
+                            action: state.query.isEmpty
+                                ? null
+                                : TextButton(
+                                    onPressed: _clearSearch,
+                                    child: const Text('Clear search'),
+                                  ),
+                          )
+                        : AppPagedList(
+                            key: ObjectKey(state),
+                            itemCount: entries.length,
+                            loadMoreKey: const Key('nextLicensesPage'),
+                            loadMoreLabel: 'Next',
+                            itemBuilder: (context, index) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: AppSurface(
+                                padding: EdgeInsets.zero,
+                                child: _LicenseRecord(
+                                  entry: entries[index],
+                                  onOpen: () => _openLicense(entries[index]),
+                                ),
                               ),
                             ),
-                    ),
+                          ),
                   ],
                 ],
               ),

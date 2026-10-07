@@ -74,7 +74,8 @@ final class _DocumentProcessingSettingsScreenState
                 AppProgressSlot(active: state.loading || state.saving),
                 const SizedBox(height: 16),
                 if (config != null) ...[
-                  AppSurface(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

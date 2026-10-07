@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../ui/domabas_ui.dart';
 import 'email_pipeline_diagram.dart';
 
 final class EmailPipeline extends StatelessWidget {
   const EmailPipeline({super.key});
 
   @override
-  Widget build(BuildContext context) => AppSurface(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
     child: ExpansionTile(
       key: const PageStorageKey('emailPipeline'),
       tilePadding: EdgeInsets.zero,

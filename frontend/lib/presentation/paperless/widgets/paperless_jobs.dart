@@ -93,7 +93,8 @@ final class PaperlessJobDetails extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 20),
-      AppSurface(
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

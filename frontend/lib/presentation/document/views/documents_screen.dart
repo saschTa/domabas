@@ -465,16 +465,12 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: Material(
-        color: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-          side: BorderSide(
-            color: highlighted
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant,
-            width: highlighted ? 1.5 : 1,
-          ),
-        ),
+        color: _focused
+            ? theme.colorScheme.primaryContainer
+            : _hovered
+            ? theme.colorScheme.surfaceContainerLow
+            : theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: radius),
         clipBehavior: Clip.antiAlias,
         child: Semantics(
           key: document.snippet == null

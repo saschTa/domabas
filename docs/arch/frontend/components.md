@@ -41,9 +41,9 @@ Import `ui/domabas_ui.dart` from app or feature presentation code.
 | `AppCollectionToolbar` and `AppSearchField` | Consistent caller-owned search, filter controls and active summaries, with the library picker on the right |
 | `AppWorkspaceAction` and its button/menu presenters | Immutable action labels and current callbacks supplied by feature owners |
 | `AppNavigationGroup` and `AppNavigationItem` | Immutable labels, icons, IDs and keys supplied by the caller |
-| `AppPage` | Fixed full-height content pane, bounded action controls and independently scrolling content |
+| `AppPage` | Transparent full-height content pane, bounded action controls and independently scrolling content |
 | `AppRefreshable` | Pull-to-refresh progress around a caller-owned vertical scroll view, with an awaited callback |
-| `AppSurface` | Flat themed panel with rounded corners and a fine neutral outline |
+| `AppSurface` | Borderless themed card with rounded corners |
 | `AppSectionHeader` | Group title, short description and optional trailing control |
 | `AppRecordRow` | List record with leading visual, text, metadata and responsive actions |
 | `AppStatusBadge` | Labeled neutral, information, success, warning or danger state |
@@ -64,13 +64,16 @@ these components. Add a new shared presenter when repeated product UI has an
 established responsibility. Do not create generic abstractions for hypothetical
 future screens or hide business logic in a component configuration object.
 
-`AppPage` fills the remaining workspace with a fixed surface. The selected
+`AppPage` fills the remaining workspace with a transparent, clipped content pane.
+Individual record and form cards sit directly on the root canvas. Do not wrap
+collections or groups of cards in another surface; use spacing and section
+headings to establish hierarchy. The selected
 navigation item identifies the destination, so its title is a semantic label
 instead of a repeated visible heading. Set `showHeading` for record details or
 standalone setup that needs its own context. Actions remain in a fixed, bounded
 control row and wrap at larger text sizes. The page itself has no scroll view.
 `AppPage.child` receives bounded remaining height; collections use a lazy
-`ListView` or `CustomScrollView` inside the surface. A primary controller supports
+`ListView` or `CustomScrollView` inside the pane. A primary controller supports
 keyboard scrolling on every platform. Independent auxiliary scroll views set
 `primary: false`. Forms inside `AppDialog` use the dialog's body scrolling.
 
@@ -88,9 +91,10 @@ filters and the loaded pagination window when reloading data.
 
 AppPage supplies a distinct PageStorage identity per title and body key. Inner
 scroll offsets restore independently, so opening job details starts at the
-outcome and returning preserves the position in older history. Chat sets
-`surface: false` because its transcript and history already supply separate
-full-height surfaces.
+outcome and returning preserves the position in older history. Chat messages
+and the independent conversation history sit directly on the canvas. Pipeline
+stages also sit directly on the canvas, with filled state colors instead of
+outlines.
 
 For lists of separate cards, set `AppPage.insetBody` to false and apply
 `AppLayout.cardListPadding(context)` to the list or scroll view. This keeps card
@@ -226,7 +230,7 @@ picker stays on the right of the toolbar. Upload is the primary action, becoming
 collection controls and a More entry when space is limited. Scan, New document
 and Upload history remain available in More. The selector uses one visible line
 with its complete library/account context in semantics. Settings use the same
-fixed AppPage surface and retain meaningful section labels. Shared UI receives immutable action values, current callbacks
+transparent AppPage pane and retain meaningful section labels. Shared UI receives immutable action values, current callbacks
 and widgets, never a document Cubit or permission object.
 
 Feature action builders keep appearance, activity and connection state mounted
@@ -256,8 +260,8 @@ full-width Documents row above paired or full-width destinations. Scroll the bar
 contents exceed 40 percent of usable height, with its margin and bottom safe inset
 inside that budget. Focused buttons scroll into view. The body extends behind the
 bar, so content remains visible through its notch and outer margins. The bar has
-eight pixels of bottom spacing above the system safe inset. Page surfaces also
-stop above the physical bottom safe inset so their corners stay visible on iPhone;
+eight pixels of bottom spacing above the system safe inset. Page panes also
+stop above the physical bottom safe inset on iPhone;
 their inner scrolling content retains the remaining navigation clearance. Scaffold
 supplies the bar's measured height as bottom MediaQuery padding. Settings lists
 consume it automatically; the document footer and password form include it inside
@@ -270,10 +274,11 @@ Navigation buttons own their hover, press and focus decoration without a second
 Material overlay. Transparent decoration endpoints retain the visible endpoint's
 color channels so intermediate frames do not darken during alpha interpolation.
 The raised center uses an outline for interaction feedback, preserving the cutout.
-Desktop sidebar and tablet rail items share the document cards' primary hover
-outline without shadows or translation. Pointer exit removes
-the outline, including after a click; the selected fill and keyboard feedback
-remain. Navigation hit targets and positions remain fixed.
+Desktop sidebar and tablet rail items retain a primary hover outline without
+shadows or translation. Document cards use a subtle hover fill and a primary
+container fill for keyboard focus, with no outline in either state. Pointer exit
+removes the navigation hover outline, including after a click; the selected fill
+and keyboard feedback remain. Navigation hit targets and positions remain fixed.
 
 Collection toolbars scroll within a bounded height in short windows: at most
 40 percent of the available height, capped at 256 pixels including padding.
@@ -302,7 +307,7 @@ with dark foreground text. Presenters resolve semantic roles at build time,
 including matching status foreground/background pairs. Read
 [appearance and client preferences](appearance.md) for lifetime and persistence.
 
-Panels and dialogs use rounded corners and fine neutral outlines. Ordinary
+Cards, panels and dialogs use rounded corners without borders. Ordinary
 buttons retain 12-pixel corners. AppElevation retains its existing API but returns
 no shadows. Surfaces have no texture, blur or hover lift. Locally bundled Barlow
 Condensed provides display and page headings; DM Sans supplies body text,
@@ -313,9 +318,9 @@ Progress uses a solid rounded segment with transparent remaining space and
 preserves determinate, RTL and reduced-motion behavior.
 
 Filled inputs, secondary buttons and chips retain focus, selection and error
-indicators. Focus and error outlines remain two pixels wide. Pipeline current
-and failed stages also retain stronger semantic edges. Document and navigation
-highlights retain primary rings for pointer and keyboard use. Thin list
+indicators. Control focus and error outlines remain two pixels wide. Pipeline
+current and failed stages use semantic fills. Document cards use hover and focus
+fills; navigation retains primary rings for pointer and keyboard use. Thin list
 separators, checkbox/radio geometry and scanner guides remain meaningful. Use
 semantic state labels alongside color.
 
@@ -329,7 +334,7 @@ that arrives during a read. Explicit refresh and initial loading remain visible.
 
 Preserve Material keyboard focus, tooltips, popup dismissal and button semantics.
 Keep interactive targets at least 48 pixels. Headings expose heading semantics;
-selected navigation exposes selected semantics; notices use live regions. Use short transitions for meaningful state changes and hover/focus outlines.
+selected navigation exposes selected semantics; notices use live regions. Use short transitions for meaningful state changes and hover/focus feedback.
 Navigation hover/focus uses 140-millisecond tint and chevron transitions;
 selection uses 180 milliseconds. Hit targets never move. Disable these transitions
 and chooser animations when either MediaQuery's disable-animations preference or

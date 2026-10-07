@@ -301,12 +301,12 @@ final class _DocumentProcessingScreenState
       );
     },
   );
-  Widget _pipelineSetup(DocumentProcessingState state) => AppSurface(
-    padding: EdgeInsets.zero,
+  Widget _pipelineSetup(DocumentProcessingState state) => Material(
+    type: MaterialType.transparency,
     child: ExpansionTile(
       key: const PageStorageKey('pipelineSetup'),
       tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      childrenPadding: const EdgeInsets.only(bottom: 16),
       title: const Text('Pipeline setup'),
       children: [
         DocumentSchedulingSummary(scheduling: state.pipeline?.scheduling),
@@ -316,7 +316,8 @@ final class _DocumentProcessingScreenState
           const SizedBox(height: 20),
         ],
         if (state.pipeline case final DocumentProcessingPipeline pipeline) ...[
-          AppSurface(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: ExpansionTile(
               key: const PageStorageKey('namespacePipeline'),
               tilePadding: EdgeInsets.zero,
@@ -337,7 +338,8 @@ final class _DocumentProcessingScreenState
             ),
           ),
           const SizedBox(height: 20),
-          AppSurface(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: ExpansionTile(
               key: const PageStorageKey('namespaceAIPipeline'),
               tilePadding: EdgeInsets.zero,
@@ -357,7 +359,8 @@ final class _DocumentProcessingScreenState
           const SizedBox(height: 20),
         ],
         if (widget.cubit.canReadJobs) ...[
-          AppSurface(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: ExpansionTile(
               key: const PageStorageKey('namespaceThumbnailPipeline'),
               tilePadding: EdgeInsets.zero,
@@ -434,7 +437,8 @@ final class _DocumentProcessingScreenState
       ),
     ),
     const SizedBox(height: 20),
-    AppSurface(
+    Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

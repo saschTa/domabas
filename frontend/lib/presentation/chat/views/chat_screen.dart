@@ -208,7 +208,6 @@ final class _ChatScreenState extends State<ChatScreen> {
         }
         return AppPage(
           title: 'AI chat',
-          surface: false,
           insetBody: false,
           description:
               'Ask questions about your documents in ${widget.libraryName}.',
@@ -245,7 +244,7 @@ final class _ChatScreenState extends State<ChatScreen> {
                   if (wide) ...[
                     SizedBox(
                       width: 260,
-                      child: AppSurface(
+                      child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: _ChatHistory(cubit: cubit, state: state),
                       ),
@@ -268,7 +267,6 @@ final class _ChatScreenState extends State<ChatScreen> {
     BoxConstraints constraints,
   ) => AppPage(
     title: 'AI chat',
-    surface: false,
     insetBody: false,
     actions: [
       IconButton(
@@ -304,8 +302,7 @@ final class _ChatScreenState extends State<ChatScreen> {
     height = (height - MediaQuery.paddingOf(context).bottom).clamp(0, height);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
-      child: AppSurface(
-        padding: EdgeInsets.zero,
+      child: ClipRect(
         child: Column(
           children: [
             AppProgressSlot(

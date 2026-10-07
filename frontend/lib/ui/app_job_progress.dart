@@ -91,7 +91,6 @@ final class AppJobActivityCard extends StatelessWidget {
             color: theme.colorScheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: theme.colorScheme.outlineVariant),
             ),
             clipBehavior: Clip.antiAlias,
             child: ConstrainedBox(

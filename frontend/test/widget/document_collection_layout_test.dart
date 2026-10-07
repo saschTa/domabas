@@ -483,29 +483,25 @@ void main() {
         expect(details, findsOneWidget);
         expect(find.text('Metadata only'), findsOneWidget);
         expect(find.textContaining('Added'), findsOneWidget);
-        BorderSide outline() =>
-            (tester
-                        .widget<Material>(
-                          find
-                              .ancestor(
-                                of: card,
-                                matching: find.byType(Material),
-                              )
-                              .first,
-                        )
-                        .shape!
-                    as RoundedRectangleBorder)
-                .side;
-        final primary =
-            (dark ? AppTheme.dark() : AppTheme.light()).colorScheme.primary;
-        expect(outline().color, primary);
+        Material surface() => tester.widget<Material>(
+          find.ancestor(of: card, matching: find.byType(Material)).first,
+        );
+        final scheme = (dark ? AppTheme.dark() : AppTheme.light()).colorScheme;
+        expect(surface().color, scheme.surfaceContainerLow);
+        expect(
+          (surface().shape! as RoundedRectangleBorder).side,
+          BorderSide.none,
+        );
         tester.widget<InkWell>(card).focusNode!.requestFocus();
         await tester.pumpAndSettle();
         await mouse.moveTo(Offset.zero);
         await tester.pumpAndSettle();
         expect(details, findsOneWidget);
-        expect(outline().color, primary);
-        expect(outline().width, 1.5);
+        expect(surface().color, scheme.primaryContainer);
+        expect(
+          (surface().shape! as RoundedRectangleBorder).side,
+          BorderSide.none,
+        );
         reduced.value = true;
         await tester.pump();
         expect(tester.getTopLeft(card), origin);

@@ -68,7 +68,7 @@ Eligible PDF/image originals enter the existing bounded preview coordinator only
 with download authority. An absent search descriptor means Preview unavailable;
 email retains its email placeholder. Only a complete browse record can establish
 No original file. The lazy collection scroll contains its cards followed by the
-count and pagination inside a fixed full-height surface. A compact progress slot
+count and pagination inside a transparent full-height pane. A compact progress slot
 above the cards stays the same height during refresh. Loading and error messages
 appear in a bounded, scrollable row below the collection and above phone navigation;
 healthy collections reserve no empty status row. Its separate persistent toolbar has bounded scrolling for short
@@ -115,7 +115,8 @@ An empty later page recovers to the first page once. These are live results;
 metadata/OCR edits between requests can change ordering and membership.
 
 The visual language follows the shared Studio neutral light and dark palettes.
-Rounded document cards use thin outlines without shadows or hover translation.
+Rounded document cards sit directly on the canvas without borders, shadows or
+hover translation.
 The feature-owned toolbar contains search, filters, sorting and view selection.
 Pulling down from the top refreshes the collection, including an empty library,
 while preserving search criteria and the current page. The refresh indicator
@@ -123,12 +124,11 @@ waits for the read to finish; failed reads keep the last snapshot and a Retry
 action. App composition places the toolbar in the persistent top bar beside the library
 picker; standalone screens use the same controls above their collection. The
 selected navigation identifies Documents; counts scroll with the pagination while
-the surrounding surface stays fixed. Opening a card or row
+the surrounding pane stays fixed. Opening a card or row
 goes directly to the original full-size document viewer.
 An opaque metadata pill fades over the preview to show original type, size and
-date without fetching additional data. The accent outline belongs to hover and
-does not persist after clicking. Keyboard focus retains Material feedback and
-supplemental details;
+date without fetching additional data. Hover uses a subtle surface fill.
+Keyboard focus uses a primary container fill and retains supplemental details;
 list rows expose those details through a tooltip. Preview arrival has a brief
 reveal. Actions also work by touch, with complete information in the opened
 document. Reduced-motion settings suppress translation and optional transitions.

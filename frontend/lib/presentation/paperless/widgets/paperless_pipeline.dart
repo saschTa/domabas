@@ -7,7 +7,8 @@ final class PaperlessPipeline extends StatelessWidget {
   const PaperlessPipeline({super.key});
 
   @override
-  Widget build(BuildContext context) => AppSurface(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
     child: ExpansionTile(
       key: const PageStorageKey('paperlessPipeline'),
       tilePadding: EdgeInsets.zero,

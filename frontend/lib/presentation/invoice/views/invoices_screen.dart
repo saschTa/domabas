@@ -98,34 +98,31 @@ final class _InvoicesScreenState extends State<InvoicesScreen> {
                           AppProgressSlot(active: state.loading),
                           const SizedBox(height: 8),
                           if (state.items.isEmpty)
-                            AppSurface(
+                            AppEmptyState(
                               key: const ValueKey('invoiceCollection'),
-                              child: AppEmptyState(
-                                icon: Icons.receipt_long_outlined,
-                                title: !state.loaded && state.loading
-                                    ? 'Loading invoices…'
-                                    : state.loaded
-                                    ? state.snapshot!.query.isNotEmpty ||
-                                              state.snapshot!.source != null ||
-                                              state.snapshot!.filters.count > 0
-                                          ? 'No matching invoices'
-                                          : 'No invoices yet'
-                                    : 'Invoices are unavailable',
-                                message: !state.loaded && state.loading
-                                    ? 'Reading invoice details from this library.'
-                                    : state.snapshot?.query.isNotEmpty == true
-                                    ? 'Try another invoice number, party or invoice detail, or clear the search.'
-                                    : (state.snapshot?.filters.count ?? 0) > 0
-                                    ? 'Adjust the invoice properties or clear the filters.'
-                                    : state.snapshot?.source == null
-                                    ? 'Recognized invoices appear here after document processing.'
-                                    : 'No invoices match this source. Choose All invoices to see other results.',
-                              ),
+                              icon: Icons.receipt_long_outlined,
+                              title: !state.loaded && state.loading
+                                  ? 'Loading invoices…'
+                                  : state.loaded
+                                  ? state.snapshot!.query.isNotEmpty ||
+                                            state.snapshot!.source != null ||
+                                            state.snapshot!.filters.count > 0
+                                        ? 'No matching invoices'
+                                        : 'No invoices yet'
+                                  : 'Invoices are unavailable',
+                              message: !state.loaded && state.loading
+                                  ? 'Reading invoice details from this library.'
+                                  : state.snapshot?.query.isNotEmpty == true
+                                  ? 'Try another invoice number, party or invoice detail, or clear the search.'
+                                  : (state.snapshot?.filters.count ?? 0) > 0
+                                  ? 'Adjust the invoice properties or clear the filters.'
+                                  : state.snapshot?.source == null
+                                  ? 'Recognized invoices appear here after document processing.'
+                                  : 'No invoices match this source. Choose All invoices to see other results.',
                             )
                           else
-                            AppSurface(
+                            KeyedSubtree(
                               key: const ValueKey('invoiceCollection'),
-                              padding: EdgeInsets.zero,
                               child: AppPagedList(
                                 key: ValueKey(
                                   'invoices-${state.snapshotVersion}',
@@ -137,15 +134,16 @@ final class _InvoicesScreenState extends State<InvoicesScreen> {
                                 loadMoreLabel: 'Next',
                                 loadMoreKey: const Key('nextInvoices'),
                                 footer: count,
-                                itemBuilder: (context, index) => Column(
-                                  children: [
-                                    if (index > 0) const Divider(height: 1),
-                                    _InvoiceRow(
+                                itemBuilder: (context, index) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: AppSurface(
+                                    padding: EdgeInsets.zero,
+                                    child: _InvoiceRow(
                                       invoice: state.items[index],
                                       onOpen: () =>
                                           _open(context, state.items[index]),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),

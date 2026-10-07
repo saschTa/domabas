@@ -16,6 +16,7 @@ final class SystemUsersScreen extends StatelessWidget {
         builder: (context, _) => AppPage(
           eyebrow: 'Admin settings',
           title: 'System users',
+          insetBody: false,
           description: 'Manage administrators for this installation. Library access is managed separately.',
           onRefresh: cubit.loading || cubit.saving ? null : () => cubit.load(),
           child: Column(
@@ -36,40 +37,41 @@ final class SystemUsersScreen extends StatelessWidget {
                 ),
               AppProgressSlot(active: cubit.loading || cubit.saving),
               Expanded(
-                child: AppSurface(
-                  padding: EdgeInsets.zero,
-                  child: ListView.separated(
-                    itemCount: cubit.users.isEmpty
-                        ? 1
-                        : cubit.users.length + (cubit.canLoadMore ? 1 : 0),
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      if (cubit.users.isEmpty) {
-                        return cubit.loading
-                            ? const SizedBox.shrink()
-                            : const AppEmptyState(
-                                icon: Icons.manage_accounts_outlined,
-                                title: 'No users to display',
-                                message: 'Pull down to refresh the users in this installation.',
-                              );
-                      }
-                      if (index == cubit.users.length) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: TextButton(
-                            onPressed: cubit.loading || cubit.saving
-                                ? null
-                                : () => cubit.load(more: true),
-                            child: const Text('Load more users'),
-                          ),
-                        );
-                      }
-                      final user = cubit.users[index];
-                      final lastAdmin = cubit.isLastAdministrator(user);
-                      final alternate = user.role == SystemRole.admin
-                          ? SystemRole.user
-                          : SystemRole.admin;
-                      return AppRecordRow(
+                child: ListView.separated(
+                  padding: AppLayout.cardListPadding(context),
+                  itemCount: cubit.users.isEmpty
+                      ? 1
+                      : cubit.users.length + (cubit.canLoadMore ? 1 : 0),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    if (cubit.users.isEmpty) {
+                      return cubit.loading
+                          ? const SizedBox.shrink()
+                          : const AppEmptyState(
+                              icon: Icons.manage_accounts_outlined,
+                              title: 'No users to display',
+                              message: 'Pull down to refresh the users in this installation.',
+                            );
+                    }
+                    if (index == cubit.users.length) {
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: TextButton(
+                          onPressed: cubit.loading || cubit.saving
+                              ? null
+                              : () => cubit.load(more: true),
+                          child: const Text('Load more users'),
+                        ),
+                      );
+                    }
+                    final user = cubit.users[index];
+                    final lastAdmin = cubit.isLastAdministrator(user);
+                    final alternate = user.role == SystemRole.admin
+                        ? SystemRole.user
+                        : SystemRole.admin;
+                    return AppSurface(
+                      padding: EdgeInsets.zero,
+                      child: AppRecordRow(
                         key: Key('system-user-${user.id}'),
                         leading: CircleAvatar(
                           child: Icon(
@@ -113,9 +115,9 @@ final class SystemUsersScreen extends StatelessWidget {
                                 : 'Make admin',
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

@@ -44,9 +44,6 @@ final class DocumentCanvasLayout extends StatelessWidget {
                       color: Theme.of(context).colorScheme.surface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outlineVariant,
-                        ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: SingleChildScrollView(

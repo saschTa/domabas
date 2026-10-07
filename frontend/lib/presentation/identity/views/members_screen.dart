@@ -23,6 +23,7 @@ final class MembersScreen extends StatelessWidget {
     builder: (context, _) => AppPage(
       eyebrow: 'User settings',
       title: invitations ? 'Invitations' : 'Library members',
+      insetBody: false,
       description: invitations
           ? 'Invite people to ${cubit.identity.accountName} and manage the access you share.'
           : 'Manage who can use ${cubit.identity.accountName} and what they can do.',
@@ -59,39 +60,40 @@ final class MembersScreen extends StatelessWidget {
           child: _error(error, () => cubit.load()),
         ),
       Expanded(
-        child: AppSurface(
-          padding: EdgeInsets.zero,
-          child: ListView.separated(
-            itemCount: cubit.members.isEmpty
-                ? 1
-                : cubit.members.length + (cubit.canLoadMore ? 1 : 0),
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              if (cubit.members.isEmpty) {
-                return cubit.loading
-                    ? const SizedBox.shrink()
-                    : const AppEmptyState(
-                        icon: Icons.people_outline,
-                        title: 'No members to display',
-                        message: 'Pull down to refresh this library’s members.',
-                      );
-              }
-              if (index == cubit.members.length) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextButton(
-                    onPressed: cubit.loading
-                        ? null
-                        : () => cubit.load(more: true),
-                    child: const Text('Load more members'),
-                  ),
-                );
-              }
-              final member = cubit.members[index];
-              final additional = member.claims
-                  .difference(cubit.roleClaims(member.role))
-                  .length;
-              return AppRecordRow(
+        child: ListView.separated(
+          padding: AppLayout.cardListPadding(context),
+          itemCount: cubit.members.isEmpty
+              ? 1
+              : cubit.members.length + (cubit.canLoadMore ? 1 : 0),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (cubit.members.isEmpty) {
+              return cubit.loading
+                  ? const SizedBox.shrink()
+                  : const AppEmptyState(
+                      icon: Icons.people_outline,
+                      title: 'No members to display',
+                      message: 'Pull down to refresh this library’s members.',
+                    );
+            }
+            if (index == cubit.members.length) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextButton(
+                  onPressed: cubit.loading
+                      ? null
+                      : () => cubit.load(more: true),
+                  child: const Text('Load more members'),
+                ),
+              );
+            }
+            final member = cubit.members[index];
+            final additional = member.claims
+                .difference(cubit.roleClaims(member.role))
+                .length;
+            return AppSurface(
+              padding: EdgeInsets.zero,
+              child: AppRecordRow(
                 key: Key('member-${member.id}'),
                 leading: const CircleAvatar(child: Icon(Icons.person_outline)),
                 title: member.email,
@@ -127,9 +129,9 @@ final class MembersScreen extends StatelessWidget {
                             ? null
                             : () => _edit(context, member),
                       ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     ],
@@ -150,37 +152,38 @@ final class MembersScreen extends StatelessWidget {
           child: AppNotice(message: error),
         ),
       Expanded(
-        child: AppSurface(
-          padding: EdgeInsets.zero,
-          child: ListView.separated(
-            itemCount: cubit.invitations.isEmpty
-                ? 1
-                : cubit.invitations.length +
-                      (cubit.canLoadMoreInvitations ? 1 : 0),
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              if (cubit.invitations.isEmpty) {
-                return cubit.loadingInvitations
-                    ? const SizedBox.shrink()
-                    : const AppEmptyState(
-                        icon: Icons.mark_email_unread_outlined,
-                        title: 'No invitations yet',
-                        message: 'Invite someone and share their code to give them access to this library.',
-                      );
-              }
-              if (index == cubit.invitations.length) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextButton(
-                    onPressed: cubit.loadingInvitations
-                        ? null
-                        : () => cubit.loadInvitations(more: true),
-                    child: const Text('Load more invitations'),
-                  ),
-                );
-              }
-              final invite = cubit.invitations[index];
-              return AppRecordRow(
+        child: ListView.separated(
+          padding: AppLayout.cardListPadding(context),
+          itemCount: cubit.invitations.isEmpty
+              ? 1
+              : cubit.invitations.length +
+                    (cubit.canLoadMoreInvitations ? 1 : 0),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (cubit.invitations.isEmpty) {
+              return cubit.loadingInvitations
+                  ? const SizedBox.shrink()
+                  : const AppEmptyState(
+                      icon: Icons.mark_email_unread_outlined,
+                      title: 'No invitations yet',
+                      message: 'Invite someone and share their code to give them access to this library.',
+                    );
+            }
+            if (index == cubit.invitations.length) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextButton(
+                  onPressed: cubit.loadingInvitations
+                      ? null
+                      : () => cubit.loadInvitations(more: true),
+                  child: const Text('Load more invitations'),
+                ),
+              );
+            }
+            final invite = cubit.invitations[index];
+            return AppSurface(
+              padding: EdgeInsets.zero,
+              child: AppRecordRow(
                 key: Key('invitation-${invite.id}'),
                 leading: const CircleAvatar(child: Icon(Icons.mail_outline)),
                 title: invite.email,
@@ -209,9 +212,9 @@ final class MembersScreen extends StatelessWidget {
                         child: const Text('Revoke'),
                       )
                     : null,
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     ],
@@ -427,8 +430,8 @@ final class _MemberDialogState extends State<_MemberDialog> {
                 ])
                   if (grouped[category]
                       case final List<IdentityClaim> claims) ...[
-                    AppSurface(
-                      padding: const EdgeInsets.all(16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -467,8 +470,8 @@ final class _MemberDialogState extends State<_MemberDialog> {
                     const SizedBox(height: 12),
                   ],
                 if (otherClaims.isNotEmpty) ...[
-                  AppSurface(
-                    padding: const EdgeInsets.all(16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -608,7 +611,8 @@ final class _InvitationCodeDialogState extends State<_InvitationCodeDialog> {
           'They must sign in with that email to accept. No email has been sent.',
         ),
         const SizedBox(height: 20),
-        AppSurface(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: SelectableText(
             widget.issued.code,
             key: const Key('invitationCode'),

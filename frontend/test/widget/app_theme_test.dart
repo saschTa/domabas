@@ -29,10 +29,9 @@ void main() {
       expect(theme.cardTheme.elevation, 0);
       expect(theme.dialogTheme.elevation, 0);
       expect(
-        (theme.cardTheme.shape! as RoundedRectangleBorder).side.color,
-        scheme.outlineVariant,
+        (theme.cardTheme.shape! as RoundedRectangleBorder).side,
+        BorderSide.none,
       );
-      expect((theme.cardTheme.shape! as RoundedRectangleBorder).side.width, 1);
     });
   }
 }

@@ -50,10 +50,7 @@ final class AppSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: color ?? Theme.of(context).colorScheme.surface,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     clipBehavior: Clip.antiAlias,
     child: Padding(padding: padding, child: child),
   );
@@ -69,7 +66,6 @@ final class AppPage extends StatelessWidget {
     this.actions = const [],
     this.insetBody = true,
     this.showHeading = false,
-    this.surface = true,
     this.onRefresh,
   });
 
@@ -83,7 +79,6 @@ final class AppPage extends StatelessWidget {
 
   final bool insetBody;
   final bool showHeading;
-  final bool surface;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -164,16 +159,12 @@ final class AppPage extends StatelessWidget {
           child: Semantics(
             container: true,
             label: title,
-            child: surface
-                ? AppSurface(
-                    key: const Key('pageSurface'),
-                    padding: EdgeInsets.zero,
-                    child: content,
-                  )
-                : SizedBox.expand(
-                    key: const Key('pageSurface'),
-                    child: content,
-                  ),
+            child: Material(
+              key: const Key('pageSurface'),
+              type: MaterialType.transparency,
+              clipBehavior: Clip.hardEdge,
+              child: content,
+            ),
           ),
         ),
       );

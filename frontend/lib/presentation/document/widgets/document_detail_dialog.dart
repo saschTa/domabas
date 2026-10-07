@@ -495,11 +495,6 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
                                 color: Theme.of(context).colorScheme.surface,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outlineVariant,
-                                  ),
                                 ),
                                 clipBehavior: Clip.antiAlias,
                                 child: _inspectorContents(

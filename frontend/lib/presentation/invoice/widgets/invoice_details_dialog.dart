@@ -95,8 +95,8 @@ final class InvoiceDetailsDialog extends StatelessWidget {
                     : 'AI extracted · Review these details against the original document before using them. Missing or incorrect values are possible.',
               ),
               const SizedBox(height: 20),
-              AppSurface(
-                color: Theme.of(context).colorScheme.surfaceContainerLow,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 child: _InvoiceDetailFields([
                   (
                     'Total including tax',
@@ -428,8 +428,8 @@ final class _InvoiceDetailRecord extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 16),
-    child: AppSurface(
-      padding: const EdgeInsets.all(16),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

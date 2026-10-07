@@ -314,7 +314,6 @@ final class DocumentCardDetailsPill extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [

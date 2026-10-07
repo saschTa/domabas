@@ -19,6 +19,10 @@ cancels invoice requests with the other authenticated resources.
 
 ## Collection and detail
 
+Each invoice occupies a borderless card directly on the workspace canvas.
+The collection has no enclosing card. Details group fields and line items with
+headings and spacing inside the dialog.
+
 The collection uses shared themed page, surface, record, status and pagination
 presenters. Each row identifies the supplier, invoice number, gross total with
 currency, dates and extraction source. Credit notes and corrected invoices use

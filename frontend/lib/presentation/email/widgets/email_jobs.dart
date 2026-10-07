@@ -24,7 +24,8 @@ final class EmailJobDetails extends StatelessWidget {
       if (error != null) AppNotice(message: error!),
       EmailRunCard(run: run, provider: provider, onOpenAccount: onOpenAccount),
       const SizedBox(height: 20),
-      AppSurface(
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

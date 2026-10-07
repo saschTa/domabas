@@ -47,7 +47,8 @@ surfaces, navigation, input boundaries, statuses, processing cards and document
 chrome resolve colors from the current theme. A five-color `AppSemanticColors`
 extension supplies success and warning foreground/background pairs and the viewer
 canvas. Studio uses achromatic white and charcoal surfaces, restrained orange
-actions and fine neutral outlines without shadows. Fields and secondary buttons
+actions and borderless cards without shadows. Record and form cards sit directly
+on the canvas; dialogs use spacing and headings for internal sections. Fields and secondary buttons
 have filled resting states. Primary focus and error outlines retain two-pixel
 borders; labels accompany state colors. `AppPaperCanvas` paints a plain neutral
 background. The existing progress and divider presenters paint a solid rounded

@@ -266,10 +266,7 @@ abstract final class AppTheme {
         elevation: 0,
         shadowColor: AppElevation.materialShadow(scheme),
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -360,10 +357,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shadowColor: AppElevation.materialShadow(scheme),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: scheme.surface,
@@ -373,7 +367,6 @@ abstract final class AppTheme {
         shadowColor: AppElevation.materialShadow(scheme),
         shape: RoundedRectangleBorder(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          side: BorderSide(color: scheme.outlineVariant),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -381,10 +374,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shadowColor: AppElevation.materialShadow(scheme),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       menuTheme: MenuThemeData(
         style: MenuStyle(
@@ -394,9 +384,7 @@ abstract final class AppTheme {
           shadowColor: WidgetStatePropertyAll(
             AppElevation.materialShadow(scheme),
           ),
-          side: WidgetStatePropertyAll(
-            BorderSide(color: scheme.outlineVariant),
-          ),
+          side: const WidgetStatePropertyAll(BorderSide.none),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),

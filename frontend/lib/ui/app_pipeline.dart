@@ -45,16 +45,10 @@ final class AppPipelineDiagram extends StatelessWidget {
           decoration: BoxDecoration(
             color: step.failed
                 ? theme.colorScheme.errorContainer
-                : theme.colorScheme.surfaceContainerLow,
+                : step.current
+                ? theme.colorScheme.primaryContainer
+                : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: step.failed
-                  ? theme.colorScheme.error
-                  : step.current
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant,
-              width: step.failed || step.current ? 2 : 1,
-            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

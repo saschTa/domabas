@@ -247,11 +247,8 @@ void main() {
         IdentityPermission.manageDocumentProcessing,
       ]);
       expect(find.byKey(const Key('processingNavigation')), findsNothing);
-      expect(
-        find.byKey(const Key('navigation-admin-settings')),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const Key('navigation-admin-settings')));
+      expect(find.byKey(const Key('navigation-more')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('manageSystemUsers')), findsNothing);
       await tester.tap(find.byKey(const Key('manageDocumentProcessing')));
@@ -299,8 +296,8 @@ void main() {
       final repository = FakeProcessingRepository();
       await mount(tester, repository, [IdentityPermission.reindexDocuments]);
       expect(find.byKey(const Key('documentsNavigation')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('processingNavigation')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('processingNavigation')), findsNothing);
+      await navigateWorkspace(tester, 'processingNavigation');
       expect(find.byKey(const Key('job-filter-all')), findsNothing);
       await tester.tap(find.byKey(const Key('reindexLibrary')));
       await tester.pumpAndSettle();

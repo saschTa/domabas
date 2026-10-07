@@ -1,4 +1,5 @@
-import 'workspace_actions.dart' show revealWorkspaceAction;
+import 'workspace_actions.dart'
+    show revealWorkspaceAction, revealWorkspaceHeader;
 
 import 'dart:convert';
 import 'dart:js_interop';
@@ -468,7 +469,9 @@ Future<void> _exerciseThumbnailJobs(
     find.text('Thumbnail renderer revision ${job.rendererRevision}'),
     findsOneWidget,
   );
-  await tester.tap(find.text('Back to jobs'));
+  final back = find.text('Back to jobs');
+  await revealWorkspaceHeader(tester, back);
+  await tester.tap(back);
   await tester.pumpAndSettle();
   await reveal(filter);
   expect(tester.widget<ChoiceChip>(filter).selected, isTrue);

@@ -66,7 +66,7 @@ void main() {
       );
       await signIn(tester);
       expect(find.text('Account a'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('navigation-user-settings')));
+      await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(find.text('a@example.com'), findsOneWidget);
       expect(find.byKey(const Key('newDocument')), findsNothing);

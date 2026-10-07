@@ -456,7 +456,11 @@ void main() {
         fixture.auth.saved = testSession();
         await tester.pumpWidget(fixture.build());
         await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('navigation-user-settings')));
+        await tester.tap(
+          find.byKey(
+            Key(width < 600 ? 'navigation-more' : 'navigation-user-settings'),
+          ),
+        );
         await tester.pumpAndSettle();
         final item = find.byKey(const Key('manageLibraries')).last;
         final route = ModalRoute.of(tester.element(item));

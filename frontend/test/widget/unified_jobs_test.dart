@@ -61,6 +61,37 @@ final class PagedEmailRepository extends FakeEmailRepository {
 }
 
 void main() {
+  Future<void> revealJobContent(WidgetTester tester, Finder target) =>
+      revealWorkspacePageContent(
+        tester,
+        target,
+        list: find
+            .descendant(
+              of: find.byType(AppPage),
+              matching: find.byType(ListView),
+            )
+            .first,
+        center: false,
+      );
+
+  Future<void> backToJobs(WidgetTester tester) async {
+    final back = find.text('Back to jobs');
+    final list = find
+        .descendant(of: find.byType(AppPage), matching: find.byType(ListView))
+        .first;
+    for (
+      var attempt = 0;
+      attempt < 30 && back.hitTestable().evaluate().isEmpty;
+      attempt++
+    ) {
+      await tester.drag(list, const Offset(0, 500));
+      await tester.pumpAndSettle();
+    }
+    expect(back.hitTestable(), findsOneWidget);
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
     'thumbnail filter uses full totals and retains selection after details',
     (tester) async {
@@ -152,8 +183,7 @@ void main() {
       expect(find.byType(DocumentThumbnailPipelineDiagram), findsOneWidget);
       expect(find.byType(ProcessingConfigurationDetails), findsNothing);
       expect(find.text('Thumbnail renderer revision 1'), findsOneWidget);
-      await tester.tap(find.text('Back to jobs'));
-      await tester.pumpAndSettle();
+      await backToJobs(tester);
       expect(tester.widget<ChoiceChip>(filter).selected, isTrue);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -373,6 +403,10 @@ void main() {
       expect(find.byKey(const Key('job-document')), findsOneWidget);
       expect(find.byKey(const Key('email-job-new-mail')), findsNothing);
       expect(find.byKey(const Key('paperless-job-paperless')), findsNothing);
+      await revealJobContent(
+        tester,
+        find.byKey(const Key('pipeline-filter-paperless')),
+      );
       await tester.tap(find.byKey(const Key('pipeline-filter-paperless')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('job-document')), findsNothing);
@@ -387,7 +421,7 @@ void main() {
         of: find.byKey(const Key('paperless-job-paperless')),
         matching: find.text('Details'),
       );
-      await tester.ensureVisible(paperlessDetail);
+      await revealJobContent(tester, paperlessDetail);
       await tester.tap(paperlessDetail);
       await tester.pumpAndSettle();
       expect(find.text('Job details'), findsOneWidget);
@@ -400,20 +434,16 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(AppPipelineDiagram), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('Document results'),
-        350,
-        scrollable: find.byType(Scrollable).last,
-      );
+      await revealJobContent(tester, find.text('Document results'));
       expect(
         find.textContaining(
           'Only PDF, PNG, JPEG and EML originals are supported.',
         ),
         findsOneWidget,
       );
-      await tester.tap(find.text('Back to jobs'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
+      await backToJobs(tester);
+      await revealJobContent(
+        tester,
         find.byKey(const Key('pipeline-filter-paperless')),
       );
       expect(
@@ -446,8 +476,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(AppPipelineDiagram), findsOneWidget);
-      await tester.tap(find.text('Back to jobs'));
-      await tester.pumpAndSettle();
+      await backToJobs(tester);
       expect(
         tester
             .widget<ChoiceChip>(find.byKey(const Key('pipeline-filter-email')))

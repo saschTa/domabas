@@ -78,8 +78,22 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                       onChanged: (value) => cubit.edit(resource.id, value),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Saved: ${resource.limit} · Active: ${resource.activeJobs}',
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final (label, value) in [
+                          ('Saved', resource.limit),
+                          ('Active', resource.activeJobs),
+                        ])
+                          Expanded(
+                            child: MergeSemantics(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [Text(label), Text('$value')],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     const Text(

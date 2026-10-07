@@ -6,6 +6,12 @@ claim independently of document-read and metadata-create permission. Web, Linux,
 macOS and Windows retain their document workspace without initializing mobile camera
 plugins. General file selection and drag-and-drop are separate upload work.
 
+On phone layouts, Scanner is a primary bottom-bar action for users with upload
+permission and a native scanner capability. It opens the scanner over the current
+workspace and returns to that same destination when closed. The Documents header
+also retains its Scan document action; unsupported platforms explain native app
+availability there.
+
 ## Capture and presentation
 
 The rear camera detects page edges during framing. The scanner prefers the rear

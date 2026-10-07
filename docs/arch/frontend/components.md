@@ -40,7 +40,7 @@ Import `ui/domabas_ui.dart` from app or feature presentation code.
 | `AppWorkspaceShell` | Responsive nested navigation, single-row top bar and account utilities |
 | `AppWorkspaceAction` and its button/menu presenters | Immutable action labels and current callbacks supplied by feature owners |
 | `AppNavigationGroup` and `AppNavigationItem` | Immutable labels, icons, IDs and keys supplied by the caller |
-| `AppPage` | Full-width content with responsive insets, page heading, wrapping actions and remaining content height |
+| `AppPage` | Full-width content with responsive insets, scrolling page heading and wrapping actions, and bounded content height |
 | `AppSurface` | Flat themed panel with rounded corners and an ink outline |
 | `AppSectionHeader` | Group title, short description and optional trailing control |
 | `AppRecordRow` | List record with leading visual, text, metadata and responsive actions |
@@ -62,17 +62,25 @@ these components. Add a new shared presenter when repeated product UI has an
 established responsibility. Do not create generic abstractions for hypothetical
 future screens or hide business logic in a component configuration object.
 
-`AppPage.child` receives bounded remaining height, so large collections should use
-a lazy `ListView` or `CustomScrollView` there. `AppSurface` can wrap that list with
+`AppPage` coordinates its unpinned heading with the body's scrolling on phones,
+tablets and desktops. Scrolling down moves the title, description, actions and
+divider out of view; returning to the beginning reveals them. `AppPage.child`
+receives bounded remaining height, so large collections should use a lazy
+`ListView` or `CustomScrollView` there and inherit the primary scroll controller.
+Independent auxiliary scroll views must set `primary: false`. `AppSurface` can wrap that list with
 zero padding; each `AppRecordRow` supplies its own spacing. Forms inside `AppDialog`
 do not need another outer scroll view: the dialog owns body scrolling. Actions
 remain separate from that body and wrap when the window or enlarged text requires it.
+
+AppPage stores independent heading and body offsets per title and body key in
+route PageStorage. It restores them after layout, so opening job details starts
+at the outcome and returning preserves the position in older history.
 
 For lists of separate cards, set `AppPage.insetBody` to false and apply
 `AppLayout.cardListPadding(context)` to the list or scroll view. This keeps card
 edges aligned with the page heading and preserves existing collection spacing.
 The padding includes bottom navigation clearance. Keep viewport clipping enabled
-so scrolled cards cannot paint over fixed headings. Enclosed row lists keep the
+so scrolled cards cannot paint over adjacent controls. Enclosed row lists keep the
 default page insets. Dialogs own their padding inside the scrolling body.
 
 ## Unified pipelines and jobs
@@ -168,9 +176,12 @@ when their available width is below 560 pixels or text is enlarged. Dialogs defa
 to 720 pixels and stay inside a narrow viewport. Member and invitation forms use
 860 pixels, with two permission columns when space and text size allow it.
 
-The [mobile navigation rules](mobile-navigation.md) keep Invoices, Jobs, Documents,
-AI chat and Settings visible when there are five groups. A sixth group moves
-Settings, Admin and future secondary groups into a More sidebar.
+The [mobile navigation rules](mobile-navigation.md) keep Invoices, Scanner,
+Documents, AI chat and More in the phone bar when available. Scanner requires
+upload permission and native scanner support; it opens the scanner without
+changing the selected workspace. Jobs, Settings, Admin and future secondary
+groups are available through More even when the bar has fewer than five entries.
+Desktop and tablet navigation retain their existing destinations.
 
 The workspace has Documents and nested User settings destinations for Libraries,
 Members, Invitations and Password. Members and Invitations refer to the selected
@@ -233,9 +244,10 @@ the outline, including after a click; the selected fill and keyboard feedback
 remain. Navigation hit targets and positions remain fixed.
 
 The single-row shell header retains its complete height in short windows.
-`AppPage` reduces its vertical spacing and bounds
-its scrollable heading against the space above navigation. Its collection viewport
-still extends behind the bar. The document toolbar and
+`AppPage` reduces its vertical spacing and bounds an oversized heading against
+the space above navigation. That heading can scroll internally to expose its
+actions and still moves away when the body scrolls. Its collection viewport
+expands as the heading disappears and extends behind the bar. The document toolbar and
 pagination also have bounded scroll regions so their controls cannot consume the
 collection viewport. This preserves access to real form and document actions at
 large text sizes without suppressing text scaling.

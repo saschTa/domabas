@@ -34,7 +34,12 @@ remove individual filter categories, and Reset filters preserves term and sort.
 The dialog groups Document type separately from the Tags and people lookup.
 Typing applies the latest valid term after 300 milliseconds; Enter or Search
 submits immediately. Active IME composition and invalid text never submit. The
-collection Cubit owns the raw term, composition, desired filters, debounce and
+search field releases focus on outside touch, collection drag and completed
+submission, so returning from another action cannot reopen its keyboard or reveal
+the offscreen search field. Background refresh preserves active editing and the
+collection scroll position.
+
+The collection Cubit owns the raw term, composition, desired filters, debounce and
 intent revision. A meaningful edit cancels and fences the previous read before
 waiting for the timer. Sort, filters, refresh and mutation reconciliation all use
 the latest desired term. Clear search returns to ordinary offset browsing and

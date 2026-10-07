@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,28 +26,53 @@ final class ChatScreen extends StatefulWidget {
 
 final class _ChatScreenState extends State<ChatScreen> {
   late final _composer = TextEditingController(text: widget.cubit.state.draft);
-  final _scroll = ScrollController();
+  ScrollController? _scroll;
+  final _messageKeys = <String, GlobalKey>{};
   final _focus = FocusNode();
   bool _away = false;
+  int _latestGeneration = 0;
+  int _earlierGeneration = 0;
+  String? _earlierConversationId;
+  bool get _loadingEarlier =>
+      _earlierConversationId != null &&
+      cubit.state.selected?.id == _earlierConversationId;
   ChatCubit get cubit => widget.cubit;
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_scrollChanged);
+  void _bindScroll(BuildContext context) {
+    final scroll = PrimaryScrollController.of(context);
+    if (identical(_scroll, scroll)) return;
+    _scroll?.removeListener(_scrollChanged);
+    _scroll = scroll;
+    scroll.addListener(_scrollChanged);
   }
 
   void _scrollChanged() {
-    if (!_scroll.hasClients) return;
-    final away = _scroll.position.extentAfter > 120;
+    final scroll = _scroll;
+    if (scroll == null || !scroll.hasClients) return;
+    final away = scroll.position.extentAfter > 120;
     if (away != _away && mounted) setState(() => _away = away);
   }
 
   void _latest() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _scroll.hasClients) {
-        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    final generation = ++_latestGeneration;
+    final scroll = _scroll;
+    var remainingFrames = 8;
+    void follow(Duration _) {
+      if (mounted &&
+          generation == _latestGeneration &&
+          identical(_scroll, scroll) &&
+          scroll != null &&
+          scroll.hasClients &&
+          scroll.position.extentAfter > 0 &&
+          remainingFrames-- > 0) {
+        scroll.jumpTo(scroll.position.maxScrollExtent);
+        if (remainingFrames > 0) {
+          WidgetsBinding.instance.addPostFrameCallback(follow);
+          WidgetsBinding.instance.scheduleFrame();
+        }
       }
-    });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback(follow);
   }
 
   Future<void> _send() async {
@@ -58,19 +84,68 @@ final class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _earlier() async {
-    final previousExtent = _scroll.hasClients
-        ? _scroll.position.maxScrollExtent
+    final scrollGeneration = ++_latestGeneration;
+    final earlierGeneration = ++_earlierGeneration;
+    final conversationId = cubit.state.selected?.id;
+    _earlierConversationId = conversationId;
+    final scroll = _scroll;
+    final anchor = _messageKeys[cubit.state.messages.firstOrNull?.id];
+    final anchorOffset = _messageOffset(anchor);
+    final previousExtent = scroll != null && scroll.hasClients
+        ? scroll.position.maxScrollExtent
         : 0.0;
-    final previousOffset = _scroll.hasClients ? _scroll.offset : 0.0;
+    final previousOffset = scroll != null && scroll.hasClients
+        ? scroll.offset
+        : 0.0;
     await cubit.earlierMessages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _scroll.hasClients) {
-        _scroll.jumpTo(
-          (previousOffset + _scroll.position.maxScrollExtent - previousExtent)
-              .clamp(0.0, _scroll.position.maxScrollExtent),
+      if (mounted &&
+          scrollGeneration == _latestGeneration &&
+          cubit.state.selected?.id == conversationId &&
+          identical(_scroll, scroll) &&
+          scroll != null &&
+          scroll.hasClients) {
+        final currentAnchorOffset = _messageOffset(anchor);
+        final offset = anchorOffset != null && currentAnchorOffset != null
+            ? scroll.offset + currentAnchorOffset - anchorOffset
+            : previousOffset + scroll.position.maxScrollExtent - previousExtent;
+        scroll.position.setPixels(
+          offset.clamp(0.0, scroll.position.maxScrollExtent),
         );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              scrollGeneration == _latestGeneration &&
+              cubit.state.selected?.id == conversationId &&
+              identical(_scroll, scroll) &&
+              scroll.hasClients) {
+            final currentAnchorOffset = _messageOffset(anchor);
+            if (anchorOffset != null && currentAnchorOffset != null) {
+              scroll.position.setPixels(
+                (scroll.offset + currentAnchorOffset - anchorOffset).clamp(
+                  0.0,
+                  scroll.position.maxScrollExtent,
+                ),
+              );
+            }
+          }
+          if (earlierGeneration == _earlierGeneration) {
+            _earlierConversationId = null;
+          }
+        });
+        WidgetsBinding.instance.scheduleFrame();
+      } else {
+        if (earlierGeneration == _earlierGeneration) {
+          _earlierConversationId = null;
+        }
       }
     });
+  }
+
+  double? _messageOffset(GlobalKey? key) {
+    final render = key?.currentContext?.findRenderObject();
+    return render is RenderBox && render.attached && render.hasSize
+        ? render.localToGlobal(Offset.zero).dy
+        : null;
   }
 
   Future<void> _history() => showDialog<void>(
@@ -111,7 +186,7 @@ final class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _composer.dispose();
-    _scroll.dispose();
+    _scroll?.removeListener(_scrollChanged);
     _focus.dispose();
     super.dispose();
   }
@@ -126,7 +201,7 @@ final class _ChatScreenState extends State<ChatScreen> {
           selection: TextSelection.collapsed(offset: state.draft.length),
         );
       }
-      if (!_away && !state.loadingMessages) _latest();
+      if (!_away && !_loadingEarlier && !state.loadingMessages) _latest();
     },
     builder: (context, state) => LayoutBuilder(
       builder: (context, constraints) {
@@ -155,6 +230,7 @@ final class _ChatScreenState extends State<ChatScreen> {
           ],
           child: LayoutBuilder(
             builder: (context, constraints) {
+              _bindScroll(context);
               final wide =
                   constraints.maxWidth >= 850 &&
                   MediaQuery.textScalerOf(context).scale(14) < 23;
@@ -202,75 +278,80 @@ final class _ChatScreenState extends State<ChatScreen> {
         : '${configuration.provider == 'ollama' ? 'Ollama' : 'External'} · ${configuration.model}';
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Column(
-        children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: availableHeight * .3),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Semantics(
-                            header: true,
-                            child: Text(
-                              'AI chat',
-                              style: Theme.of(context).textTheme.titleLarge,
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverToBoxAdapter(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: availableHeight * .3),
+              child: SingleChildScrollView(
+                primary: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                'AI chat',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
                             ),
-                          ),
-                          Tooltip(
-                            message: modelLabel,
-                            child: Text(
-                              modelLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
+                            Tooltip(
+                              message: modelLabel,
+                              child: Text(
+                                modelLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      key: const Key('chatHistory'),
-                      tooltip: 'Conversation history',
-                      onPressed: state.canManageConversations ? _history : null,
-                      icon: const Icon(Icons.history),
-                    ),
-                    IconButton(
-                      key: const Key('newChat'),
-                      tooltip: 'New chat',
-                      onPressed: state.canManageConversations
-                          ? cubit.newConversation
-                          : null,
-                      icon: const Icon(Icons.add),
-                    ),
-                    IconButton(
-                      key: const Key('refreshChat'),
-                      tooltip: 'Refresh chat',
-                      onPressed:
-                          state.loading ||
-                              state.sending ||
-                              state.deletingConversationId != null
-                          ? null
-                          : cubit.load,
-                      icon: const Icon(Icons.refresh),
-                    ),
-                  ],
+                      IconButton(
+                        key: const Key('chatHistory'),
+                        tooltip: 'Conversation history',
+                        onPressed: state.canManageConversations
+                            ? _history
+                            : null,
+                        icon: const Icon(Icons.history),
+                      ),
+                      IconButton(
+                        key: const Key('newChat'),
+                        tooltip: 'New chat',
+                        onPressed: state.canManageConversations
+                            ? cubit.newConversation
+                            : null,
+                        icon: const Icon(Icons.add),
+                      ),
+                      IconButton(
+                        key: const Key('refreshChat'),
+                        tooltip: 'Refresh chat',
+                        onPressed:
+                            state.loading ||
+                                state.sending ||
+                                state.deletingConversationId != null
+                            ? null
+                            : cubit.load,
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, bounds) =>
-                  _transcript(context, state, bounds.maxHeight, compact: true),
-            ),
-          ),
         ],
+        body: LayoutBuilder(
+          builder: (context, bounds) {
+            _bindScroll(context);
+            return _transcript(context, state, bounds.maxHeight, compact: true);
+          },
+        ),
       ),
     );
   }
@@ -282,6 +363,8 @@ final class _ChatScreenState extends State<ChatScreen> {
     bool compact = false,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final messageIds = state.messages.map((message) => message.id).toSet();
+    _messageKeys.removeWhere((id, key) => !messageIds.contains(id));
     height = (height - MediaQuery.paddingOf(context).bottom).clamp(0, height);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
@@ -289,191 +372,206 @@ final class _ChatScreenState extends State<ChatScreen> {
         padding: EdgeInsets.zero,
         child: Column(
           children: [
-            if (!compact)
-              ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: height * .3),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome_outlined,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                state.selected?.title.isNotEmpty == true
-                                    ? state.selected!.title
-                                    : 'Ask your library',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              if (state.configuration != null)
-                                Text(
-                                  '${state.configuration!.provider == 'ollama' ? 'Internal Ollama' : 'External service'} · ${state.configuration!.model}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          key: const Key('refreshChat'),
-                          tooltip: 'Refresh chat',
-                          onPressed:
-                              state.loading ||
-                                  state.sending ||
-                                  state.deletingConversationId != null
-                              ? null
-                              : cubit.load,
-                          icon: const Icon(Icons.refresh),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             AppProgressSlot(
               active: state.loading || state.loadingMessages || state.sending,
             ),
             Expanded(
-              child: ListView(
-                controller: _scroll,
-                key: const Key('chatTranscript'),
-                padding: EdgeInsets.all(compact ? 12 : 20),
-                children: [
-                  if (state.configuration?.enabled == false)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 16),
-                      child: AppNotice(
-                        tone: AppTone.info,
-                        title: 'Chat is paused',
-                        message: 'An administrator has paused new chat messages. Your conversations remain available.',
-                      ),
-                    ),
-                  if (state.error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: AppNotice(
-                        message: state.error!,
-                        action: state.uncertain
-                            ? TextButton(
-                                key: const Key('reconcileChatMessage'),
-                                onPressed: state.sending
-                                    ? null
-                                    : () => cubit.send(reconcile: true),
-                                child: const Text('Check sent message'),
-                              )
-                            : TextButton(
-                                onPressed: state.loading ? null : cubit.load,
-                                child: const Text('Refresh'),
-                              ),
-                      ),
-                    ),
-                  if (state.updatesError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: AppNotice(
-                        tone: AppTone.warning,
-                        message: state.updatesError!,
-                      ),
-                    ),
-                  if (state.messageCursor != null)
-                    Center(
-                      child: TextButton.icon(
-                        key: const Key('earlierChatMessages'),
-                        onPressed:
-                            state.loadingMessages ||
-                                state.deletingConversationId != null
-                            ? null
-                            : _earlier,
-                        icon: const Icon(Icons.expand_less),
-                        label: const Text('Load earlier messages'),
-                      ),
-                    ),
-                  if (state.messages.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            size: 48,
-                            color: scheme.primary,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            state.loadingMessages
-                                ? 'Loading your conversation…'
-                                : 'A little clarity, from your documents',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Find details, connect ideas and follow the sources back to your library.',
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-                          for (final prompt in const [
-                            'Find my latest electricity bill',
-                            'Summarize my insurance documents',
-                            'Which invoices are due soon?',
-                          ])
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: OutlinedButton.icon(
-                                onPressed: !state.canManageConversations
-                                    ? null
-                                    : () {
-                                        cubit.editDraft(prompt);
-                                        _focus.requestFocus();
-                                      },
-                                icon: const Icon(Icons.arrow_outward, size: 18),
-                                label: Text(
-                                  prompt,
-                                  textAlign: TextAlign.center,
-                                ),
+              child: NotificationListener<UserScrollNotification>(
+                onNotification: (notification) {
+                  if (notification.direction != ScrollDirection.idle) {
+                    _latestGeneration++;
+                  }
+                  return false;
+                },
+                child: ListView(
+                  controller: _scroll,
+                  key: const Key('chatTranscript'),
+                  padding: EdgeInsets.all(compact ? 12 : 20),
+                  children: [
+                    if (!compact)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome_outlined,
+                              color: scheme.primary,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    state.selected?.title.isNotEmpty == true
+                                        ? state.selected!.title
+                                        : 'Ask your library',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                  if (state.configuration != null)
+                                    Text(
+                                      '${state.configuration!.provider == 'ollama' ? 'Internal Ollama' : 'External service'} · ${state.configuration!.model}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                ],
                               ),
                             ),
-                        ],
+                            IconButton(
+                              key: const Key('refreshChat'),
+                              tooltip: 'Refresh chat',
+                              onPressed:
+                                  state.loading ||
+                                      state.sending ||
+                                      state.deletingConversationId != null
+                                  ? null
+                                  : cubit.load,
+                              icon: const Icon(Icons.refresh),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  for (final message in state.messages)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: ChatMessageCard(
-                        message: message,
-                        onOpenDocument: widget.onOpenDocument,
-                        onSendAgain:
-                            state.hasActiveTurn ||
-                                state.sending ||
-                                state.uncertain ||
-                                state.deletingConversationId != null
-                            ? null
-                            : () {
-                                cubit.sendAgain(message);
-                                _focus.requestFocus();
-                              },
+                    if (state.configuration?.enabled == false)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: AppNotice(
+                          tone: AppTone.info,
+                          title: 'Chat is paused',
+                          message: 'An administrator has paused new chat messages. Your conversations remain available.',
+                        ),
                       ),
-                    ),
-                ],
+                    if (state.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: AppNotice(
+                          message: state.error!,
+                          action: state.uncertain
+                              ? TextButton(
+                                  key: const Key('reconcileChatMessage'),
+                                  onPressed: state.sending
+                                      ? null
+                                      : () => cubit.send(reconcile: true),
+                                  child: const Text('Check sent message'),
+                                )
+                              : TextButton(
+                                  onPressed: state.loading ? null : cubit.load,
+                                  child: const Text('Refresh'),
+                                ),
+                        ),
+                      ),
+                    if (state.updatesError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: AppNotice(
+                          tone: AppTone.warning,
+                          message: state.updatesError!,
+                        ),
+                      ),
+                    if (state.messageCursor != null)
+                      Center(
+                        child: TextButton.icon(
+                          key: const Key('earlierChatMessages'),
+                          onPressed:
+                              state.loadingMessages ||
+                                  state.deletingConversationId != null
+                              ? null
+                              : _earlier,
+                          icon: const Icon(Icons.expand_less),
+                          label: const Text('Load earlier messages'),
+                        ),
+                      ),
+                    if (state.messages.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline_rounded,
+                              size: 48,
+                              color: scheme.primary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              state.loadingMessages
+                                  ? 'Loading your conversation…'
+                                  : 'A little clarity, from your documents',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Find details, connect ideas and follow the sources back to your library.',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 24),
+                            for (final prompt in const [
+                              'Find my latest electricity bill',
+                              'Summarize my insurance documents',
+                              'Which invoices are due soon?',
+                            ])
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: OutlinedButton.icon(
+                                  onPressed: !state.canManageConversations
+                                      ? null
+                                      : () {
+                                          cubit.editDraft(prompt);
+                                          _focus.requestFocus();
+                                        },
+                                  icon: const Icon(
+                                    Icons.arrow_outward,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    prompt,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    for (final message in state.messages)
+                      Padding(
+                        key: _messageKeys.putIfAbsent(
+                          message.id,
+                          GlobalKey.new,
+                        ),
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: ChatMessageCard(
+                          message: message,
+                          onOpenDocument: widget.onOpenDocument,
+                          onSendAgain:
+                              state.hasActiveTurn ||
+                                  state.sending ||
+                                  state.uncertain ||
+                                  state.deletingConversationId != null
+                              ? null
+                              : () {
+                                  cubit.sendAgain(message);
+                                  _focus.requestFocus();
+                                },
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             if (_away)
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: height * .15),
                 child: SingleChildScrollView(
+                  primary: false,
                   child: TextButton.icon(
                     onPressed: _latest,
                     icon: const Icon(Icons.arrow_downward, size: 18),
@@ -486,6 +584,7 @@ final class _ChatScreenState extends State<ChatScreen> {
                 maxHeight: (height * .42).clamp(0, 260),
               ),
               child: SingleChildScrollView(
+                primary: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: Column(
@@ -639,6 +738,7 @@ final class _ChatHistory extends StatelessWidget {
       if (state.deleteError != null)
         Flexible(
           child: SingleChildScrollView(
+            primary: false,
             key: const Key('chatDeleteError'),
             child: Padding(
               padding: const EdgeInsets.all(8),
@@ -649,6 +749,8 @@ final class _ChatHistory extends StatelessWidget {
       Expanded(
         flex: 2,
         child: ListView(
+          key: const Key('chatHistoryList'),
+          primary: false,
           children: [
             if (state.conversations.isEmpty)
               Padding(

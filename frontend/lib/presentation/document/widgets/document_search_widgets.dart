@@ -11,6 +11,7 @@ final class DocumentSearchControls extends StatelessWidget {
   const DocumentSearchControls({
     super.key,
     required this.term,
+    required this.termFocus,
     required this.termError,
     required this.state,
     required this.filtersFocus,
@@ -26,6 +27,7 @@ final class DocumentSearchControls extends StatelessWidget {
     required this.compactSort,
   });
   final TextEditingController term;
+  final FocusNode termFocus;
   final String? termError;
   final DocumentsState state;
   final FocusNode filtersFocus;
@@ -98,11 +100,13 @@ final class DocumentSearchControls extends StatelessWidget {
                       child: TextField(
                         key: const Key('documentSearchTerm'),
                         controller: term,
+                        focusNode: termFocus,
+                        onTapOutside: (_) => termFocus.unfocus(),
                         textInputAction: TextInputAction.search,
                         onEditingComplete: () {
                           final composing = term.value.composing;
                           if (!composing.isValid || composing.isCollapsed) {
-                            FocusScope.of(context).unfocus();
+                            termFocus.unfocus();
                           }
                         },
                         onSubmitted: (_) => onSubmit(),
@@ -143,20 +147,21 @@ final class DocumentSearchControls extends StatelessWidget {
                           child: const Icon(Icons.tune),
                         ),
                       ),
-                    if (wide)
-                      FilledButton.icon(
-                        key: const Key('applyDocumentSearch'),
-                        onPressed: onSubmit,
-                        icon: const Icon(Icons.search),
-                        label: const Text('Search'),
-                      )
-                    else
-                      IconButton.filled(
-                        key: const Key('applyDocumentSearch'),
-                        tooltip: 'Search',
-                        onPressed: onSubmit,
-                        icon: const Icon(Icons.search),
-                      ),
+                    TextFieldTapRegion(
+                      child: wide
+                          ? FilledButton.icon(
+                              key: const Key('applyDocumentSearch'),
+                              onPressed: onSubmit,
+                              icon: const Icon(Icons.search),
+                              label: const Text('Search'),
+                            )
+                          : IconButton.filled(
+                              key: const Key('applyDocumentSearch'),
+                              tooltip: 'Search',
+                              onPressed: onSubmit,
+                              icon: const Icon(Icons.search),
+                            ),
+                    ),
                     if (compactSort)
                       DocumentSortControl(
                         criteria: criteria,

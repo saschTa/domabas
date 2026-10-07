@@ -62,6 +62,13 @@ model-authored text cannot manufacture a trusted route. Composer controls respec
 keyboard and shell insets. Ctrl/Cmd+Enter sends and Enter inserts a newline. The
 transcript preserves the scroll anchor while earlier messages are inserted,
 only follows new content when already near its bottom, and offers Jump to latest.
+Page and conversation headings scroll away with the transcript on phones and
+wide windows while the composer remains available. Conversation history and
+composer overflow scroll independently. Chat observes the page's coordinated
+transcript controller without owning its lifetime. Following settles bounded
+lazy-list layout changes and stops when the user scrolls or the controller changes.
+Loading earlier messages retains the visible message's position and the current
+heading offset, and temporarily suspends automatic following.
 
 Administrator settings support the internal Ollama default `qwen3.5:4b`, a
 paginated installed-model catalog and explicit model entry. External service

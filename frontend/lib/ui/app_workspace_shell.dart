@@ -56,6 +56,7 @@ final class AppWorkspaceShell extends StatefulWidget {
     this.actions = const [],
     this.utilityActions = const [],
     this.activityIndicator,
+    this.mobileGroups,
     this.mobilePrimaryGroupIds,
   });
 
@@ -69,6 +70,7 @@ final class AppWorkspaceShell extends StatefulWidget {
   final List<AppWorkspaceAction> actions;
   final List<AppWorkspaceAction> utilityActions;
   final Widget? activityIndicator;
+  final List<AppNavigationGroup>? mobileGroups;
   final List<String>? mobilePrimaryGroupIds;
 
   @override
@@ -100,15 +102,15 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       widget.groups.where((group) => group.items.isNotEmpty).toList();
 
   List<AppNavigationGroup> _mobileGroups(AppWorkspaceShell shell) {
-    final groups = shell.groups.where((group) => group.items.isNotEmpty);
+    final groups = (shell.mobileGroups ?? shell.groups).where(
+      (group) => group.items.isNotEmpty,
+    );
     final primary = shell.mobilePrimaryGroupIds;
     if (primary == null) return groups.toList();
     final remaining = groups.where((group) => !primary.contains(group.id));
     return [
       for (final id in primary) ...groups.where((group) => group.id == id),
-      if (groups.length <= 5)
-        ...remaining
-      else if (remaining.isNotEmpty)
+      if (remaining.isNotEmpty)
         AppNavigationGroup(
           id: 'more',
           label: 'More',
@@ -120,8 +122,13 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
 
   List<AppNavigationGroup> get _menuGroups => [
     ..._groups,
-    ..._mobileGroups(widget).where((group) => group.id == 'more'),
+    ..._mobileGroups(widget),
   ];
+
+  List<AppNavigationGroup> _currentGroups(AppWorkspaceShell shell) =>
+      _layout == 0
+      ? _mobileGroups(shell)
+      : shell.groups.where((group) => group.items.isNotEmpty).toList();
 
   void _measureActivity() {
     if (_measuringActivity) return;
@@ -170,11 +177,10 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
     super.didUpdateWidget(oldWidget);
     final current = _menu;
     if (current != null) {
-      final before = [
-        ...oldWidget.groups,
-        ..._mobileGroups(oldWidget),
-      ].where((group) => group.id == current.groupId).firstOrNull;
-      final after = _menuGroups
+      final before = _currentGroups(oldWidget)
+          .where((group) => group.id == current.groupId)
+          .firstOrNull;
+      final after = _currentGroups(widget)
           .where((group) => group.id == current.groupId)
           .firstOrNull;
       if (before == null ||
@@ -256,7 +262,8 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
 
   void _select(String id) {
     if (mounted &&
-        _groups.any((group) => group.items.any((item) => item.id == id))) {
+        _currentGroups(widget)
+            .any((group) => group.items.any((item) => item.id == id))) {
       widget.onSelected(id);
     }
   }
@@ -272,7 +279,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
         _layout != (mobile ? 0 : 1)) {
       return;
     }
-    final current = _menuGroups
+    final current = _currentGroups(widget)
         .where((value) => value.id == group.id)
         .firstOrNull;
     if (current == null ||
@@ -426,7 +433,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       );
     }
     if (!mounted || _menu != menu || menu.generation != _generation) return;
-    final completedGroup = _menuGroups
+    final completedGroup = _currentGroups(widget)
         .where((value) => value.id == group.id)
         .firstOrNull;
     setState(() => _menu = null);
@@ -501,9 +508,10 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                 const SizedBox(height: 16),
                 for (final item in group.items) ...[
                   if (group.id == 'more' &&
-                      _groups.any(
+                      (widget.mobileGroups ?? widget.groups).any(
                         (entry) =>
                             entry.collapsible &&
+                            entry.items.isNotEmpty &&
                             entry.items.first.id == item.id,
                       ))
                     Padding(
@@ -511,9 +519,11 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
                       child: Semantics(
                         header: true,
                         child: Text(
-                          _groups
+                          (widget.mobileGroups ?? widget.groups)
                               .firstWhere(
-                                (entry) => entry.items.first.id == item.id,
+                                (entry) =>
+                                    entry.items.isNotEmpty &&
+                                    entry.items.first.id == item.id,
                               )
                               .label,
                           style: Theme.of(context).textTheme.labelLarge

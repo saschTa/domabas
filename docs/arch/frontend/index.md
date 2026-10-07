@@ -11,8 +11,8 @@ and system administration.
 
 Start with [document workspace and design](documents.md), [shared UI components](components.md),
 [platforms and transport](platforms.md), and [authentication lifetime](identity.md).
-See [mobile workspace navigation](mobile-navigation.md) for the five-entry bar
-and the More sidebar when secondary destinations exceed that limit.
+See [mobile workspace navigation](mobile-navigation.md) for the primary bar,
+native Scanner action and More sidebar containing secondary destinations.
 See [invoice workspace](invoices.md) for invoice provenance, exact amounts,
 document links and paginated invoice details.
 See [appearance and client preferences](appearance.md) for persistent System,

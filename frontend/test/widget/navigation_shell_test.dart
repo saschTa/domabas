@@ -78,6 +78,7 @@ class _HarnessState extends State<_Harness> {
   bool disableAnimations = false;
   bool showShell = true;
   List<String>? mobilePrimaryGroupIds;
+  List<AppNavigationGroup>? mobileGroups;
   double keyboardInset = 0;
 
   void change(VoidCallback action) => setState(action);
@@ -97,6 +98,7 @@ class _HarnessState extends State<_Harness> {
     home: showShell
         ? AppWorkspaceShell(
             groups: groups,
+            mobileGroups: mobileGroups,
             mobilePrimaryGroupIds: mobilePrimaryGroupIds,
             selectedId: selected,
             onSelected: (value) => setState(() {
@@ -153,7 +155,7 @@ void main() {
     key.currentState!.change(() {
       key.currentState!.mobilePrimaryGroupIds = [
         'invoices',
-        'jobs',
+        'scanner',
         'documents',
         'chat',
       ];
@@ -179,6 +181,23 @@ void main() {
             ],
           ),
       ];
+      key.currentState!.mobileGroups = [
+        ...key.currentState!.groups,
+        AppNavigationGroup(
+          id: 'scanner',
+          label: 'Scanner',
+          icon: Icons.document_scanner_outlined,
+          collapsible: false,
+          items: const [
+            AppNavigationItem(
+              id: 'scanner',
+              label: 'Scanner',
+              icon: Icons.document_scanner_outlined,
+              key: Key('scannerNavigation'),
+            ),
+          ],
+        ),
+      ];
     });
     await tester.pumpAndSettle();
     return key;
@@ -195,10 +214,10 @@ void main() {
       expect(tester.getCenter(button('navigationDocumentsCircle')).dx, 195);
       final slots = [
         'invoicesNavigation',
-        'jobsNavigation',
+        'scannerNavigation',
         'documentsNavigation',
         'chatNavigation',
-        admin ? 'navigation-more' : 'navigation-user-settings',
+        'navigation-more',
       ];
       for (var index = 0; index < slots.length; index++) {
         expect(button(slots[index]).hitTestable(), findsOneWidget);
@@ -213,11 +232,10 @@ void main() {
           );
         }
       }
-      await open(tester, group: admin ? 'more' : 'user-settings');
-      expect(
-        button('workspaceMoreDrawer'),
-        admin ? findsOneWidget : findsNothing,
-      );
+      expect(button('jobsNavigation'), findsNothing);
+      await open(tester, group: 'more');
+      expect(button('workspaceMoreDrawer'), findsOneWidget);
+      expect(button('jobsNavigation'), findsOneWidget);
       expect(
         button('manageSystemUsers'),
         admin ? findsOneWidget : findsNothing,
@@ -236,7 +254,7 @@ void main() {
     (tester) async {
       final key = await mountMobileNavigation(tester);
       key.currentState!.change(
-        () => key.currentState!.groups.add(
+        () => key.currentState!.mobileGroups!.add(
           AppNavigationGroup(
             id: 'reports',
             label: 'Reports',
@@ -269,7 +287,7 @@ void main() {
       await open(tester, group: 'more');
       final stale = control(tester, 'manageSystemUsers').onPressed;
       key.currentState!.change(
-        () => key.currentState!.groups.removeWhere(
+        () => key.currentState!.mobileGroups!.removeWhere(
           (group) => group.id == 'admin-settings',
         ),
       );
@@ -283,7 +301,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(button('workspaceMoreDrawer'), findsNothing);
       expect(button('workspaceBottomNavigation'), findsNothing);
-      expect(button('reportsNavigation'), findsOneWidget);
+      expect(button('reportsNavigation'), findsNothing);
+      expect(button('scannerNavigation'), findsNothing);
+      expect(button('jobsNavigation'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -300,6 +320,42 @@ void main() {
     expect(find.text('Page: system-users'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'mobile actions reject stale callbacks after removal and resize',
+    (tester) async {
+      final key = await mountMobileNavigation(tester, admin: false);
+      final scanner = control(tester, 'scannerNavigation').onPressed;
+      scanner();
+      await tester.pumpAndSettle();
+      expect(key.currentState!.calls, ['scanner']);
+      key.currentState!.change(
+        () => key.currentState!.mobileGroups!.removeWhere(
+          (group) => group.id == 'scanner',
+        ),
+      );
+      await tester.pumpAndSettle();
+      scanner();
+      expect(key.currentState!.calls, ['scanner']);
+      expect(button('jobsNavigation'), findsNothing);
+      await open(tester, group: 'more');
+      await tester.ensureVisible(button('jobsNavigation'));
+      await tester.tap(button('jobsNavigation'));
+      await tester.pumpAndSettle();
+      expect(key.currentState!.selected, 'jobs');
+      expect(control(tester, 'navigation-more').selected, isTrue);
+      for (final width in [900.0, 1280.0]) {
+        tester.view.physicalSize = Size(width, 844);
+        await tester.pumpAndSettle();
+        scanner();
+        expect(key.currentState!.calls, ['scanner', 'jobs']);
+        expect(button('scannerNavigation'), findsNothing);
+        expect(button('jobsNavigation'), findsOneWidget);
+        expect(button('navigation-more'), findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final width in [390.0, 900.0]) {
     testWidgets(

@@ -1,5 +1,8 @@
 import 'workspace_actions.dart'
-    show revealWorkspaceAction, waitForWorkspaceWidget;
+    show
+        revealWorkspaceAction,
+        revealWorkspacePageContent,
+        waitForWorkspaceWidget;
 
 import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/app/domabas_app.dart';
@@ -201,17 +204,8 @@ void main() {
           findsOneWidget,
         );
         expect(find.byKey(const Key('openNavigation')), findsNothing);
-        expect(
-          find.byKey(const Key('navigation-more')),
-          administerSystem ? findsOneWidget : findsNothing,
-        );
-        await tester.tap(
-          find.byKey(
-            Key(
-              administerSystem ? 'navigation-more' : 'navigation-user-settings',
-            ),
-          ),
-        );
+        expect(find.byKey(const Key('navigation-more')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('navigation-more')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('changePassword')), findsOneWidget);
         expect(
@@ -624,19 +618,11 @@ Future<void> exerciseWorkloadSettings(
           'workloadLimit-worker-',
         ),
   );
-  Future<void> reveal(Finder target) async {
-    final scrollable = find
-        .descendant(
-          of: find.byKey(const Key('workloadSettingsScroll')),
-          matching: find.byType(Scrollable),
-        )
-        .first;
-    tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(target, 250, scrollable: scrollable);
-    await tester.ensureVisible(target);
-    await tester.pumpAndSettle();
-  }
+  Future<void> reveal(Finder target) => revealWorkspacePageContent(
+    tester,
+    target,
+    list: find.byKey(const Key('workloadSettingsScroll')),
+  );
 
   Future<void> save(int limit) async {
     final cubit = screen().cubit;
@@ -646,8 +632,6 @@ Future<void> exerciseWorkloadSettings(
     expect(cubit.state.canSave, isTrue);
     final save = find.byKey(const Key('saveWorkloadSettings'));
     await reveal(save);
-    await Scrollable.ensureVisible(tester.element(save), alignment: .5);
-    await tester.pumpAndSettle();
     final saveBounds = tester.getRect(save);
     await tester.tap(save);
     await waitForWorkspaceWidget(

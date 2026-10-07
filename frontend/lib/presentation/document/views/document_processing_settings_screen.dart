@@ -42,15 +42,7 @@ final class _DocumentProcessingSettingsScreenState
             eyebrow: 'ADMIN SETTINGS',
             title: 'Document processing',
             description: 'Configure OCR, optional AI property and invoice extraction, and indexing across all libraries.',
-            actions: [
-              IconButton(
-                tooltip: 'Refresh processing settings',
-                onPressed: state.loading || state.saving
-                    ? null
-                    : () => cubit.load(),
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+            onRefresh: state.loading || state.saving ? null : cubit.load,
             child: ListView(
               padding: AppLayout.cardListPadding(context),
               children: [
@@ -68,14 +60,14 @@ final class _DocumentProcessingSettingsScreenState
                             onPressed: state.loading || state.saving
                                 ? null
                                 : () => cubit.load(),
-                            child: const Text('Refresh'),
+                            child: const Text('Retry'),
                           ),
                   ),
                   const SizedBox(height: 16),
                 ],
                 if (state.browsingHistory) ...[
                   const AppNotice(
-                    message: 'Older history stays in place while active outcomes update. Refresh to see the newest requests.',
+                    message: 'Older history stays in place while active outcomes update. Pull down to see the newest requests.',
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -313,7 +305,7 @@ final class _DocumentProcessingSettingsScreenState
                   const AppEmptyState(
                     icon: Icons.settings_outlined,
                     title: 'Processing settings are unavailable',
-                    message: 'Refresh to load the installed pipeline.',
+                    message: 'Pull down to load the installed pipeline.',
                   ),
               ],
             ),
@@ -346,6 +338,7 @@ final class _DocumentProcessingSettingsScreenState
               builder: (context, state) {
                 return AppDialog(
                   title: 'Extraction settings',
+                  onRefresh: state.loading || state.saving ? null : cubit.load,
                   actions: [
                     Visibility(
                       visible:
@@ -374,7 +367,7 @@ final class _DocumentProcessingSettingsScreenState
                           message: state.error!,
                           action: TextButton(
                             onPressed: state.saving ? null : () => cubit.load(),
-                            child: const Text('Refresh'),
+                            child: const Text('Retry'),
                           ),
                         ),
                         const SizedBox(height: 16),

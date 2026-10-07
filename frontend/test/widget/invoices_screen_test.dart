@@ -21,6 +21,77 @@ import '../support/fake_realtime_repository.dart';
 import '../support/workspace_navigation.dart';
 
 void main() {
+  for (final empty in [false, true]) {
+    testWidgets(
+      'pull refreshes ${empty ? 'empty' : 'loaded'} invoices and footer count',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(390, 844);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        final repository = FakeInvoiceRepository();
+        if (!empty) {
+          repository.records[invoiceFixture(1).id] = invoiceFixture(1);
+        }
+        final cubit = InvoicesCubit(repository, allowed: true)..setActive(true);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: InvoicesScreen(cubit: cubit, shellToolbar: true),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final count = find.byKey(const Key('invoiceCount'));
+        final collection = find.byKey(const ValueKey('invoiceCollection'));
+        expect(
+          tester.widget<Text>(count).data,
+          empty ? '0 invoices loaded' : '1 invoice loaded',
+        );
+        if (!empty) {
+          expect(
+            tester.getRect(count).top,
+            greaterThan(
+              tester
+                  .getRect(
+                    find.byKey(ValueKey('invoice-${invoiceFixture(1).id}')),
+                  )
+                  .bottom,
+            ),
+          );
+        } else {
+          expect(
+            tester.getRect(count).top,
+            greaterThanOrEqualTo(tester.getRect(collection).bottom),
+          );
+        }
+        final pending = Completer<InvoicePage>();
+        repository.onSearch = (_, _, _) => pending.future;
+        final list = find.byKey(const PageStorageKey('invoiceWorkspaceScroll'));
+        await tester.dragFrom(
+          tester.getTopLeft(list) + const Offset(180, 32),
+          const Offset(0, 500),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(repository.queries, ['', '']);
+        expect(find.byType(RefreshProgressIndicator), findsOneWidget);
+        pending.complete(InvoicePage(items: [invoiceFixture(2)]));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Text>(count).data, '1 invoice loaded');
+        expect(
+          find.byKey(ValueKey('invoice-${invoiceFixture(2).id}')),
+          findsOneWidget,
+        );
+        expect(find.byType(RefreshProgressIndicator), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await cubit.close();
+      },
+    );
+  }
+
   testWidgets(
     'search retains results during typing, errors and source changes, then clears',
     (tester) async {
@@ -46,22 +117,16 @@ void main() {
       expect(row, findsOneWidget);
       expect(tester.element(row), same(originalRow));
       expect(find.textContaining('Showing previous results'), findsOneWidget);
-      final filterPositions = [
-        for (final source in ['all', 'structured', 'ai'])
-          tester.getRect(find.byKey(ValueKey('invoiceFilter-$source'))),
-      ];
-      await tester.tap(find.byKey(const ValueKey('invoiceFilter-ai')));
-      await tester.pump();
-      expect(
-        tester
-            .widget<IconButton>(find.byKey(const Key('refreshInvoices')))
-            .onPressed,
-        isNull,
+      final sourceBounds = tester.getRect(
+        find.byKey(const Key('invoiceSource')),
       );
-      expect([
-        for (final source in ['all', 'structured', 'ai'])
-          tester.getRect(find.byKey(ValueKey('invoiceFilter-$source'))),
-      ], filterPositions);
+      await _selectInvoiceSource(tester, 'ai');
+      await tester.pump();
+      expect(find.byKey(const Key('refreshInvoices')), findsNothing);
+      expect(
+        tester.getSize(find.byKey(const Key('invoiceSource'))),
+        sourceBounds.size,
+      );
       expect(repository.queries.last, 'no match');
       expect(repository.sources.last, 'ai');
       expect(tester.element(row), same(originalRow));
@@ -82,7 +147,7 @@ void main() {
       expect(cubit.state.source, 'ai');
       expect(cubit.state.snapshot!.query, isEmpty);
       expect(find.text('No matching invoices'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('invoiceFilter-all')));
+      await _selectInvoiceSource(tester, 'all');
       await tester.pumpAndSettle();
       expect(row, findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -167,9 +232,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final refresh = find.byKey(const Key('refreshInvoices'));
-    expect(tester.widget<IconButton>(refresh).tooltip, 'Refresh invoices');
-    expect(tester.getSize(refresh), const Size(48, 48));
+    expect(find.byKey(const Key('refreshInvoices')), findsNothing);
+    expect(find.byTooltip('Invoice source'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('invoiceSource'))).height,
+      greaterThanOrEqualTo(48),
+    );
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     semantics.dispose();
@@ -321,7 +389,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('closeInvoiceDetails')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('invoiceFilter-ai')));
+      await _selectInvoiceSource(tester, 'ai');
       await tester.pumpAndSettle();
       expect(find.byKey(ValueKey('invoice-${correction.id}')), findsNothing);
       expect(find.text('AI extracted · Review details'), findsOneWidget);
@@ -376,56 +444,79 @@ void main() {
     },
   );
 
-  testWidgets('automatic refresh keeps the visible invoice history page', (
-    tester,
-  ) async {
-    final repository = FakeInvoiceRepository();
-    for (var index = 0; index < 45; index++) {
-      final invoice = invoiceFixture(index);
-      repository.records[invoice.id] = invoice;
-    }
-    final cubit = InvoicesCubit(repository, allowed: true)..setActive(true);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(body: InvoicesScreen(cubit: cubit)),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await revealWorkspaceContent(
-      tester,
-      find.byKey(const Key('nextInvoices')),
-      scrollable: find.byKey(const PageStorageKey('invoiceWorkspaceScroll')),
-    );
-    await tester.tap(find.byKey(const Key('nextInvoices')));
-    await tester.pumpAndSettle();
-    final visiblePage = tester.element(find.byType(AppPagedList));
-    expect(find.text('21–40'), findsOneWidget);
-    repository.records[invoiceFixture(25).id] = invoiceFixture(
-      25,
-      number: 'Corrected',
-    );
-    repository.records.remove(invoiceFixture(28).id);
-    final original = Map<String, Invoice>.of(repository.records);
-    final head = invoiceFixture(99);
-    repository.records
-      ..clear()
-      ..[head.id] = head
-      ..addAll(original);
+  testWidgets(
+    'automatic and pull refresh keep the visible invoice history page',
+    (tester) async {
+      final repository = FakeInvoiceRepository();
+      for (var index = 0; index < 45; index++) {
+        final invoice = invoiceFixture(index);
+        repository.records[invoice.id] = invoice;
+      }
+      final cubit = InvoicesCubit(repository, allowed: true)..setActive(true);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(body: InvoicesScreen(cubit: cubit)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await revealWorkspaceContent(
+        tester,
+        find.byKey(const Key('nextInvoices')),
+        scrollable: find.byKey(const PageStorageKey('invoiceWorkspaceScroll')),
+      );
+      await tester.tap(find.byKey(const Key('nextInvoices')));
+      await tester.pumpAndSettle();
+      final visiblePage = tester.element(find.byType(AppPagedList));
+      expect(find.text('21–40'), findsOneWidget);
+      repository.records[invoiceFixture(25).id] = invoiceFixture(
+        25,
+        number: 'Corrected',
+      );
+      repository.records.remove(invoiceFixture(28).id);
+      final original = Map<String, Invoice>.of(repository.records);
+      final head = invoiceFixture(99);
+      repository.records
+        ..clear()
+        ..[head.id] = head
+        ..addAll(original);
 
-    await cubit.load(background: true);
-    await tester.pumpAndSettle();
+      await cubit.load(background: true);
+      await tester.pumpAndSettle();
 
-    expect(tester.element(find.byType(AppPagedList)), same(visiblePage));
-    expect(find.text('21–40'), findsOneWidget);
-    expect(find.text('Invoice Corrected'), findsOneWidget);
-    expect(find.text('Invoice INV-28'), findsNothing);
-    expect(find.text('Invoice INV-99'), findsNothing);
-    expect(find.text('Invoice INV-0'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-    await cubit.close();
-  });
+      expect(tester.element(find.byType(AppPagedList)), same(visiblePage));
+      expect(find.text('21–40'), findsOneWidget);
+      expect(find.text('Invoice Corrected'), findsOneWidget);
+      expect(find.text('Invoice INV-28'), findsNothing);
+      expect(find.text('Invoice INV-99'), findsNothing);
+      expect(find.text('Invoice INV-0'), findsNothing);
+      repository.records[invoiceFixture(25).id] = invoiceFixture(
+        25,
+        number: 'Updated by pull',
+      );
+      final list = find.byKey(const PageStorageKey('invoiceWorkspaceScroll'));
+      final scroll = find
+          .descendant(of: list, matching: find.byType(Scrollable))
+          .first;
+      tester.state<ScrollableState>(scroll).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.dragFrom(
+        tester.getTopLeft(list) + const Offset(180, 32),
+        const Offset(0, 500),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.element(find.byType(AppPagedList)), same(visiblePage));
+      expect(find.text('21–40'), findsOneWidget);
+      expect(find.text('Invoice Updated by pull'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('invoiceCount'))).data,
+        '40 invoices loaded',
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await cubit.close();
+    },
+  );
 
   for (final allowed in [false, true]) {
     testWidgets(
@@ -477,4 +568,17 @@ void main() {
       },
     );
   }
+}
+
+Future<void> _selectInvoiceSource(WidgetTester tester, String source) async {
+  final trigger = find.byKey(const Key('invoiceSource'));
+  if (trigger.hitTestable().evaluate().isEmpty) {
+    await tester.ensureVisible(trigger);
+  }
+  await tester.tap(trigger);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.byKey(ValueKey('invoiceFilter-$source')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }

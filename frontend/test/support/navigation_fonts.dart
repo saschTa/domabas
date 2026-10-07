@@ -1,18 +1,14 @@
-import 'dart:io';
-
 import 'package:flutter/services.dart';
 
 Future<void> loadNavigationFonts() async {
-  final root = Platform.environment['FLUTTER_ROOT'];
-  if (root == null) {
-    throw StateError('Flutter SDK root is required for font loading');
+  for (final (family, files) in [
+    ('DMSans', ['DMSans-Regular.ttf', 'DMSans-SemiBold.ttf']),
+    ('BarlowCondensed', ['BarlowCondensed-Bold.ttf']),
+  ]) {
+    final loader = FontLoader(family);
+    for (final file in files) {
+      loader.addFont(rootBundle.load('assets/fonts/$file'));
+    }
+    await loader.load();
   }
-  final loader = FontLoader('Roboto');
-  for (final weight in ['Regular', 'Medium']) {
-    final file = File(
-      '$root/bin/cache/artifacts/material_fonts/Roboto-$weight.ttf',
-    );
-    loader.addFont(file.readAsBytes().then(ByteData.sublistView));
-  }
-  await loader.load();
 }

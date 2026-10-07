@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Future<void> refreshWorkspacePage(
+  WidgetTester tester, {
+  required Finder list,
+}) async {
+  final scroll = find
+      .descendant(of: list, matching: find.byType(Scrollable))
+      .first;
+  final position = tester.state<ScrollableState>(scroll).position;
+  position.jumpTo(position.minScrollExtent);
+  await tester.pumpAndSettle();
+  final viewport = tester.getRect(list);
+  await tester.dragFrom(
+    Offset(viewport.center.dx, viewport.top + 32),
+    Offset(0, (viewport.height * .75).clamp(240, 500)),
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> revealWorkspacePageContent(
   WidgetTester tester,
   Finder target, {
@@ -80,7 +98,10 @@ Future<void> revealWorkspaceAction(WidgetTester tester, String key) async {
       'logout',
     }.contains(key);
     final account = find.byKey(const Key('workspaceAccount'));
-    final trigger = utility && account.evaluate().isNotEmpty
+    final mobileMore = find.byKey(const Key('navigation-more'));
+    final trigger = mobileMore.evaluate().isNotEmpty
+        ? mobileMore
+        : utility && account.evaluate().isNotEmpty
         ? account
         : find.byKey(const Key('workspaceMore'));
     await tester.ensureVisible(trigger);
@@ -92,27 +113,67 @@ Future<void> revealWorkspaceAction(WidgetTester tester, String key) async {
 }
 
 Future<void> revealWorkspaceHeader(WidgetTester tester, Finder target) async {
-  final page = find.byType(NestedScrollView).last;
-  for (var attempt = 0; attempt < 100; attempt++) {
-    if (target.hitTestable().evaluate().isNotEmpty) return;
-    var viewport = tester.getRect(page);
-    final navigation = find.byKey(const Key('workspaceBottomNavigation'));
-    if (navigation.evaluate().isNotEmpty) {
-      viewport = viewport.intersect(
-        Rect.fromLTRB(
-          viewport.left,
-          viewport.top,
-          viewport.right,
-          tester.getRect(navigation).top,
-        ),
-      );
-    }
-    expect(viewport.height, greaterThan(0));
-    await tester.dragFrom(
-      viewport.center,
-      Offset(0, (viewport.height * .6).clamp(0, 300)),
-    );
+  final toolbarTarget = find.descendant(
+    of: find.byKey(const Key('workspaceHeader')),
+    matching: target,
+  );
+  if (toolbarTarget.evaluate().isNotEmpty) {
+    await tester.ensureVisible(toolbarTarget);
+    await tester.pumpAndSettle();
+    expect(toolbarTarget.hitTestable(), findsOneWidget);
+    return;
+  }
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  expect(target.hitTestable(), findsOneWidget);
+}
+
+Future<void> openWorkspaceJobFilters(WidgetTester tester) async {
+  if (find.text('Filter jobs').evaluate().isNotEmpty) return;
+  final trigger = find.byKey(const Key('jobFilters'));
+  await revealWorkspaceHeader(tester, trigger);
+  await tester.tap(trigger);
+  await tester.pumpAndSettle();
+}
+
+Future<void> closeWorkspaceJobFilters(WidgetTester tester) async {
+  await tester.tap(find.text('Done'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> selectWorkspaceJobFilters(
+  WidgetTester tester,
+  Iterable<String> keys,
+) async {
+  await openWorkspaceJobFilters(tester);
+  for (final key in keys) {
+    final filter = find.byKey(Key(key));
+    await tester.ensureVisible(filter);
+    await tester.pumpAndSettle();
+    await tester.tap(filter);
     await tester.pumpAndSettle();
   }
-  expect(target.hitTestable(), findsOneWidget);
+  await closeWorkspaceJobFilters(tester);
+}
+
+Future<void> setWorkspacePipelineSetup(
+  WidgetTester tester, {
+  required bool expanded,
+}) async {
+  final setup = find.byKey(const PageStorageKey('pipelineSetup'));
+  final title = find.text('Pipeline setup');
+  await revealWorkspacePageContent(
+    tester,
+    title,
+    list: find.byKey(const PageStorageKey('processingPage')),
+    center: false,
+  );
+  final open = find
+      .descendant(of: setup, matching: find.text('Shared resource limits'))
+      .evaluate()
+      .isNotEmpty;
+  if (open != expanded) {
+    await tester.tap(title);
+    await tester.pumpAndSettle();
+  }
 }

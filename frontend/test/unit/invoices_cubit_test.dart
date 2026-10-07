@@ -143,7 +143,7 @@ void main() {
       await cubit.submitSearch();
       await cubit.load(more: true);
       final ids = cubit.state.items.map((invoice) => invoice.id).toList();
-      await cubit.load(background: true);
+      await cubit.refresh();
       expect(cubit.state.items.map((invoice) => invoice.id), ids);
       expect(cubit.state.cursor, '40');
       expect(repository.queries.last, 'supplier');
@@ -191,6 +191,23 @@ void main() {
       expect(cubit.state.error, isNotNull);
     },
   );
+
+  test('refresh joins a current read until its result is committed', () async {
+    final pending = Completer<InvoicePage>();
+    final repository = FakeInvoiceRepository()
+      ..onSearch = (_, _, _) => pending.future;
+    final cubit = InvoicesCubit(repository, allowed: true)..setActive(true);
+    addTearDown(cubit.close);
+    var finished = false;
+    final refresh = cubit.refresh().then((_) => finished = true);
+    await pumpEventQueue();
+    expect(finished, isFalse);
+    expect(repository.queries, ['']);
+    pending.complete(InvoicePage(items: [invoiceFixture(1)]));
+    await refresh;
+    expect(cubit.state.items.single.id, invoiceFixture(1).id);
+    expect(cubit.state.loaded, isTrue);
+  });
 
   test('changing source cancels and fences older reads', () async {
     final old = Completer<InvoicePage>();

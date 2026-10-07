@@ -27,6 +27,7 @@ import '../support/document_thumbnail_fixture.dart';
 import '../support/fake_email_repository.dart';
 import '../support/fake_identity_repository.dart';
 import '../support/fake_processing_repository.dart';
+import '../support/workspace_navigation.dart';
 
 void main() {
   Future<void> mount(WidgetTester tester, Widget screen) async {
@@ -83,6 +84,7 @@ void main() {
         image!.dispose();
       });
       await mount(tester, DocumentsScreen(cubit: cubit));
+      expect(find.byKey(const Key('refreshDocuments')), findsNothing);
       final card = find.byKey(const Key('document-invoice'));
       final preview = find.descendant(
         of: card,
@@ -95,9 +97,18 @@ void main() {
       expect(repository.downloads, 1);
 
       repository.pending = Completer<DocumentPage>();
-      await tester.tap(find.byKey(const Key('refreshDocuments')));
+      await tester.dragFrom(
+        tester.getTopLeft(find.byKey(const Key('documentCollectionScroll'))) +
+            const Offset(300, 24),
+        const Offset(0, 500),
+      );
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       expect(find.byType(AppStripedProgressIndicator), findsOneWidget);
+      expect(
+        find.byKey(const Key('documentCollectionStatus')).hitTestable(),
+        findsOneWidget,
+      );
       expect(tester.getRect(card), bounds);
       expect(tester.element(card), same(element));
       expect(tester.widget<RawImage>(preview).image, same(image));
@@ -108,13 +119,22 @@ void main() {
       expect(tester.widget<RawImage>(preview).image, same(image));
 
       repository.pending = Completer<DocumentPage>();
-      await tester.tap(find.byKey(const Key('refreshDocuments')));
+      await tester.dragFrom(
+        tester.getTopLeft(find.byKey(const Key('documentCollectionScroll'))) +
+            const Offset(300, 24),
+        const Offset(0, 500),
+      );
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
       repository.pending!.completeError(
         const DocumentFailure(DocumentFailureKind.unavailable),
       );
       await tester.pumpAndSettle();
       expect(find.byTooltip('Retry'), findsOneWidget);
+      expect(
+        find.byKey(const Key('documentCollectionStatus')).hitTestable(),
+        findsOneWidget,
+      );
       expect(tester.getRect(card), bounds);
       expect(tester.widget<RawImage>(preview).image, same(image));
       repository.pending = Completer<DocumentPage>();
@@ -210,10 +230,9 @@ void main() {
       await cubit.load();
       await mount(tester, EmailProvidersScreen(cubit: cubit));
       final add = find.byKey(const Key('email-add'));
-      final refresh = find.byKey(const Key('email-refresh'));
+      expect(find.byKey(const Key('email-refresh')), findsNothing);
       final empty = find.text('No email accounts');
       final addBounds = tester.getRect(add);
-      final refreshBounds = tester.getRect(refresh);
       final emptyBounds = tester.getRect(empty);
       final addElement = tester.element(add);
       for (final background in [true, false]) {
@@ -222,12 +241,10 @@ void main() {
         await tester.pump();
         await tester.pump();
         expect(tester.getRect(add), addBounds);
-        expect(tester.getRect(refresh), refreshBounds);
         expect(tester.element(add), same(addElement));
         expect(tester.widget<FilledButton>(add).onPressed, isNotNull);
         if (background) {
           expect(tester.getRect(empty), emptyBounds);
-          expect(tester.widget<OutlinedButton>(refresh).onPressed, isNotNull);
           expect(find.byType(AppStripedProgressIndicator), findsNothing);
         } else {
           expect(find.byType(AppStripedProgressIndicator), findsOneWidget);
@@ -236,7 +253,6 @@ void main() {
         await read;
         await tester.pumpAndSettle();
         expect(tester.getRect(add), addBounds);
-        expect(tester.getRect(refresh), refreshBounds);
         expect(tester.getRect(empty), emptyBounds);
         expect(tester.element(add), same(addElement));
       }
@@ -263,8 +279,15 @@ void main() {
           onOpenDocument: (_) {},
         ),
       );
+      await setWorkspacePipelineSetup(tester, expanded: true);
       final expansion = find.byKey(const PageStorageKey('namespacePipeline'));
-      await tester.tap(expansion);
+      await revealWorkspacePageContent(
+        tester,
+        find.text('Document ingestion pipeline'),
+        list: find.byKey(const PageStorageKey('processingPage')),
+        center: false,
+      );
+      await tester.tap(find.text('Document ingestion pipeline'));
       await tester.pumpAndSettle();
       final diagram = find.byType(PipelineDiagram);
       final bounds = tester.getRect(diagram);
@@ -277,10 +300,7 @@ void main() {
         await tester.pump();
         expect(tester.getRect(diagram), bounds);
         expect(tester.element(expansion), same(element));
-        expect(
-          find.byType(AppStripedProgressIndicator),
-          background ? findsNothing : findsOneWidget,
-        );
+        expect(cubit.state.loading, !background);
         response.complete(repository.pipeline);
         await read;
         await tester.pumpAndSettle();

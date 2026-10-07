@@ -98,7 +98,7 @@ Future<void> exerciseInvoiceWorkflow(
       () => find.byType(InvoicesScreen).evaluate().isNotEmpty,
       'Invoice destination loaded',
     );
-    await tester.tap(find.byKey(const ValueKey('invoiceFilter-structured')));
+    await _selectInvoiceSource(tester, 'structured');
     final details = find.byKey(ValueKey('invoiceDetails-${invoice.id}'));
     await _wait(
       tester,
@@ -155,7 +155,7 @@ Future<void> exerciseInvoiceWorkflow(
       'Search submission uses latest invoice party term',
     );
     expect(details, findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('invoiceFilter-ai')));
+    await _selectInvoiceSource(tester, 'ai');
     await _wait(
       tester,
       () =>
@@ -166,7 +166,7 @@ Future<void> exerciseInvoiceWorkflow(
     );
     expect(find.text('No matching invoices'), findsOneWidget);
     expect(cubit.state.rawTerm, 'Acme Supplies');
-    await tester.tap(find.byKey(const ValueKey('invoiceFilter-structured')));
+    await _selectInvoiceSource(tester, 'structured');
     await _wait(
       tester,
       () =>
@@ -308,4 +308,14 @@ Future<void> _wait(
     isTrue,
     reason: '$reason${diagnostics == null ? '' : '\n${diagnostics()}'}',
   );
+}
+
+Future<void> _selectInvoiceSource(WidgetTester tester, String source) async {
+  final trigger = find.byKey(const Key('invoiceSource'));
+  await tester.ensureVisible(trigger);
+  await tester.tap(trigger);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(ValueKey('invoiceFilter-$source')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }

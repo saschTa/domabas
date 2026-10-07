@@ -8,6 +8,7 @@ import 'package:domabas/domain/document/models/document_processing.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
 import 'package:domabas/presentation/document/cubits/document_processing_cubit.dart';
 import 'package:domabas/presentation/document/views/document_processing_screen.dart';
+import 'package:domabas/presentation/document/views/document_processing_settings_screen.dart';
 import 'package:domabas/presentation/document/widgets/processing_widgets.dart';
 import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,11 @@ void main() {
         const FakeAccessibilityFeatures(disableAnimations: true);
   });
   tearDown(binding.platformDispatcher.clearAccessibilityFeaturesTestValue);
+
+  Future<void> expandPipelineSetup(WidgetTester tester) async {
+    await setWorkspacePipelineSetup(tester, expanded: true);
+  }
+
   testWidgets(
     'job readers can still view reindex history without reindex permission',
     (tester) async {
@@ -50,10 +56,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const Key('showReindexRequests')),
         200,
-        scrollable: find.descendant(
-          of: find.byKey(const PageStorageKey('processingPage')),
-          matching: find.byType(Scrollable),
-        ),
+        scrollable: find
+            .descendant(
+              of: find.byKey(const PageStorageKey('processingPage')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.tap(find.byKey(const Key('showReindexRequests')));
       await tester.pumpAndSettle();
@@ -85,19 +93,27 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const PageStorageKey('namespacePipeline')),
-        200,
-        scrollable: find.descendant(
-          of: find.byKey(const PageStorageKey('processingPage')),
-          matching: find.byType(Scrollable),
-        ),
+      expect(find.byType(PipelineDiagram), findsNothing);
+      await expandPipelineSetup(tester);
+      final scroll = find
+          .descendant(
+            of: find.byKey(const PageStorageKey('processingPage')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await revealWorkspaceContent(
+        tester,
+        find.text('Document ingestion pipeline'),
+        scrollable: scroll,
       );
-      await tester.tap(find.byKey(const PageStorageKey('namespacePipeline')));
+      await tester.tap(find.text('Document ingestion pipeline'));
       await tester.pumpAndSettle();
       expect(find.text('Configuration fingerprint'), findsNothing);
-      await tester.ensureVisible(find.text('Configuration 1'));
-      await tester.pumpAndSettle();
+      await revealWorkspaceContent(
+        tester,
+        find.text('Configuration 1'),
+        scrollable: scroll,
+      );
       await tester.tap(find.text('Configuration 1'));
       await tester.pumpAndSettle();
       expect(find.text('Configuration fingerprint'), findsOneWidget);
@@ -253,7 +269,7 @@ void main() {
       expect(find.byKey(const Key('manageSystemUsers')), findsNothing);
       await tester.tap(find.byKey(const Key('manageDocumentProcessing')));
       await tester.pumpAndSettle();
-      expect(find.text('Document processing'), findsOneWidget);
+      expect(find.byType(DocumentProcessingSettingsScreen), findsOneWidget);
       expect(repository.systemReads, 1);
       await tester.pumpWidget(const SizedBox.shrink());
     },
@@ -270,21 +286,34 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('reindexLibrary')), findsNothing);
       expect(find.byKey(const Key('navigation-admin-settings')), findsNothing);
-      expect(find.text('Shared resource limits'), findsOneWidget);
+      expect(find.text('Shared resource limits'), findsNothing);
+      expect(find.text('Details').hitTestable(), findsOneWidget);
       await revealWorkspaceContent(
         tester,
         find.text('Details'),
-        scrollable: find.descendant(
-          of: find.byKey(const PageStorageKey('processingPage')),
-          matching: find.byType(Scrollable),
-        ),
+        scrollable: find
+            .descendant(
+              of: find.byKey(const PageStorageKey('processingPage')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
-      expect(find.text('Failed'), findsNWidgets(2));
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('job-job')),
+          matching: find.text('Failed'),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Details'));
       await tester.pumpAndSettle();
       expect(find.text('Job details'), findsOneWidget);
       expect(find.text('Pipeline for this attempt'), findsOneWidget);
       expect(repository.namespaceRequests, isEmpty);
+      await tester.tap(find.text('Back to jobs'));
+      await tester.pumpAndSettle();
+      await expandPipelineSetup(tester);
+      expect(find.text('Shared resource limits'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

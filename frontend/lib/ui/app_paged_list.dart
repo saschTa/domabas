@@ -11,6 +11,7 @@ final class AppPagedList extends StatefulWidget {
     this.onLoadMore,
     this.loadMoreLabel = 'Load more',
     this.loadMoreKey,
+    this.footer,
   });
 
   final int itemCount, pageSize;
@@ -19,6 +20,7 @@ final class AppPagedList extends StatefulWidget {
   final VoidCallback? onLoadMore;
   final String loadMoreLabel;
   final Key? loadMoreKey;
+  final Widget? footer;
 
   @override
   State<AppPagedList> createState() => _AppPagedListState();
@@ -94,6 +96,7 @@ final class _AppPagedListState extends State<AppPagedList> {
       children: [
         SizedBox(key: _top),
         for (var i = start; i < end; i++) widget.itemBuilder(context, i),
+        ?widget.footer,
         if (widget.itemCount > widget.pageSize || widget.hasMore)
           Wrap(
             spacing: 12,

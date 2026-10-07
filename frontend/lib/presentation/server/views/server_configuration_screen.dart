@@ -39,6 +39,7 @@ final class _ServerConfigurationScreenState
         bloc: widget.cubit,
         builder: (context, state) => AppPage(
           insetBody: false,
+          showHeading: true,
           title: state.address == null ? 'Connect to your server' : 'Server',
           description: 'Enter the address of your Domabas installation.',
           child: SingleChildScrollView(

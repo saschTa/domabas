@@ -17,6 +17,7 @@ final class AppNavigationButton extends StatefulWidget {
     this.fillSelection = true,
     this.fillInteraction = true,
     this.outlinedHover = false,
+    this.strongSelection = false,
   });
 
   final String label;
@@ -30,6 +31,7 @@ final class AppNavigationButton extends StatefulWidget {
   final bool fillSelection;
   final bool fillInteraction;
   final bool outlinedHover;
+  final bool strongSelection;
 
   @override
   State<AppNavigationButton> createState() => _AppNavigationButtonState();
@@ -84,7 +86,7 @@ final class _AppNavigationButtonState extends State<AppNavigationButton> {
                   ? .06
                   : 0,
             ),
-            colors.primaryContainer,
+            widget.strongSelection ? colors.onSurface : colors.primaryContainer,
           )
         : interaction
         ? Color.alphaBlend(
@@ -147,7 +149,9 @@ final class _AppNavigationButtonState extends State<AppNavigationButton> {
               minimumSize: const Size(48, 48),
               padding: widget.padding,
               foregroundColor: widget.selected
-                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                  ? widget.strongSelection
+                        ? colors.surface
+                        : colors.onPrimaryContainer
                   : Theme.of(context).colorScheme.onSurfaceVariant,
               overlayColor: Colors.transparent,
               splashFactory: NoSplash.splashFactory,

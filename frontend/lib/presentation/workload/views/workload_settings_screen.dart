@@ -24,14 +24,7 @@ final class WorkloadSettingsScreen extends StatelessWidget {
       eyebrow: 'ADMIN SETTINGS',
       title: 'Workload limits',
       description: 'Control how many background jobs share workers and AI providers across all libraries.',
-      actions: [
-        IconButton(
-          key: const Key('refreshWorkloadSettings'),
-          tooltip: 'Refresh workload limits',
-          onPressed: state.loading || state.saving ? null : cubit.load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
+      onRefresh: state.loading || state.saving ? null : cubit.load,
       child: ListView(
         key: const Key('workloadSettingsScroll'),
         padding: AppLayout.cardListPadding(context),

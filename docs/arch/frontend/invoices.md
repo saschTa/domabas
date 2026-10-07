@@ -25,8 +25,9 @@ currency, dates and extraction source. Credit notes and corrected invoices use
 explicit labels. The source chooser offers All invoices, E-invoices and AI
 extracted. No amount is converted to a floating-point number or combined with
 other currencies. Missing values remain visibly missing.
-Refresh uses the same circular icon button as the other workspaces, with the
-accessible label Refresh invoices and the shared 48-pixel target.
+Pulling down from the top refreshes the collection, including an empty list.
+Refresh waits for the current read, retains the loaded row window and visible
+page, and preserves search and filter values. Errors keep a visible retry action.
 
 Search follows Documents: a persistent field, 300-millisecond debounce, immediate
 Search or Enter, and an explicit clear action. It searches extracted invoice
@@ -34,8 +35,11 @@ properties, including number, parties, line items, payment details, references a
 notes; original document title and OCR are outside its scope. Source and query
 combine. Clear removes the text while retaining the chosen source. The field caps
 valid queries at 200 Unicode characters and waits for IME composition to finish.
-The search surface caps field width at 560 pixels and wraps accessible actions on
-compact layouts.
+The feature-owned toolbar uses the shared search field and collection controls.
+App composition places it in the top bar, with library selection on the right.
+Source selection, filters and sort remain available while invoices
+scroll inside the fixed full-height content pane. Compact widths use a second controls row; controller
+and query state survive layout changes.
 
 Sort offers newest or oldest added, earliest or latest due date and issue date,
 and ascending or descending invoice number, supplier and customer. Automatic uses
@@ -71,6 +75,11 @@ current close/apply actions reachable. Controls wrap at narrow widths and enlarg
 text. Long values retain their complete tooltip and selection value.
 
 The list reads 20 records at a time and exposes Previous and Next controls.
+Its loaded invoice count appears below the rows beside pagination, including when
+only one page is loaded. The count describes loaded records, not a server-wide
+total. Empty successful results show zero below the empty state. Active loading,
+search and error feedback sits in a bounded row above phone navigation; healthy
+collections reserve no blank status area above the rows.
 Automatic refresh rereads the loaded row window from the head, using at most one
 bounded request per previously loaded page and the new responses' continuations.
 It publishes the refreshed rows and cursor together, updating changed invoices,

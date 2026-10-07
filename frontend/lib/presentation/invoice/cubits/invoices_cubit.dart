@@ -126,6 +126,7 @@ final class InvoicesCubit extends Cubit<InvoicesState> {
   bool _active = false, _reading = false, _background = false;
   int _epoch = 0;
   Completer<void>? _cancel;
+  Completer<void>? _readFinished;
   Timer? _timer, _debounce;
 
   InvoiceDetailCubit details(String id, {Invoice? initial}) =>
@@ -241,6 +242,10 @@ final class InvoicesCubit extends Cubit<InvoicesState> {
     _reading = false;
   }
 
+  Future<void> refresh() => _reading
+      ? _readFinished!.future
+      : load(background: state.matchesSnapshot && !state.debouncing);
+
   Future<void> load({bool background = false, bool more = false}) async {
     if (isClosed || !allowed || !_active || state.intentBlocked) return;
     if (background && state.debouncing) return;
@@ -253,6 +258,7 @@ final class InvoicesCubit extends Cubit<InvoicesState> {
     final previous = state;
     final epoch = ++_epoch;
     final cancel = _cancel = Completer<void>();
+    final finished = _readFinished = Completer<void>();
     _reading = true;
     _background = background;
     _timer?.cancel();
@@ -321,6 +327,8 @@ final class InvoicesCubit extends Cubit<InvoicesState> {
         );
       }
     } finally {
+      finished.complete();
+      if (identical(_readFinished, finished)) _readFinished = null;
       if (current()) {
         _reading = false;
         _timer = Timer(

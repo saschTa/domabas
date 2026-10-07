@@ -1,1 +1,3 @@
 third_party/licenses/native/* whitespace=-blank-at-eof
+frontend/assets/licenses/barlow-ofl.txt -text whitespace=-blank-at-eol
+frontend/assets/licenses/dmsans-ofl.txt -text whitespace=-blank-at-eol,cr-at-eol

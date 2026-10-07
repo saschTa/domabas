@@ -40,7 +40,8 @@ final class LibrarySwitcher extends StatelessWidget {
                       key: const Key('currentAccount'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),

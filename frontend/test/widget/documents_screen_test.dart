@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:domabas/domain/document/models/document.dart';
 import 'package:domabas/domain/document/models/document_failure.dart';
 import 'package:domabas/domain/document/models/document_search.dart';
 import 'package:domabas/presentation/document/views/documents_screen.dart';
@@ -11,6 +12,42 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/fake_document_repository.dart';
 
 void main() {
+  testWidgets('pull refreshes an empty document collection', (tester) async {
+    final repository = FakeDocumentRepository();
+    final cubit = DocumentsCubit(
+      repository,
+      capabilities: allDocumentCapabilities,
+    );
+    addTearDown(cubit.close);
+    await cubit.load();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(body: DocumentsScreen(cubit: cubit, shellToolbar: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No documents yet'), findsOneWidget);
+    repository.records = [
+      Document(
+        id: 'new',
+        title: 'New arrival',
+        description: '',
+        createdAt: DateTime.utc(2026),
+      ),
+    ];
+    final list = find.byKey(const Key('documentCollectionScroll'));
+    await tester.dragFrom(
+      tester.getTopLeft(list) + const Offset(180, 32),
+      const Offset(0, 500),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.offsets, [0, 0]);
+    expect(find.text('New arrival'), findsOneWidget);
+    expect(find.text('No documents yet'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   Widget workspace(DocumentsCubit model) => MaterialApp(
     theme: AppTheme.light(),
     home: Builder(
@@ -51,7 +88,7 @@ void main() {
     await tester.pumpWidget(workspace(model));
     await tester.pumpAndSettle();
     expect(find.text('No documents yet'), findsOneWidget);
-    await tester.tap(find.byTooltip('More actions'));
+    await tester.tap(find.byKey(const Key('navigation-more')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('newDocument')));
     await tester.pumpAndSettle();

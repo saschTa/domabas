@@ -24,6 +24,10 @@ void main() {
   tearDown(() => documents.close());
 
   Future<void> tap(WidgetTester tester, Finder finder) async {
+    if (finder.evaluate().isNotEmpty) {
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+    }
     await revealWorkspaceContent(
       tester,
       finder,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_ink_widgets.dart';
 import 'app_job_progress.dart';
+import 'app_refreshable.dart';
 import 'app_theme.dart';
 
 enum AppTone { neutral, info, success, warning, danger }
@@ -50,11 +51,8 @@ final class AppSurface extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: color ?? Theme.of(context).colorScheme.surface,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(24),
-      side: BorderSide(
-        color: Theme.of(context).colorScheme.outline,
-        width: 1.5,
-      ),
+      borderRadius: BorderRadius.circular(20),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
     ),
     clipBehavior: Clip.antiAlias,
     child: Padding(padding: padding, child: child),
@@ -70,6 +68,9 @@ final class AppPage extends StatelessWidget {
     this.description,
     this.actions = const [],
     this.insetBody = true,
+    this.showHeading = false,
+    this.surface = true,
+    this.onRefresh,
   });
 
   final String title;
@@ -78,57 +79,101 @@ final class AppPage extends StatelessWidget {
   final List<Widget> actions;
   final Widget child;
 
+  final Future<void> Function()? onRefresh;
+
   final bool insetBody;
+  final bool showHeading;
+  final bool surface;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final inset = AppLayout.pageInset(MediaQuery.sizeOf(context).width);
-      final availableHeight =
-          constraints.maxHeight - MediaQuery.paddingOf(context).bottom;
-      final compact = availableHeight < 360;
-      final top = compact ? 8.0 : 24.0;
-      final bottom = compact ? 8.0 : inset;
-      final contentHeight = (availableHeight - top - bottom).clamp(
+      final media = MediaQuery.of(context);
+      final safeBottom = media.viewPadding.bottom.clamp(
         0.0,
-        constraints.maxHeight,
+        media.padding.bottom,
       );
-      return Padding(
-        padding: EdgeInsets.only(bottom: insetBody ? bottom : 0),
-        child: _AppPageScroll(
-          key: ValueKey((title, child.key)),
-          storageId: (AppPage, title, child.key),
-          header: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(height: top),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: contentHeight * (compact ? .25 : .5),
-                  ),
-                  child: SingleChildScrollView(
-                    primary: false,
-                    padding: EdgeInsets.symmetric(horizontal: inset),
-                    child: _PageHeader(
-                      title: title,
-                      eyebrow: eyebrow,
-                      description: description,
-                      actions: actions,
-                    ),
-                  ),
+      final margin = MediaQuery.sizeOf(context).width < 600 ? 8.0 : 16.0;
+      final availableHeight = (constraints.maxHeight - margin * 2 - safeBottom)
+          .clamp(0.0, constraints.maxHeight);
+      final visibleHeight =
+          (availableHeight - media.padding.bottom + safeBottom).clamp(
+            0.0,
+            availableHeight,
+          );
+      final content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (showHeading || actions.isNotEmpty)
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: (visibleHeight * .4).clamp(0.0, 240.0),
+              ),
+              child: SingleChildScrollView(
+                key: const Key('pageControls'),
+                primary: false,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
                 ),
-                AppStripedDivider(
-                  height: compact ? 8 : (insetBody ? 24 : 8),
-                  indent: inset,
-                  endIndent: inset,
-                ),
-              ],
+                child: showHeading
+                    ? _PageHeader(
+                        title: title,
+                        eyebrow: eyebrow,
+                        description: description,
+                        actions: actions,
+                      )
+                    : Align(
+                        alignment: Alignment.centerRight,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: actions,
+                        ),
+                      ),
+              ),
+            ),
+          Expanded(
+            child: Padding(
+              padding: insetBody ? const EdgeInsets.all(16) : EdgeInsets.zero,
+              child: _AppPageBody(
+                key: PageStorageKey((title, child.key)),
+                onRefresh: onRefresh,
+                child: child,
+              ),
             ),
           ),
-          body: Padding(
-            padding: EdgeInsets.symmetric(horizontal: insetBody ? inset : 0),
-            child: child,
+        ],
+      );
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          margin,
+          margin,
+          margin,
+          margin + safeBottom,
+        ),
+        child: MediaQuery(
+          data: media.copyWith(
+            padding: media.padding.copyWith(
+              bottom: media.padding.bottom - safeBottom,
+            ),
+            viewPadding: media.viewPadding.copyWith(
+              bottom: media.viewPadding.bottom - safeBottom,
+            ),
+          ),
+          child: Semantics(
+            container: true,
+            label: title,
+            child: surface
+                ? AppSurface(
+                    key: const Key('pageSurface'),
+                    padding: EdgeInsets.zero,
+                    child: content,
+                  )
+                : SizedBox.expand(
+                    key: const Key('pageSurface'),
+                    child: content,
+                  ),
           ),
         ),
       );
@@ -136,79 +181,31 @@ final class AppPage extends StatelessWidget {
   );
 }
 
-final class _AppPageScroll extends StatefulWidget {
-  const _AppPageScroll({
-    super.key,
-    required this.storageId,
-    required this.header,
-    required this.body,
-  });
+final class _AppPageBody extends StatefulWidget {
+  const _AppPageBody({super.key, required this.child, this.onRefresh});
 
-  final Object storageId;
-  final Widget header, body;
+  final Widget child;
+  final Future<void> Function()? onRefresh;
 
   @override
-  State<_AppPageScroll> createState() => _AppPageScrollState();
+  State<_AppPageBody> createState() => _AppPageBodyState();
 }
 
-final class _AppPageScrollState extends State<_AppPageScroll> {
-  final _nested = GlobalKey<NestedScrollViewState>();
-  final _outer = ScrollController(keepScrollOffset: false);
-  PageStorageBucket? _storage;
-  bool _initialized = false;
-  bool _restoring = true;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_initialized) return;
-    _initialized = true;
-    _storage = PageStorage.maybeOf(context);
-    final saved = _storage?.readState(context, identifier: widget.storageId);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final nested = _nested.currentState;
-      if (saved is (double, double) && nested != null && _outer.hasClients) {
-        final inner = nested.innerController;
-        if (saved.$2 > 0 && inner.positions.length == 1) {
-          inner.jumpTo(saved.$2);
-        } else {
-          _outer.jumpTo(saved.$1.clamp(0, _outer.position.maxScrollExtent));
-        }
-      }
-      _restoring = false;
-    });
-  }
-
-  bool _remember(ScrollNotification notification) {
-    final nested = _nested.currentState;
-    if (_restoring || nested == null || !_outer.hasClients) return false;
-    final inner = nested.innerController;
-    if (inner.positions.length > 1) return false;
-    _storage?.writeState(context, (
-      _outer.offset,
-      inner.hasClients ? inner.offset : 0.0,
-    ), identifier: widget.storageId);
-    return false;
-  }
+final class _AppPageBodyState extends State<_AppPageBody> {
+  final _scroll = ScrollController();
 
   @override
   void dispose() {
-    _outer.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) =>
-      NotificationListener<ScrollNotification>(
-        onNotification: _remember,
-        child: NestedScrollView(
-          key: _nested,
-          controller: _outer,
-          headerSliverBuilder: (context, innerBoxIsScrolled) => [widget.header],
-          body: widget.body,
-        ),
-      );
+  Widget build(BuildContext context) => PrimaryScrollController(
+    controller: _scroll,
+    automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+    child: AppRefreshable(onRefresh: widget.onRefresh, child: widget.child),
+  );
 }
 
 final class _PageHeader extends StatelessWidget {
@@ -464,6 +461,10 @@ final class AppEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: SingleChildScrollView(
+      primary: false,
+      physics: Scrollable.maybeOf(context) == null
+          ? null
+          : const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(32),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 380),
@@ -579,6 +580,7 @@ final class AppDialog extends StatelessWidget {
     required this.actions,
     this.description,
     this.width = 720,
+    this.onRefresh,
   });
 
   final String title;
@@ -586,58 +588,67 @@ final class AppDialog extends StatelessWidget {
   final Widget child;
   final List<Widget> actions;
   final double width;
+  final Future<void> Function()? onRefresh;
 
   @override
-  Widget build(BuildContext context) => Dialog(
-    insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-    child: ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: width),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Semantics(
-                      namesRoute: true,
-                      header: true,
-                      child: Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    if (description != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        description!,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context) => SafeArea(
+    child: Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: width),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(
+                child: AppRefreshable(
+                  onRefresh: onRefresh,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Semantics(
+                          namesRoute: true,
+                          header: true,
+                          child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
                         ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    child,
-                  ],
+                        if (description != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            description!,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        child,
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: actions,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: actions,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

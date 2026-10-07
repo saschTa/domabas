@@ -109,9 +109,7 @@ final class _ChatScreenState extends State<ChatScreen> {
         final offset = anchorOffset != null && currentAnchorOffset != null
             ? scroll.offset + currentAnchorOffset - anchorOffset
             : previousOffset + scroll.position.maxScrollExtent - previousExtent;
-        scroll.position.setPixels(
-          offset.clamp(0.0, scroll.position.maxScrollExtent),
-        );
+        scroll.jumpTo(offset.clamp(0.0, scroll.position.maxScrollExtent));
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted &&
               scrollGeneration == _latestGeneration &&
@@ -120,7 +118,7 @@ final class _ChatScreenState extends State<ChatScreen> {
               scroll.hasClients) {
             final currentAnchorOffset = _messageOffset(anchor);
             if (anchorOffset != null && currentAnchorOffset != null) {
-              scroll.position.setPixels(
+              scroll.jumpTo(
                 (scroll.offset + currentAnchorOffset - anchorOffset).clamp(
                   0.0,
                   scroll.position.maxScrollExtent,
@@ -210,6 +208,8 @@ final class _ChatScreenState extends State<ChatScreen> {
         }
         return AppPage(
           title: 'AI chat',
+          surface: false,
+          insetBody: false,
           description:
               'Ask questions about your documents in ${widget.libraryName}.',
           actions: [
@@ -266,95 +266,31 @@ final class _ChatScreenState extends State<ChatScreen> {
     BuildContext context,
     ChatState state,
     BoxConstraints constraints,
-  ) {
-    final availableHeight =
-        (constraints.maxHeight - MediaQuery.paddingOf(context).bottom).clamp(
-          0.0,
-          constraints.maxHeight,
-        );
-    final configuration = state.configuration;
-    final modelLabel = configuration == null
-        ? 'Your document assistant'
-        : '${configuration.provider == 'ollama' ? 'Ollama' : 'External'} · ${configuration.model}';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverToBoxAdapter(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: availableHeight * .3),
-              child: SingleChildScrollView(
-                primary: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Semantics(
-                              header: true,
-                              child: Text(
-                                'AI chat',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                            ),
-                            Tooltip(
-                              message: modelLabel,
-                              child: Text(
-                                modelLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        key: const Key('chatHistory'),
-                        tooltip: 'Conversation history',
-                        onPressed: state.canManageConversations
-                            ? _history
-                            : null,
-                        icon: const Icon(Icons.history),
-                      ),
-                      IconButton(
-                        key: const Key('newChat'),
-                        tooltip: 'New chat',
-                        onPressed: state.canManageConversations
-                            ? cubit.newConversation
-                            : null,
-                        icon: const Icon(Icons.add),
-                      ),
-                      IconButton(
-                        key: const Key('refreshChat'),
-                        tooltip: 'Refresh chat',
-                        onPressed:
-                            state.loading ||
-                                state.sending ||
-                                state.deletingConversationId != null
-                            ? null
-                            : cubit.load,
-                        icon: const Icon(Icons.refresh),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-        body: LayoutBuilder(
-          builder: (context, bounds) {
-            _bindScroll(context);
-            return _transcript(context, state, bounds.maxHeight, compact: true);
-          },
-        ),
+  ) => AppPage(
+    title: 'AI chat',
+    surface: false,
+    insetBody: false,
+    actions: [
+      IconButton(
+        key: const Key('chatHistory'),
+        tooltip: 'Conversation history',
+        onPressed: state.canManageConversations ? _history : null,
+        icon: const Icon(Icons.history),
       ),
-    );
-  }
+      IconButton(
+        key: const Key('newChat'),
+        tooltip: 'New chat',
+        onPressed: state.canManageConversations ? cubit.newConversation : null,
+        icon: const Icon(Icons.add),
+      ),
+    ],
+    child: LayoutBuilder(
+      builder: (context, bounds) {
+        _bindScroll(context);
+        return _transcript(context, state, bounds.maxHeight, compact: true);
+      },
+    ),
+  );
 
   Widget _transcript(
     BuildContext context,
@@ -376,194 +312,196 @@ final class _ChatScreenState extends State<ChatScreen> {
               active: state.loading || state.loadingMessages || state.sending,
             ),
             Expanded(
-              child: NotificationListener<UserScrollNotification>(
-                onNotification: (notification) {
-                  if (notification.direction != ScrollDirection.idle) {
-                    _latestGeneration++;
-                  }
-                  return false;
-                },
-                child: ListView(
-                  controller: _scroll,
-                  key: const Key('chatTranscript'),
-                  padding: EdgeInsets.all(compact ? 12 : 20),
-                  children: [
-                    if (!compact)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.auto_awesome_outlined,
-                              color: scheme.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    state.selected?.title.isNotEmpty == true
-                                        ? state.selected!.title
-                                        : 'Ask your library',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
-                                  ),
-                                  if (state.configuration != null)
+              child: AppRefreshable(
+                onRefresh:
+                    state.loading ||
+                        state.loadingHistory ||
+                        state.loadingMessages ||
+                        state.sending ||
+                        state.stopping ||
+                        state.deletingConversationId != null
+                    ? null
+                    : cubit.load,
+                child: NotificationListener<UserScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.direction != ScrollDirection.idle) {
+                      _latestGeneration++;
+                    }
+                    return false;
+                  },
+                  child: ListView(
+                    controller: _scroll,
+                    key: const Key('chatTranscript'),
+                    padding: EdgeInsets.all(compact ? 12 : 20),
+                    children: [
+                      if (!compact)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome_outlined,
+                                color: scheme.primary,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      '${state.configuration!.provider == 'ollama' ? 'Internal Ollama' : 'External service'} · ${state.configuration!.model}',
+                                      state.selected?.title.isNotEmpty == true
+                                          ? state.selected!.title
+                                          : 'Ask your library',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: Theme.of(context)
                                           .textTheme
-                                          .bodySmall,
+                                          .titleMedium,
                                     ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              key: const Key('refreshChat'),
-                              tooltip: 'Refresh chat',
-                              onPressed:
-                                  state.loading ||
-                                      state.sending ||
-                                      state.deletingConversationId != null
-                                  ? null
-                                  : cubit.load,
-                              icon: const Icon(Icons.refresh),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (state.configuration?.enabled == false)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 16),
-                        child: AppNotice(
-                          tone: AppTone.info,
-                          title: 'Chat is paused',
-                          message: 'An administrator has paused new chat messages. Your conversations remain available.',
-                        ),
-                      ),
-                    if (state.error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: AppNotice(
-                          message: state.error!,
-                          action: state.uncertain
-                              ? TextButton(
-                                  key: const Key('reconcileChatMessage'),
-                                  onPressed: state.sending
-                                      ? null
-                                      : () => cubit.send(reconcile: true),
-                                  child: const Text('Check sent message'),
-                                )
-                              : TextButton(
-                                  onPressed: state.loading ? null : cubit.load,
-                                  child: const Text('Refresh'),
-                                ),
-                        ),
-                      ),
-                    if (state.updatesError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: AppNotice(
-                          tone: AppTone.warning,
-                          message: state.updatesError!,
-                        ),
-                      ),
-                    if (state.messageCursor != null)
-                      Center(
-                        child: TextButton.icon(
-                          key: const Key('earlierChatMessages'),
-                          onPressed:
-                              state.loadingMessages ||
-                                  state.deletingConversationId != null
-                              ? null
-                              : _earlier,
-                          icon: const Icon(Icons.expand_less),
-                          label: const Text('Load earlier messages'),
-                        ),
-                      ),
-                    if (state.messages.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              size: 48,
-                              color: scheme.primary,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              state.loadingMessages
-                                  ? 'Loading your conversation…'
-                                  : 'A little clarity, from your documents',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Find details, connect ideas and follow the sources back to your library.',
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 24),
-                            for (final prompt in const [
-                              'Find my latest electricity bill',
-                              'Summarize my insurance documents',
-                              'Which invoices are due soon?',
-                            ])
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: OutlinedButton.icon(
-                                  onPressed: !state.canManageConversations
-                                      ? null
-                                      : () {
-                                          cubit.editDraft(prompt);
-                                          _focus.requestFocus();
-                                        },
-                                  icon: const Icon(
-                                    Icons.arrow_outward,
-                                    size: 18,
-                                  ),
-                                  label: Text(
-                                    prompt,
-                                    textAlign: TextAlign.center,
-                                  ),
+                                    if (state.configuration != null)
+                                      Text(
+                                        '${state.configuration!.provider == 'ollama' ? 'Internal Ollama' : 'External service'} · ${state.configuration!.model}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                  ],
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    for (final message in state.messages)
-                      Padding(
-                        key: _messageKeys.putIfAbsent(
-                          message.id,
-                          GlobalKey.new,
+                      if (state.configuration?.enabled == false)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 16),
+                          child: AppNotice(
+                            tone: AppTone.info,
+                            title: 'Chat is paused',
+                            message: 'An administrator has paused new chat messages. Your conversations remain available.',
+                          ),
                         ),
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: ChatMessageCard(
-                          message: message,
-                          onOpenDocument: widget.onOpenDocument,
-                          onSendAgain:
-                              state.hasActiveTurn ||
-                                  state.sending ||
-                                  state.uncertain ||
-                                  state.deletingConversationId != null
-                              ? null
-                              : () {
-                                  cubit.sendAgain(message);
-                                  _focus.requestFocus();
-                                },
+                      if (state.error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: AppNotice(
+                            message: state.error!,
+                            action: state.uncertain
+                                ? TextButton(
+                                    key: const Key('reconcileChatMessage'),
+                                    onPressed: state.sending
+                                        ? null
+                                        : () => cubit.send(reconcile: true),
+                                    child: const Text('Check sent message'),
+                                  )
+                                : TextButton(
+                                    onPressed: state.loading
+                                        ? null
+                                        : cubit.load,
+                                    child: const Text('Retry'),
+                                  ),
+                          ),
                         ),
-                      ),
-                  ],
+                      if (state.updatesError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: AppNotice(
+                            tone: AppTone.warning,
+                            message: state.updatesError!,
+                          ),
+                        ),
+                      if (state.messageCursor != null)
+                        Center(
+                          child: TextButton.icon(
+                            key: const Key('earlierChatMessages'),
+                            onPressed:
+                                state.loadingMessages ||
+                                    state.deletingConversationId != null
+                                ? null
+                                : _earlier,
+                            icon: const Icon(Icons.expand_less),
+                            label: const Text('Load earlier messages'),
+                          ),
+                        ),
+                      if (state.messages.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 48,
+                                color: scheme.primary,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                state.loadingMessages
+                                    ? 'Loading your conversation…'
+                                    : 'A little clarity, from your documents',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Find details, connect ideas and follow the sources back to your library.',
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              for (final prompt in const [
+                                'Find my latest electricity bill',
+                                'Summarize my insurance documents',
+                                'Which invoices are due soon?',
+                              ])
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: OutlinedButton.icon(
+                                    onPressed: !state.canManageConversations
+                                        ? null
+                                        : () {
+                                            cubit.editDraft(prompt);
+                                            _focus.requestFocus();
+                                          },
+                                    icon: const Icon(
+                                      Icons.arrow_outward,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      prompt,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      for (final message in state.messages)
+                        Padding(
+                          key: _messageKeys.putIfAbsent(
+                            message.id,
+                            GlobalKey.new,
+                          ),
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: ChatMessageCard(
+                            message: message,
+                            onOpenDocument: widget.onOpenDocument,
+                            onSendAgain:
+                                state.hasActiveTurn ||
+                                    state.sending ||
+                                    state.uncertain ||
+                                    state.deletingConversationId != null
+                                ? null
+                                : () {
+                                    cubit.sendAgain(message);
+                                    _focus.requestFocus();
+                                  },
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -748,87 +686,98 @@ final class _ChatHistory extends StatelessWidget {
         ),
       Expanded(
         flex: 2,
-        child: ListView(
-          key: const Key('chatHistoryList'),
-          primary: false,
-          children: [
-            if (state.conversations.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  state.loading
-                      ? 'Loading conversations…'
-                      : 'Your conversations will appear here.',
+        child: AppRefreshable(
+          onRefresh:
+              state.loading ||
+                  state.loadingHistory ||
+                  state.loadingMessages ||
+                  state.sending ||
+                  state.stopping ||
+                  state.deletingConversationId != null
+              ? null
+              : cubit.load,
+          child: ListView(
+            key: const Key('chatHistoryList'),
+            primary: false,
+            children: [
+              if (state.conversations.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    state.loading
+                        ? 'Loading conversations…'
+                        : 'Your conversations will appear here.',
+                  ),
                 ),
-              ),
-            for (final conversation in state.conversations)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: ListTile(
-                  key: ValueKey('chatConversation-${conversation.id}'),
-                  selected: conversation.id == state.selected?.id,
-                  selectedTileColor: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  leading: Icon(
-                    conversation.activeTurnId != null
-                        ? Icons.schedule
-                        : Icons.chat_bubble_outline,
-                    size: 20,
-                  ),
-                  title: Text(
-                    conversation.title.isEmpty
-                        ? 'New conversation'
-                        : conversation.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${conversation.updatedAt.toLocal().day}.${conversation.updatedAt.toLocal().month}.${conversation.updatedAt.toLocal().year}',
-                  ),
-                  trailing: state.deletingConversationId == conversation.id
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            semanticsLabel: 'Deleting conversation',
+              for (final conversation in state.conversations)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: ListTile(
+                    key: ValueKey('chatConversation-${conversation.id}'),
+                    selected: conversation.id == state.selected?.id,
+                    selectedTileColor: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    leading: Icon(
+                      conversation.activeTurnId != null
+                          ? Icons.schedule
+                          : Icons.chat_bubble_outline,
+                      size: 20,
+                    ),
+                    title: Text(
+                      conversation.title.isEmpty
+                          ? 'New conversation'
+                          : conversation.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${conversation.updatedAt.toLocal().day}.${conversation.updatedAt.toLocal().month}.${conversation.updatedAt.toLocal().year}',
+                    ),
+                    trailing: state.deletingConversationId == conversation.id
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              semanticsLabel: 'Deleting conversation',
+                            ),
+                          )
+                        : IconButton(
+                            key: ValueKey(
+                              'deleteChatConversation-${conversation.id}',
+                            ),
+                            tooltip: 'Delete conversation',
+                            onPressed: state.canManageConversations
+                                ? () => _delete(context, conversation)
+                                : null,
+                            icon: const Icon(Icons.delete_outline, size: 20),
                           ),
-                        )
-                      : IconButton(
-                          key: ValueKey(
-                            'deleteChatConversation-${conversation.id}',
-                          ),
-                          tooltip: 'Delete conversation',
-                          onPressed: state.canManageConversations
-                              ? () => _delete(context, conversation)
-                              : null,
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                        ),
-                  onTap: !state.canManageConversations
+                    onTap: !state.canManageConversations
+                        ? null
+                        : () {
+                            unawaited(cubit.select(conversation));
+                            onSelected?.call();
+                          },
+                  ),
+                ),
+              if (state.conversationCursor != null)
+                TextButton(
+                  key: const Key('olderChatConversations'),
+                  onPressed:
+                      state.loadingHistory ||
+                          state.loading ||
+                          state.sending ||
+                          state.deletingConversationId != null
                       ? null
-                      : () {
-                          unawaited(cubit.select(conversation));
-                          onSelected?.call();
-                        },
+                      : () => cubit.load(more: true),
+                  child: const Text('Load older conversations'),
                 ),
-              ),
-            if (state.conversationCursor != null)
-              TextButton(
-                key: const Key('olderChatConversations'),
-                onPressed:
-                    state.loadingHistory ||
-                        state.loading ||
-                        state.sending ||
-                        state.deletingConversationId != null
-                    ? null
-                    : () => cubit.load(more: true),
-                child: const Text('Load older conversations'),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     ],

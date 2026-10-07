@@ -12,10 +12,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_document_repository.dart';
 import '../support/fake_identity_repository.dart';
+import '../support/navigation_fonts.dart';
 import '../support/workspace_navigation.dart';
 import 'identity_app_test.dart' show signIn;
 
 void main() {
+  setUpAll(loadNavigationFonts);
   for (final (width, scale) in [
     (320.0, 1.0),
     (320.0, 2.0),
@@ -80,10 +82,20 @@ void main() {
           find.text('A clear home for the details that matter.'),
           findsNothing,
         );
-        expect(
-          tester.getSize(find.byKey(const Key('workspaceHeader'))).height,
-          lessThanOrEqualTo(80),
+        final header = tester.getRect(find.byKey(const Key('workspaceHeader')));
+        expect(header.height, lessThanOrEqualTo(256));
+        final navigation = find.byKey(const Key('workspaceBottomNavigation'));
+        final bodyBottom = navigation.evaluate().isEmpty
+            ? 1000.0
+            : tester.getRect(navigation).top;
+        expect(bodyBottom - header.bottom, greaterThanOrEqualTo(48));
+        final toolbar = tester.getRect(
+          find.byKey(const Key('collectionToolbarPrimary')),
         );
+        final library = tester.getRect(
+          find.byKey(const Key('collectionToolbarLibrary')),
+        );
+        expect(library.right, closeTo(toolbar.right, .1));
         await revealWorkspaceAction(tester, 'newDocument');
         expect(find.byKey(const Key('newDocument')), findsOneWidget);
         await tester.tap(find.byKey(const Key('newDocument')));
@@ -92,6 +104,10 @@ void main() {
         await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
         await navigateWorkspace(tester, 'manageLibraries');
+        expect(
+          tester.getSize(find.byKey(const Key('workspaceHeader'))).height,
+          lessThanOrEqualTo(80),
+        );
         expect(find.byKey(const Key('newDocument')), findsNothing);
         expect(
           find.descendant(

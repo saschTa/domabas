@@ -108,169 +108,172 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
       final ocr = state.ocr;
       return Padding(
         padding: const EdgeInsets.all(20),
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (state.ocrLoading) const AppStripedProgressIndicator(),
-                  if (state.ocrError case final error?) ...[
-                    Text(error),
-                    TextButton(
-                      onPressed: state.ocrLoading ? null : widget.cubit.loadOcr,
-                      child: const Text('Retry extracted text'),
-                    ),
-                  ],
-                  if (ocr == null &&
-                      !state.ocrLoading &&
-                      state.ocrError == null)
-                    const Text('Extracted text is unavailable.'),
-                  if (ocr != null) ...[
-                    Text(
-                      ocr.available
-                          ? '${ocr.origin == 'manual' ? 'Corrected' : 'Machine'} text · revision ${ocr.revision}'
-                          : switch (ocr.reason) {
-                              'no_original' =>
-                                'This document has no original file.',
-                              'processing' => 'Text extraction is in progress.',
-                              'processing_failed' => 'Text extraction failed. Retry processing or enter a correction.',
-                              'legacy_text_missing' => 'Text is missing for this older document. Retry processing to recover it.',
-                              _ => 'Extracted text is unavailable.',
-                            },
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (ocr.available)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(switch (ocr.semanticIndexing) {
-                          'pending' => 'Search indexing in progress. Saved text is available now.',
-                          'failed' => 'Search indexing failed. Save the text again to retry indexing.',
-                          'not_required' => 'No searchable text to index.',
-                          'ready' => 'Search index up to date.',
-                          _ => 'Search indexing unavailable.',
-                        }, style: Theme.of(context).textTheme.bodySmall),
+        child: AppRefreshable(
+          onRefresh: state.ocrLoading || state.saving
+              ? null
+              : widget.cubit.loadOcr,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (state.ocrLoading) const AppStripedProgressIndicator(),
+                    if (state.ocrError case final error?) ...[
+                      Text(error),
+                      TextButton(
+                        onPressed: state.ocrLoading
+                            ? null
+                            : widget.cubit.loadOcr,
+                        child: const Text('Retry extracted text'),
                       ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        IconButton(
-                          tooltip: 'Refresh extracted text',
-                          onPressed: state.ocrLoading || state.saving
-                              ? null
-                              : widget.cubit.loadOcr,
-                          icon: const Icon(Icons.refresh),
+                    ],
+                    if (ocr == null &&
+                        !state.ocrLoading &&
+                        state.ocrError == null)
+                      const Text('Extracted text is unavailable.'),
+                    if (ocr != null) ...[
+                      Text(
+                        ocr.available
+                            ? '${ocr.origin == 'manual' ? 'Corrected' : 'Machine'} text · revision ${ocr.revision}'
+                            : switch (ocr.reason) {
+                                'no_original' =>
+                                  'This document has no original file.',
+                                'processing' =>
+                                  'Text extraction is in progress.',
+                                'processing_failed' => 'Text extraction failed. Retry processing or enter a correction.',
+                                'legacy_text_missing' => 'Text is missing for this older document. Retry processing to recover it.',
+                                _ => 'Extracted text is unavailable.',
+                              },
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (ocr.available)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(switch (ocr.semanticIndexing) {
+                            'pending' => 'Search indexing in progress. Saved text is available now.',
+                            'failed' => 'Search indexing failed. Save the text again to retry indexing.',
+                            'not_required' => 'No searchable text to index.',
+                            'ready' => 'Search index up to date.',
+                            _ => 'Search indexing unavailable.',
+                          }, style: Theme.of(context).textTheme.bodySmall),
                         ),
-                        if (state.editingOcr) ...[
-                          FilledButton(
-                            onPressed:
-                                state.saving ||
-                                    state.conflict ||
-                                    state.reconcileRequired
-                                ? null
-                                : widget.cubit.saveOcr,
-                            child: Text(
-                              state.saving ? 'Saving…' : 'Save extracted text',
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: state.saving ? null : widget.onCancel,
-                            child: const Text('Cancel'),
-                          ),
-                        ] else if (widget.cubit.capabilities.updateOcr &&
-                            state.document?.file != null)
-                          OutlinedButton.icon(
-                            onPressed: state.saving
-                                ? null
-                                : widget.cubit.editOcr,
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('Edit extracted text'),
-                          ),
-                        if (state.conflict || state.reconcileRequired)
-                          TextButton(
-                            onPressed: state.ocrLoading || state.saving
-                                ? null
-                                : widget.cubit.loadOcr,
-                            child: const Text('Reload latest'),
-                          ),
-                        if (widget.cubit.capabilities.retry &&
-                            (ocr.reason == 'legacy_text_missing' ||
-                                ocr.reason == 'processing_failed'))
-                          TextButton(
-                            onPressed: state.saving
-                                ? null
-                                : widget.cubit.retryProcessing,
-                            child: const Text('Retry processing'),
-                          ),
-                      ],
-                    ),
-                    if (ocr.available || state.editingOcr) ...[
                       const SizedBox(height: 12),
-                      TextField(
-                        controller: _query,
-                        decoration: const InputDecoration(
-                          labelText: 'Find in extracted text',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                        onChanged: (_) {
-                          setState(_find);
-                          _showMatch(0);
-                        },
-                      ),
                       Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 4,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          Text(
-                            _query.text.isEmpty
-                                ? 'Text search has no page highlights.'
-                                : _matches.isEmpty
-                                ? 'No matches'
-                                : '${_match + 1} of ${_matches.length} matches',
-                          ),
-                          IconButton(
-                            tooltip: 'Previous text match',
-                            onPressed: _matches.isEmpty
-                                ? null
-                                : () => _showMatch(-1),
-                            icon: const Icon(Icons.keyboard_arrow_up),
-                          ),
-                          IconButton(
-                            tooltip: 'Next text match',
-                            onPressed: _matches.isEmpty
-                                ? null
-                                : () => _showMatch(1),
-                            icon: const Icon(Icons.keyboard_arrow_down),
-                          ),
+                          if (state.editingOcr) ...[
+                            FilledButton(
+                              onPressed:
+                                  state.saving ||
+                                      state.conflict ||
+                                      state.reconcileRequired
+                                  ? null
+                                  : widget.cubit.saveOcr,
+                              child: Text(
+                                state.saving
+                                    ? 'Saving…'
+                                    : 'Save extracted text',
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: state.saving ? null : widget.onCancel,
+                              child: const Text('Cancel'),
+                            ),
+                          ] else if (widget.cubit.capabilities.updateOcr &&
+                              state.document?.file != null)
+                            OutlinedButton.icon(
+                              onPressed: state.saving
+                                  ? null
+                                  : widget.cubit.editOcr,
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text('Edit extracted text'),
+                            ),
+                          if (state.conflict || state.reconcileRequired)
+                            TextButton(
+                              onPressed: state.ocrLoading || state.saving
+                                  ? null
+                                  : widget.cubit.loadOcr,
+                              child: const Text('Reload latest'),
+                            ),
+                          if (widget.cubit.capabilities.retry &&
+                              (ocr.reason == 'legacy_text_missing' ||
+                                  ocr.reason == 'processing_failed'))
+                            TextButton(
+                              onPressed: state.saving
+                                  ? null
+                                  : widget.cubit.retryProcessing,
+                              child: const Text('Retry processing'),
+                            ),
                         ],
                       ),
-                      if (_text.text.isEmpty && !state.editingOcr)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
-                          child: Text('The saved extracted text is empty.'),
+                      if (ocr.available || state.editingOcr) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _query,
+                          decoration: const InputDecoration(
+                            labelText: 'Find in extracted text',
+                            prefixIcon: Icon(Icons.search),
+                          ),
+                          onChanged: (_) {
+                            setState(_find);
+                            _showMatch(0);
+                          },
                         ),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          children: [
+                            Text(
+                              _query.text.isEmpty
+                                  ? 'Text search has no page highlights.'
+                                  : _matches.isEmpty
+                                  ? 'No matches'
+                                  : '${_match + 1} of ${_matches.length} matches',
+                            ),
+                            IconButton(
+                              tooltip: 'Previous text match',
+                              onPressed: _matches.isEmpty
+                                  ? null
+                                  : () => _showMatch(-1),
+                              icon: const Icon(Icons.keyboard_arrow_up),
+                            ),
+                            IconButton(
+                              tooltip: 'Next text match',
+                              onPressed: _matches.isEmpty
+                                  ? null
+                                  : () => _showMatch(1),
+                              icon: const Icon(Icons.keyboard_arrow_down),
+                            ),
+                          ],
+                        ),
+                        if (_text.text.isEmpty && !state.editingOcr)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text('The saved extracted text is empty.'),
+                          ),
+                      ],
                     ],
                   ],
-                ],
+                ),
               ),
-            ),
-            if (ocr != null && (ocr.available || state.editingOcr))
-              SliverLayoutBuilder(
-                builder: (context, constraints) {
-                  final remaining =
-                      constraints.viewportMainAxisExtent -
-                      constraints.precedingScrollExtent;
-                  return SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: remaining < 240 ? 240 : remaining,
-                      child: _editorContent(state),
-                    ),
-                  );
-                },
-              ),
-          ],
+              if (ocr != null && (ocr.available || state.editingOcr))
+                SliverLayoutBuilder(
+                  builder: (context, constraints) {
+                    final remaining =
+                        constraints.viewportMainAxisExtent -
+                        constraints.precedingScrollExtent;
+                    return SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: remaining < 240 ? 240 : remaining,
+                        child: _editorContent(state),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
         ),
       );
     },
@@ -280,7 +283,7 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Theme.of(context).colorScheme.outline),
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     ),
     child: Padding(
       padding: const EdgeInsets.all(12),

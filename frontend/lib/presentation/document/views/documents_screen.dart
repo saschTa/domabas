@@ -11,8 +11,7 @@ import '../widgets/document_card_metadata.dart';
 import '../../../domain/document/interfaces/document_vocabulary_repository.dart';
 import '../widgets/document_detail_dialog.dart';
 import '../widgets/document_editor_dialog.dart';
-import '../widgets/document_search_widgets.dart';
-import '../widgets/document_filter_dialog.dart';
+import '../widgets/documents_workspace_toolbar.dart';
 import '../cubits/documents_cubit.dart';
 import '../cubits/document_preview_cubit.dart';
 
@@ -23,32 +22,26 @@ final class DocumentsScreen extends StatefulWidget {
     this.canCreate = true,
     this.vocabulary,
     this.appearanceAction,
+    this.shellToolbar = false,
   });
   final DocumentsCubit cubit;
   final bool canCreate;
   final DocumentVocabularyRepository? vocabulary;
   final Widget? appearanceAction;
+  final bool shellToolbar;
   @override
   State<DocumentsScreen> createState() => _DocumentsScreenState();
 }
 
 final class _DocumentsScreenState extends State<DocumentsScreen>
     with WidgetsBindingObserver {
-  final _term = TextEditingController();
-  final _termFocus = FocusNode();
   final _scroll = ScrollController();
-  final _filtersFocus = FocusNode();
-  RawDialogRoute<void>? _filterRoute;
-  NavigatorState? _filterNavigator;
-  int _filterGeneration = 0;
   int _scrollEpoch = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _term.text = widget.cubit.state.rawTerm;
-    _term.addListener(_edited);
   }
 
   @override
@@ -59,82 +52,8 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _filterGeneration++;
-    final route = _filterRoute;
-    final navigator = _filterNavigator;
-    if (route != null && navigator != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (navigator.mounted && route.navigator == navigator) {
-          navigator.removeRoute(route);
-        }
-      });
-    }
-    _term.dispose();
-    _termFocus.dispose();
     _scroll.dispose();
-    _filtersFocus.dispose();
     super.dispose();
-  }
-
-  void _edited() {
-    final value = _term.value;
-    widget.cubit.editTerm(
-      value.text,
-      composing: value.composing.isValid && !value.composing.isCollapsed,
-    );
-  }
-
-  void _submit() {
-    final composing = _term.value.composing;
-    if (composing.isValid && !composing.isCollapsed) return;
-    _termFocus.unfocus();
-    unawaited(widget.cubit.submitSearch());
-  }
-
-  void _clear() {
-    _term.clear();
-    unawaited(widget.cubit.clearSearch());
-  }
-
-  Future<void> _filters() async {
-    final repository = widget.vocabulary;
-    if (_filterRoute != null || repository == null) return;
-    final owner = widget.cubit;
-    final generation = ++_filterGeneration;
-    final navigator = _filterNavigator = Navigator.of(context);
-    late final RawDialogRoute<void> route;
-    bool owns() =>
-        mounted &&
-        identical(owner, widget.cubit) &&
-        identical(repository, widget.vocabulary) &&
-        !owner.isClosed &&
-        generation == _filterGeneration &&
-        _filterRoute == route &&
-        navigator.mounted &&
-        route.navigator == navigator &&
-        route.isCurrent;
-    route = RawDialogRoute<void>(
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black54,
-      transitionDuration: Duration.zero,
-      pageBuilder: (_, _, _) => DocumentFilterDialog(
-        documents: owner,
-        repository: repository,
-        isCurrent: owns,
-        onClose: () {
-          if (owns()) navigator.pop();
-        },
-      ),
-    );
-    _filterRoute = route;
-    await navigator.push(route);
-    if (!mounted || generation != _filterGeneration || _filterRoute != route) {
-      return;
-    }
-    _filterRoute = null;
-    _filterNavigator = null;
-    if (_filtersFocus.canRequestFocus) _filtersFocus.requestFocus();
   }
 
   @override
@@ -142,391 +61,305 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
     BuildContext context,
   ) => BlocConsumer<DocumentsCubit, DocumentsState>(
     bloc: widget.cubit,
-    listenWhen: (before, after) =>
-        before.scrollEpoch != after.scrollEpoch ||
-        before.rawTerm != after.rawTerm,
+    listenWhen: (before, after) => before.scrollEpoch != after.scrollEpoch,
     listener: (_, state) {
       if (_scrollEpoch != state.scrollEpoch) {
         _scrollEpoch = state.scrollEpoch;
         if (_scroll.hasClients) _scroll.jumpTo(0);
       }
-      if (_term.text != state.rawTerm) {
-        _term.value = TextEditingValue(
-          text: state.rawTerm,
-          selection: TextSelection.collapsed(offset: state.rawTerm.length),
-        );
-      }
     },
-    builder: (context, state) => LayoutBuilder(
-      builder: (context, constraints) {
-        final inset = AppLayout.pageInset(MediaQuery.sizeOf(context).width);
-        final width = constraints.maxWidth - inset * 2;
-        final columns = state.layout == DocumentLayout.list
-            ? 1
-            : math.max(1, ((width + 16) / 256).floor());
-        final items = state.searching
-            ? state.results.map(DocumentCollectionItem.fromSearch).toList()
-            : state.documents.map(DocumentCollectionItem.fromDocument).toList();
-        final rows = (items.length / columns).ceil();
-        final reduced =
-            MediaQuery.disableAnimationsOf(context) ||
-            View.of(context)
-                .platformDispatcher
-                .accessibilityFeatures
-                .reduceMotion;
-        final heading = !state.hasSnapshot
-            ? 'Documents'
-            : state.searching
-            ? state.totalKnown
-                  ? '${state.total} ${state.total == 1 ? 'result' : 'results'}'
-                  : 'Search results'
-            : '${state.total} ${state.total == 1 ? 'document' : 'documents'}';
-        final status =
-            state.error ??
-            state.notice ??
-            (state.showLoading ||
-                    state.debouncing ||
-                    state.intentBlocked ||
-                    state.confirmedMutation ||
-                    !state.hasSnapshot
-                ? state.status
-                : '');
-        return Align(
-          alignment: Alignment.topCenter,
-          child: SizedBox(
-            width: double.infinity,
-            child: Semantics(
-              container: true,
-              label: 'Document collection',
-              child: CustomScrollView(
-                key: const Key('documentCollectionScroll'),
-                controller: _scroll,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                scrollCacheExtent: const ScrollCacheExtent.pixels(0),
-                slivers: [
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(inset, 12, inset, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (widget.cubit.capabilities.read &&
-                              widget.cubit.capabilities.search) ...[
-                            DocumentSearchControls(
-                              term: _term,
-                              termFocus: _termFocus,
-                              termError: state.termError,
-                              state: state,
-                              filtersFocus: _filtersFocus,
-                              onSubmit: _submit,
-                              onFilters: _filters,
-                              onClear: _clear,
-                              onSort: widget.cubit.setSort,
-                              compactSort: width < 560,
-                              onRemoveTag: widget.cubit.removeTag,
-                              onClearAddress: widget.cubit.clearAddress,
-                              onKindsChanged: widget.cubit.setKinds,
-                              onClearKinds: widget.cubit.clearKinds,
-                              onResetFilters: widget.cubit.resetFilters,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          LayoutBuilder(
-                            builder: (context, toolbar) {
-                              final compact =
-                                  toolbar.maxWidth < 720 ||
-                                  MediaQuery.textScalerOf(context).scale(14) >
-                                      20;
-                              return Wrap(
-                                alignment: WrapAlignment.spaceBetween,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  Tooltip(
-                                    message: state.status,
-                                    child: Semantics(
-                                      liveRegion: !state.isLoading,
-                                      child: Text(
-                                        heading,
-                                        key: const Key('documentCount'),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall,
-                                      ),
-                                    ),
-                                  ),
-                                  Wrap(
-                                    spacing: 4,
-                                    runSpacing: 4,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    children: [
-                                      if (width >= 560 &&
-                                          widget.cubit.capabilities.read &&
-                                          widget.cubit.capabilities.search)
-                                        DocumentSortControl(
-                                          criteria: state.desiredCriteria,
-                                          onSort: widget.cubit.setSort,
-                                          compact: compact,
-                                        ),
-                                      ToggleButtons(
-                                        borderRadius: BorderRadius.circular(24),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 48,
-                                          minHeight: 48,
-                                        ),
-                                        isSelected: [
-                                          state.layout == DocumentLayout.grid,
-                                          state.layout == DocumentLayout.list,
-                                        ],
-                                        onPressed: (index) =>
-                                            widget.cubit.setLayout(
-                                              DocumentLayout.values[index],
-                                            ),
-                                        children: [
-                                          for (final (label, icon) in [
-                                            ('Grid', Icons.grid_view_rounded),
-                                            ('List', Icons.view_list_rounded),
-                                          ])
-                                            Tooltip(
-                                              message: label,
-                                              child: Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: compact ? 0 : 12,
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(icon, size: 20),
-                                                    if (!compact) ...[
-                                                      const SizedBox(width: 8),
-                                                      Text(label),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      IconButton(
-                                        key: const Key('refreshDocuments'),
-                                        tooltip: state.error == null
-                                            ? 'Refresh documents'
-                                            : 'Retry',
-                                        onPressed:
-                                            state.isSaving ||
-                                                (state.error != null &&
-                                                    (state.intentBlocked ||
-                                                        state.showLoading))
-                                            ? null
-                                            : state.error != null
-                                            ? widget.cubit.retryCollection
-                                            : () => widget.cubit.load(),
-                                        icon: const Icon(Icons.refresh_rounded),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Semantics(
-                                    liveRegion: true,
-                                    child: Tooltip(
-                                      message: status,
-                                      child: Text(
-                                        status.isEmpty ? ' ' : status,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                            height: 2,
-                            child: state.showLoading
-                                ? AppStripedProgressIndicator(
-                                    animate: !reduced,
-                                    minHeight: 2,
-                                  )
-                                : null,
-                          ),
-                          const AppStripedDivider(height: 12),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (state.searching
-                      ? state.results.isEmpty
-                      : state.documents.isEmpty)
-                    SliverPadding(
-                      padding: EdgeInsets.symmetric(horizontal: inset),
-                      sliver: SliverToBoxAdapter(
-                        child: AppEmptyState(
-                          icon: Icons.folder_open_rounded,
-                          title: state.hasSnapshot
-                              ? state.searching
-                                    ? 'No matching documents'
-                                    : 'No documents yet'
-                              : state.isLoading
-                              ? 'Opening your library…'
-                              : state.error != null
-                              ? (state.searching
-                                    ? 'Search is unavailable'
-                                    : 'Your library is unavailable')
-                              : 'Your library has not loaded',
-                          message: !state.hasSnapshot
-                              ? 'Your documents will appear here.'
-                              : state.searching
-                              ? 'Try another term or adjust the filters.'
-                              : widget.canCreate
-                              ? 'Add your first document to start your collection.'
-                              : 'Documents shared with this library will appear here.',
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: EdgeInsets.symmetric(horizontal: inset),
-                      sliver: SliverList.builder(
-                        itemCount: rows,
-                        itemBuilder: (context, row) => Padding(
-                          padding: EdgeInsets.only(
-                            bottom: state.layout == DocumentLayout.list
-                                ? 8
-                                : 20,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+    builder: (context, state) => AppPage(
+      title: 'Documents',
+      insetBody: false,
+      onRefresh: state.isSaving || state.intentBlocked
+          ? null
+          : () => widget.cubit.load(),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = MediaQuery.sizeOf(context).width;
+          final inset =
+              AppLayout.pageInset(screenWidth) - (screenWidth < 600 ? 8 : 16);
+          final width = constraints.maxWidth - inset * 2;
+          final columns = state.layout == DocumentLayout.list
+              ? 1
+              : math.max(1, ((width + 16) / 256).floor());
+          final items = state.searching
+              ? state.results.map(DocumentCollectionItem.fromSearch).toList()
+              : state.documents
+                    .map(DocumentCollectionItem.fromDocument)
+                    .toList();
+          final rows = (items.length / columns).ceil();
+          final reduced =
+              MediaQuery.disableAnimationsOf(context) ||
+              View.of(context)
+                  .platformDispatcher
+                  .accessibilityFeatures
+                  .reduceMotion;
+          final count = !state.hasSnapshot
+              ? 'Documents'
+              : state.searching
+              ? state.totalKnown
+                    ? '${state.total} ${state.total == 1 ? 'result' : 'results'}'
+                    : 'Search results'
+              : '${state.total} ${state.total == 1 ? 'document' : 'documents'}';
+          final status =
+              state.error ??
+              state.notice ??
+              (state.showLoading ||
+                      state.debouncing ||
+                      state.intentBlocked ||
+                      state.confirmedMutation ||
+                      !state.hasSnapshot
+                  ? state.status
+                  : '');
+          final bottomClearance = MediaQuery.paddingOf(context).bottom
+              .clamp(0.0, constraints.maxHeight);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Semantics(
+                  container: true,
+                  label: 'Document collection',
+                  child: CustomScrollView(
+                    key: const Key('documentCollectionScroll'),
+                    controller: _scroll,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(0),
+                    slivers: [
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(inset, 8, inset, 8),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              for (
-                                var column = 0;
-                                column < columns;
-                                column++
-                              ) ...[
-                                if (column > 0) const SizedBox(width: 16),
-                                Expanded(
-                                  child: row * columns + column < items.length
-                                      ? DocumentCollectionCard(
-                                          appearanceAction:
-                                              widget.appearanceAction,
-                                          key: ValueKey(
-                                            items[row * columns + column].id,
-                                          ),
-                                          document:
-                                              items[row * columns + column],
-                                          cubit: widget.cubit,
-                                          list:
-                                              state.layout ==
-                                              DocumentLayout.list,
-                                        )
-                                      : const SizedBox.shrink(),
+                              if (!widget.shellToolbar) ...[
+                                DocumentsWorkspaceToolbar(
+                                  cubit: widget.cubit,
+                                  vocabulary: widget.vocabulary,
                                 ),
+                                const SizedBox(height: 8),
                               ],
+                              SizedBox(
+                                height: 2,
+                                child: state.showLoading
+                                    ? AppStripedProgressIndicator(
+                                        animate: !reduced,
+                                        minHeight: 2,
+                                      )
+                                    : null,
+                              ),
                             ],
                           ),
                         ),
                       ),
+                      if (state.searching
+                          ? state.results.isEmpty
+                          : state.documents.isEmpty)
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: inset),
+                          sliver: SliverToBoxAdapter(
+                            child: AppEmptyState(
+                              icon: Icons.folder_open_rounded,
+                              title: state.hasSnapshot
+                                  ? state.searching
+                                        ? 'No matching documents'
+                                        : 'No documents yet'
+                                  : state.isLoading
+                                  ? 'Opening your library…'
+                                  : state.error != null
+                                  ? (state.searching
+                                        ? 'Search is unavailable'
+                                        : 'Your library is unavailable')
+                                  : 'Your library has not loaded',
+                              message: !state.hasSnapshot
+                                  ? 'Your documents will appear here.'
+                                  : state.searching
+                                  ? 'Try another term or adjust the filters.'
+                                  : widget.canCreate
+                                  ? 'Add your first document to start your collection.'
+                                  : 'Documents shared with this library will appear here.',
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: inset),
+                          sliver: SliverList.builder(
+                            itemCount: rows,
+                            itemBuilder: (context, row) => Padding(
+                              padding: EdgeInsets.only(
+                                bottom: state.layout == DocumentLayout.list
+                                    ? 8
+                                    : 20,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for (
+                                    var column = 0;
+                                    column < columns;
+                                    column++
+                                  ) ...[
+                                    if (column > 0) const SizedBox(width: 16),
+                                    Expanded(
+                                      child:
+                                          row * columns + column < items.length
+                                          ? DocumentCollectionCard(
+                                              appearanceAction:
+                                                  widget.appearanceAction,
+                                              key: ValueKey(
+                                                items[row * columns + column]
+                                                    .id,
+                                              ),
+                                              document:
+                                                  items[row * columns + column],
+                                              cubit: widget.cubit,
+                                              list:
+                                                  state.layout ==
+                                                  DocumentLayout.list,
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          inset,
+                          8,
+                          inset,
+                          16 + (status.isEmpty ? bottomClearance : 0),
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            key: const Key('documentCollectionFooter'),
+                            children: [
+                              Semantics(
+                                liveRegion: !state.isLoading,
+                                child: Text(
+                                  count,
+                                  key: const Key('documentCount'),
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                ),
+                              ),
+                              if (state.searching ||
+                                  state.total > DocumentsCubit.pageSize)
+                                const SizedBox(height: 8),
+                              if (state.searching)
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    if (state.ordinal > 1)
+                                      TextButton(
+                                        onPressed: !state.canPaginate
+                                            ? null
+                                            : widget.cubit.firstSearchPage,
+                                        child: const Text('First page'),
+                                      ),
+                                    TextButton.icon(
+                                      onPressed:
+                                          !state.canPaginate ||
+                                              (state
+                                                      .searchRequest
+                                                      ?.history
+                                                      .isEmpty ??
+                                                  true)
+                                          ? null
+                                          : widget.cubit.previousSearchPage,
+                                      icon: const Icon(Icons.chevron_left),
+                                      label: const Text('Previous'),
+                                    ),
+                                    Text('Page ${state.ordinal}'),
+                                    TextButton.icon(
+                                      onPressed:
+                                          !state.canPaginate ||
+                                              state.nextCursor == null
+                                          ? null
+                                          : widget.cubit.nextSearchPage,
+                                      icon: const Icon(Icons.chevron_right),
+                                      label: const Text('Next'),
+                                    ),
+                                  ],
+                                )
+                              else if (state.total > DocumentsCubit.pageSize)
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 8,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Previous page',
+                                      onPressed:
+                                          state.page == 0 || !state.canPaginate
+                                          ? null
+                                          : () => widget.cubit.load(
+                                              page: state.page - 1,
+                                            ),
+                                      icon: const Icon(Icons.chevron_left),
+                                    ),
+                                    Text(
+                                      'Page ${state.page + 1} of ${state.pages}',
+                                    ),
+                                    IconButton(
+                                      key: const Key('loadMoreDocuments'),
+                                      tooltip: 'Next page',
+                                      onPressed:
+                                          !widget.cubit.canLoadMore ||
+                                              state.showLoading
+                                          ? null
+                                          : () => widget.cubit.load(more: true),
+                                      icon: const Icon(Icons.chevron_right),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (status.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(bottom: bottomClearance),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight:
+                          (constraints.maxHeight - bottomClearance) * .35,
                     ),
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                      inset,
-                      8,
-                      inset,
-                      16 + MediaQuery.paddingOf(context).bottom,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: state.searching
-                          ? Wrap(
-                              alignment: WrapAlignment.center,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                if (state.ordinal > 1)
-                                  TextButton(
-                                    onPressed: !state.canPaginate
-                                        ? null
-                                        : widget.cubit.firstSearchPage,
-                                    child: const Text('First page'),
-                                  ),
-                                TextButton.icon(
-                                  onPressed:
-                                      !state.canPaginate ||
-                                          (state
-                                                  .searchRequest
-                                                  ?.history
-                                                  .isEmpty ??
-                                              true)
-                                      ? null
-                                      : widget.cubit.previousSearchPage,
-                                  icon: const Icon(Icons.chevron_left),
-                                  label: const Text('Previous'),
-                                ),
-                                Text('Page ${state.ordinal}'),
-                                TextButton.icon(
-                                  onPressed:
-                                      !state.canPaginate ||
-                                          state.nextCursor == null
-                                      ? null
-                                      : widget.cubit.nextSearchPage,
-                                  icon: const Icon(Icons.chevron_right),
-                                  label: const Text('Next'),
-                                ),
-                              ],
-                            )
-                          : state.total > DocumentsCubit.pageSize
-                          ? Wrap(
-                              alignment: WrapAlignment.center,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 8,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Previous page',
-                                  onPressed:
-                                      state.page == 0 || !state.canPaginate
-                                      ? null
-                                      : () => widget.cubit.load(
-                                          page: state.page - 1,
-                                        ),
-                                  icon: const Icon(Icons.chevron_left),
-                                ),
-                                Text(
-                                  'Page ${state.page + 1} of ${state.pages}',
-                                ),
-                                IconButton(
-                                  key: const Key('loadMoreDocuments'),
-                                  tooltip: 'Next page',
-                                  onPressed:
-                                      !widget.cubit.canLoadMore ||
-                                          state.showLoading
-                                      ? null
-                                      : () => widget.cubit.load(more: true),
-                                  icon: const Icon(Icons.chevron_right),
-                                ),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
+                    child: SingleChildScrollView(
+                      primary: false,
+                      padding: EdgeInsets.fromLTRB(inset, 8, inset, 8),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          status,
+                          key: const Key('documentCollectionStatus'),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+                ),
+            ],
+          );
+        },
+      ),
     ),
   );
 }
@@ -626,7 +459,7 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
       cubit: widget.cubit,
       resumeRevision: widget.cubit.state.previewEpoch,
     );
-    final radius = BorderRadius.circular(24);
+    final radius = BorderRadius.circular(16);
     final details = documentSupplementalDetails(context, document);
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -638,8 +471,8 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
           side: BorderSide(
             color: highlighted
                 ? theme.colorScheme.primary
-                : theme.colorScheme.outline,
-            width: 2,
+                : theme.colorScheme.outlineVariant,
+            width: highlighted ? 1.5 : 1,
           ),
         ),
         clipBehavior: Clip.antiAlias,
@@ -666,7 +499,7 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
                       child: Row(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                             child: SizedBox(
                               width: 56,
                               height: 72,
@@ -690,7 +523,7 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       AspectRatio(
-                        aspectRatio: 1.45,
+                        aspectRatio: 1.4,
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
@@ -707,7 +540,7 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                         child: metadata,
                       ),
                     ],

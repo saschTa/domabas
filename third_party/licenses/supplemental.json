@@ -2317,5 +2317,31 @@
       "https://raw.githubusercontent.com/actions/upload-artifact/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/LICENSE"
     ],
     "files": []
+  },
+  {
+    "id": "extra:Barlow Condensed font",
+    "name": "Barlow Condensed font",
+    "version": "1.408 (Google Fonts v13)",
+    "component": "Fonts",
+    "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/barlowcondensed",
+    "urls": [],
+    "files": [
+      "frontend/assets/licenses/barlow-ofl.txt",
+      "frontend/assets/licenses/barlow-source.txt"
+    ],
+    "license": "OFL-1.1"
+  },
+  {
+    "id": "extra:DM Sans font",
+    "name": "DM Sans font",
+    "version": "4.004 (Google Fonts v17)",
+    "component": "Fonts",
+    "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/dmsans",
+    "urls": [],
+    "files": [
+      "frontend/assets/licenses/dmsans-ofl.txt",
+      "frontend/assets/licenses/dmsans-source.txt"
+    ],
+    "license": "OFL-1.1"
   }
 ]

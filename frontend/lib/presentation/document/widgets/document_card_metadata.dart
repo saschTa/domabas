@@ -53,7 +53,7 @@ final class DocumentCardMetadata extends StatelessWidget {
       final title = _DocumentTextSlot(
         text: document.title,
         lines: wide ? 1 : 2,
-        style: theme.textTheme.titleMedium!,
+        style: theme.textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600),
       );
       final tags = _DocumentTagRail(tags: document.tags);
       final footer = _DocumentFooter(document: document, inline: !wide);
@@ -138,7 +138,7 @@ final class _DocumentTagRail extends StatelessWidget {
     builder: (context, constraints) {
       final theme = Theme.of(context);
       final style = theme.textTheme.labelSmall!.copyWith(
-        color: theme.colorScheme.onSurface,
+        color: theme.colorScheme.onSurfaceVariant,
       );
       final line = _measure(context, 'Ag', style);
       final height = line.height.ceilToDouble() + 8;
@@ -188,8 +188,8 @@ final class _DocumentTagRail extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHigh,
-                              borderRadius: BorderRadius.circular(10),
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               tags[index],
@@ -220,7 +220,8 @@ final class _DocumentFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall!;
+    final style = Theme.of(context).textTheme.bodySmall!
+        .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
     final status = Row(
       children: [
         if (document.requiresPassword) ...[
@@ -312,8 +313,8 @@ final class DocumentCardDetailsPill extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: theme.colorScheme.outline),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [

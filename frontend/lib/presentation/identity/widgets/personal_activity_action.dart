@@ -63,79 +63,79 @@ final class _IdentityPersonalActivityActionState
           constraints: const BoxConstraints(maxWidth: 640),
           child: BlocBuilder<PersonalActivityCubit, PersonalActivityState>(
             bloc: widget.cubit,
-            builder: (context, state) => ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(20),
-              children: [
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Your jobs',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    IconButton(
-                      key: const Key('personal-activity-close'),
-                      tooltip: 'Close jobs',
-                      onPressed: _close,
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const Text(
-                  'Your work across libraries you can access. Automatic work without a recorded owner is not listed.',
-                ),
-                AppProgressSlot(active: state.loading),
-                if (state.error case final error?)
-                  AppNotice(
-                    message: error,
-                    action: TextButton(
-                      onPressed: state.loading ? null : widget.cubit.refresh,
-                      child: const Text('Retry'),
-                    ),
+            builder: (context, state) => AppRefreshable(
+              onRefresh: state.loading ? null : widget.cubit.refresh,
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Your jobs',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      IconButton(
+                        key: const Key('personal-activity-close'),
+                        tooltip: 'Close jobs',
+                        onPressed: _close,
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 20),
-                const AppSectionHeader(title: 'Active'),
-                if (state.activity case final activity?) ...[
-                  Text(
-                    'Last updated: ${formatLocalDateTime(activity.generatedAt)}${state.error == null ? '' : ' · Refresh failed; statuses may be out of date.'}',
+                  const Text(
+                    'Your work across libraries you can access. Automatic work without a recorded owner is not listed.',
                   ),
-                  for (final item in activity.active) _item(item),
-                  if (activity.active.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('No active jobs.'),
+                  AppProgressSlot(active: state.loading),
+                  if (state.error case final error?)
+                    AppNotice(
+                      message: error,
+                      action: TextButton(
+                        onPressed: state.loading ? null : widget.cubit.refresh,
+                        child: const Text('Retry'),
+                      ),
                     ),
-                  _pages(
-                    page: state.activePage,
-                    hasMore: activity.activeNextCursor != null,
-                    loading: state.loading,
-                    previous: () => widget.cubit.refresh(previousActive: true),
-                    next: () => widget.cubit.refresh(moreActive: true),
-                  ),
                   const SizedBox(height: 20),
-                  const AppSectionHeader(title: 'Finished jobs'),
-                  for (final item in activity.finished) _item(item),
-                  _pages(
-                    page: state.finishedPage,
-                    hasMore: activity.finishedNextCursor != null,
-                    loading: state.loading,
-                    previous: () =>
-                        widget.cubit.refresh(previousFinished: true),
-                    next: () => widget.cubit.refresh(moreFinished: true),
-                  ),
-                  if (activity.finished.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('No finished jobs yet.'),
+                  const AppSectionHeader(title: 'Active'),
+                  if (state.activity case final activity?) ...[
+                    Text(
+                      'Last updated: ${formatLocalDateTime(activity.generatedAt)}${state.error == null ? '' : ' · Refresh failed; statuses may be out of date.'}',
                     ),
+                    for (final item in activity.active) _item(item),
+                    if (activity.active.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text('No active jobs.'),
+                      ),
+                    _pages(
+                      page: state.activePage,
+                      hasMore: activity.activeNextCursor != null,
+                      loading: state.loading,
+                      previous: () =>
+                          widget.cubit.refresh(previousActive: true),
+                      next: () => widget.cubit.refresh(moreActive: true),
+                    ),
+                    const SizedBox(height: 20),
+                    const AppSectionHeader(title: 'Finished jobs'),
+                    for (final item in activity.finished) _item(item),
+                    _pages(
+                      page: state.finishedPage,
+                      hasMore: activity.finishedNextCursor != null,
+                      loading: state.loading,
+                      previous: () =>
+                          widget.cubit.refresh(previousFinished: true),
+                      next: () => widget.cubit.refresh(moreFinished: true),
+                    ),
+                    if (activity.finished.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text('No finished jobs yet.'),
+                      ),
+                  ],
                 ],
-                TextButton(
-                  onPressed: state.loading ? null : widget.cubit.refresh,
-                  child: const Text('Refresh jobs'),
-                ),
-              ],
+              ),
             ),
           ),
         ),

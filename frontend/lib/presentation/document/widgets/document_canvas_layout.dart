@@ -43,17 +43,16 @@ final class DocumentCanvasLayout extends StatelessWidget {
                       key: const Key('documentCanvasControls'),
                       color: Theme.of(context).colorScheme.surface,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(14),
                         side: BorderSide(
-                          color: Theme.of(context).colorScheme.outline,
-                          width: 1.5,
+                          color: Theme.of(context).colorScheme.outlineVariant,
                         ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: 8,
+                          vertical: 4,
                         ),
                         child: controls,
                       ),

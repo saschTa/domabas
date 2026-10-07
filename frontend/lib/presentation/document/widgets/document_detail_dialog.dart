@@ -370,7 +370,8 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
                               state.document?.title ?? 'Opening document…',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleLarge,
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ),
                           if (_document.capabilities.download &&
@@ -486,19 +487,18 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
                             !state.remotelyDeleted &&
                             MediaQuery.sizeOf(context).width >= 1100)
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(0, 16, 16, 16),
+                            padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
                             child: SizedBox(
                               width: 360,
                               child: Material(
                                 key: const Key('documentInspectorPanel'),
                                 color: Theme.of(context).colorScheme.surface,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
+                                  borderRadius: BorderRadius.circular(16),
                                   side: BorderSide(
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .outline,
-                                    width: 1.5,
+                                        .outlineVariant,
                                   ),
                                 ),
                                 clipBehavior: Clip.antiAlias,
@@ -581,46 +581,48 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
     }
     if (state.document!.file!.isEmail) {
       final mail = state.document!;
-      return ListView(
-        key: const Key('email-document-view'),
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Icon(Icons.mail_outline, size: 48),
-          const SizedBox(height: 16),
-          SelectableText(
-            mail.subject.isEmpty ? mail.title : mail.subject,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          if (mail.sender.isNotEmpty) SelectableText('From: ${mail.sender}'),
-          if (mail.recipients.isNotEmpty)
-            SelectableText('To: ${mail.recipients.join(', ')}'),
-          if (mail.cc.isNotEmpty) SelectableText('CC: ${mail.cc.join(', ')}'),
-          if (mail.bcc.isNotEmpty)
-            SelectableText('BCC: ${mail.bcc.join(', ')}'),
-          if (mail.documentDate.isNotEmpty) Text(mail.documentDate),
-          const AppStripedDivider(height: 32, thickness: 8),
-          if (!_document.capabilities.readOcr)
-            const Text(
-              'Your permissions do not allow viewing extracted email text.',
-            )
-          else ...[
-            if (state.ocrLoading) const AppStripedProgressIndicator(),
-            if (state.ocrError case final error?) AppNotice(message: error),
-            if (state.ocr?.text case final text?)
-              SelectableText(text, key: const Key('email-body'))
-            else
-              Text(
-                state.ocr?.status == 'pending'
-                    ? 'Email text is being prepared.'
-                    : 'No email body text is available.',
-              ),
-            TextButton(
-              onPressed: state.ocrLoading ? null : _document.loadOcr,
-              child: const Text('Refresh email text'),
+      return AppRefreshable(
+        onRefresh:
+            _document.capabilities.readOcr && !state.ocrLoading && !state.saving
+            ? _document.loadOcr
+            : null,
+        child: ListView(
+          key: const Key('email-document-view'),
+          padding: const EdgeInsets.all(24),
+          children: [
+            const Icon(Icons.mail_outline, size: 48),
+            const SizedBox(height: 16),
+            SelectableText(
+              mail.subject.isEmpty ? mail.title : mail.subject,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
+            if (mail.sender.isNotEmpty) SelectableText('From: ${mail.sender}'),
+            if (mail.recipients.isNotEmpty)
+              SelectableText('To: ${mail.recipients.join(', ')}'),
+            if (mail.cc.isNotEmpty) SelectableText('CC: ${mail.cc.join(', ')}'),
+            if (mail.bcc.isNotEmpty)
+              SelectableText('BCC: ${mail.bcc.join(', ')}'),
+            if (mail.documentDate.isNotEmpty) Text(mail.documentDate),
+            const AppStripedDivider(height: 32, thickness: 8),
+            if (!_document.capabilities.readOcr)
+              const Text(
+                'Your permissions do not allow viewing extracted email text.',
+              )
+            else ...[
+              if (state.ocrLoading) const AppStripedProgressIndicator(),
+              if (state.ocrError case final error?) AppNotice(message: error),
+              if (state.ocr?.text case final text?)
+                SelectableText(text, key: const Key('email-body'))
+              else
+                Text(
+                  state.ocr?.status == 'pending'
+                      ? 'Email text is being prepared.'
+                      : 'No email body text is available.',
+                ),
+            ],
+            _emailLinks(),
           ],
-          _emailLinks(),
-        ],
+        ),
       );
     }
     if (state.document?.processing?.failureCode == 'encrypted_pdf') {

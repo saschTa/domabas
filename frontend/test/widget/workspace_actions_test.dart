@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:domabas/ui/domabas_ui.dart';
+import 'package:domabas/ui/app_navigation_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -119,7 +120,9 @@ void main() {
   }
 
   Future<void> more(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('More actions'));
+    final trigger = find.byKey(const Key('navigation-more'));
+    await tester.ensureVisible(trigger);
+    await tester.tap(trigger);
     await tester.pumpAndSettle();
   }
 
@@ -172,6 +175,45 @@ void main() {
     }
   }
 
+  testWidgets('phone More contains every action below the system safe inset', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+    tester.view.viewPadding = const FakeViewPadding(top: 59, bottom: 34);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
+    await mount(tester, width: 390, height: 844);
+    expect(find.byKey(const Key('workspaceMore')), findsNothing);
+    expect(find.byTooltip('More actions'), findsNothing);
+    expect(find.byKey(const Key('uploadFiles')).hitTestable(), findsOneWidget);
+    await more(tester);
+    expect(
+      tester.getRect(find.byKey(const Key('closeNavigationChooser'))).top,
+      greaterThanOrEqualTo(59),
+    );
+    for (final id in [
+      'uploadFiles',
+      'newDocument',
+      'viewUploads',
+      'appearance-action',
+      'liveUpdatesStatus',
+      'personal-activity',
+      'logout',
+    ]) {
+      final action = find.descendant(
+        of: find.byKey(const Key('workspaceMoreDrawer')),
+        matching: find.byKey(Key(id)),
+      );
+      await tester.ensureVisible(action);
+      await tester.pumpAndSettle();
+      expect(action.hitTestable(), findsOneWidget, reason: id);
+      final bounds = tester.getRect(action);
+      expect(bounds.height, greaterThanOrEqualTo(48));
+      expect(bounds.bottom, lessThanOrEqualTo(810));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'open chooser reflects busy/status updates and invokes only current enabled action',
     (tester) async {
@@ -194,7 +236,7 @@ void main() {
       await tester.tap(find.byKey(const Key('uploadFiles')));
       expect(key.currentState!.activations, 1);
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Close actions'), findsNothing);
+      expect(find.byTooltip('Close navigation'), findsNothing);
     },
   );
 
@@ -223,7 +265,7 @@ void main() {
         saved();
         await tester.pumpAndSettle();
         expect(key.currentState!.activations, 0);
-        expect(find.byTooltip('Close actions'), findsNothing);
+        expect(find.byTooltip('Close navigation'), findsNothing);
       },
     );
   }
@@ -249,11 +291,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      final trigger = tester.widget<IconButton>(
-        find.descendant(
-          of: find.byKey(const Key('workspaceMore')),
-          matching: find.byType(IconButton),
-        ),
+      final trigger = tester.widget<AppNavigationButton>(
+        find.byKey(const Key('navigation-more')),
       );
       expect(trigger.focusNode!.hasFocus, isTrue);
     },
@@ -274,13 +313,10 @@ void main() {
     await tester.tap(find.byKey(const Key('uploadFiles')));
     await tester.pumpAndSettle();
     expect(find.text('Nested dialog'), findsOneWidget);
-    expect(find.byTooltip('Close actions'), findsNothing);
+    expect(find.byTooltip('Close navigation'), findsNothing);
     expect(FocusManager.instance.primaryFocus!.context, isNotNull);
-    final trigger = tester.widget<IconButton>(
-      find.descendant(
-        of: find.byKey(const Key('workspaceMore')),
-        matching: find.byType(IconButton),
-      ),
+    final trigger = tester.widget<AppNavigationButton>(
+      find.byKey(const Key('navigation-more')),
     );
     expect(trigger.focusNode!.hasFocus, isFalse);
     key.currentState!.navigator.currentState!.pop();

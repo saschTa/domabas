@@ -10,7 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 import 'document_fixtures.dart';
-import 'workspace_actions.dart' show revealWorkspacePageContent;
+import 'workspace_actions.dart'
+    show
+        refreshWorkspacePage,
+        revealWorkspacePageContent,
+        selectWorkspaceJobFilters,
+        setWorkspacePipelineSetup;
 
 Future<void> exerciseLLMProcessing(
   WidgetTester tester, {
@@ -325,6 +330,7 @@ Future<void> exerciseLLMProcessing(
   expect(completedAI.status.toString(), 'succeeded');
 
   await navigate('processingNavigation');
+  await setWorkspacePipelineSetup(tester, expanded: true);
   await _wait(
     tester,
     () => find.text('Shared resource limits').evaluate().isNotEmpty,
@@ -336,8 +342,8 @@ Future<void> exerciseLLMProcessing(
   expect(find.text('Document ingestion pipeline'), findsOneWidget);
   await _reveal(tester, find.text('AI processing pipeline'));
   expect(find.text('AI processing pipeline'), findsOneWidget);
-  await _reveal(tester, find.byKey(const Key('pipeline-filter-ai')));
-  await tester.tap(find.byKey(const Key('pipeline-filter-ai')));
+  await setWorkspacePipelineSetup(tester, expanded: false);
+  await selectWorkspaceJobFilters(tester, ['pipeline-filter-ai']);
   await _wait(
     tester,
     () =>
@@ -348,7 +354,10 @@ Future<void> exerciseLLMProcessing(
   expect(find.byKey(Key('job-${completed.id}')), findsNothing);
 
   await navigate('documentsNavigation');
-  await tester.tap(find.byKey(const Key('refreshDocuments')));
+  await refreshWorkspacePage(
+    tester,
+    list: find.byKey(const Key('documentCollectionScroll')),
+  );
   await _wait(
     tester,
     () => find.text(title).evaluate().isNotEmpty,
@@ -432,7 +441,10 @@ Future<void> exerciseLLMProcessing(
   expect(beforeRetry.state.toString(), 'ready');
   expect(beforeRetry.failureCode, isNull);
   await navigate('documentsNavigation');
-  await tester.tap(find.byKey(const Key('refreshDocuments')));
+  await refreshWorkspacePage(
+    tester,
+    list: find.byKey(const Key('documentCollectionScroll')),
+  );
   await _wait(
     tester,
     () => find.text(failedTitle).evaluate().isNotEmpty,

@@ -19,14 +19,7 @@ final class PaperlessSettingsScreen extends StatelessWidget {
       eyebrow: 'ADMIN SETTINGS',
       title: 'Paperless retrievals',
       description: 'Set how many documents Domabas retrieves from Paperless at the same time across all libraries and imports.',
-      actions: [
-        IconButton(
-          key: const Key('refreshPaperlessSettings'),
-          tooltip: 'Refresh Paperless settings',
-          onPressed: state.loading || state.saving ? null : cubit.load,
-          icon: const Icon(Icons.refresh),
-        ),
-      ],
+      onRefresh: state.loading || state.saving ? null : cubit.load,
       child: ListView(
         padding: AppLayout.cardListPadding(context),
         key: const Key('paperlessSettingsScroll'),

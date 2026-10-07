@@ -32,6 +32,10 @@ composer, while deleting another conversation retains the current selection and
 draft. Request epochs fence late history and selected-message reads so a deleted
 conversation cannot reappear.
 
+Pulling down at the top of the transcript or conversation history refreshes chat.
+The transcript, desktop history pane and mobile History dialog have independent
+gesture boundaries. The composer stays outside them and keeps its controller and
+unsent question while loading. There is no ordinary refresh button.
 Refresh retains loaded pages and their continuation. When a complete newest page
 contains no previously loaded IDs, its continuation becomes available to fill the
 gap before the retained history. This also discovers pagination when an initially
@@ -62,13 +66,14 @@ model-authored text cannot manufacture a trusted route. Composer controls respec
 keyboard and shell insets. Ctrl/Cmd+Enter sends and Enter inserts a newline. The
 transcript preserves the scroll anchor while earlier messages are inserted,
 only follows new content when already near its bottom, and offers Jump to latest.
-Page and conversation headings scroll away with the transcript on phones and
-wide windows while the composer remains available. Conversation history and
-composer overflow scroll independently. Chat observes the page's coordinated
-transcript controller without owning its lifetime. Following settles bounded
+The transcript and conversation history fill their available height. There is no
+repeated destination heading or outer page scroll; history and new-chat controls
+stay fixed, and the composer remains available. Conversation history and composer
+overflow scroll independently. Chat observes the page's primary transcript
+controller without owning its lifetime. Following settles bounded
 lazy-list layout changes and stops when the user scrolls or the controller changes.
-Loading earlier messages retains the visible message's position and the current
-heading offset, and temporarily suspends automatic following.
+Loading earlier messages retains the visible message's position and temporarily
+suspends automatic following.
 
 Administrator settings support the internal Ollama default `qwen3.5:4b`, a
 paginated installed-model catalog and explicit model entry. External service
@@ -103,6 +108,8 @@ from save errors. External mode retains the Ollama choice and explains that the
 external service manages context. A temporary invalid Ollama draft is omitted
 when saving external settings, preserving the server's existing value.
 `AppModelContextField` is a shared dumb presenter also used by AI extraction.
+Pull down on the settings form to load current saved values without replacing
+drafts. Model discovery and conflict reconciliation remain explicit actions.
 
 Tests cover generated-client transport, private response errors, uncertain
 acceptance, pagination, deletion confirmation and retry, late deletion reads,

@@ -14,6 +14,11 @@ username, write-only password, mailbox, interval, age and page size. Password
 controllers start empty; an omitted replacement preserves the saved password.
 Sparse serializers omit absent secrets instead of sending null.
 
+Pulling down on the email account list or account detail history refreshes the
+current view, including empty lists. There is no separate refresh button. The
+indicator waits for the request to complete; editors retain their separate
+connection tests and uncertain-write reconciliation actions.
+
 Connection testing is separate from saving and importing. Changing a tested value
 invalidates an earlier result. Definite failures preserve the draft; uncertain
 mutations require readback. A password write is never automatically replayed,
@@ -60,7 +65,8 @@ successful Paperless runs with failed outcomes count as partially completed.
 
 ## Activity and lifetime
 
-Your activity is a topbar action across the authenticated workspace. The feed
+Your jobs is available across the authenticated workspace through the desktop
+sidebar, rail Account menu or phone More sidebar. The feed
 spans authorized libraries and labels each row with its library. It separates
 active work from finished jobs, with independent previous/next controls and explicit state and
 kind. A mail retrieval success means files were accepted, while their parsing,
@@ -72,7 +78,8 @@ prior evidence with its update time. Provider views refresh only while visible.
 Neither uses polling or a disconnected fallback. The active badge reports
 the current bounded active page and indicates when more records are available.
 Activity requests contain independent active and finished cursors. Automatic
-refresh rereads the current pages; explicit refresh returns to the newest pages.
+refresh rereads the current pages; pulling down in Your jobs returns to the newest
+pages and waits for the response. Failed reads retain an explicit Retry action.
 Failed navigation preserves the old page and its continuation.
 
 Same-library rows open only currently permitted destinations. A row in another

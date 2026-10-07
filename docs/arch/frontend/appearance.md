@@ -46,13 +46,17 @@ timers and fences callbacks, without waiting indefinitely for platform storage.
 surfaces, navigation, input boundaries, statuses, processing cards and document
 chrome resolve colors from the current theme. A five-color `AppSemanticColors`
 extension supplies success and warning foreground/background pairs and the viewer
-canvas. Paper & Ink uses warm neutral surfaces, restrained rust actions and rounded
-outlines without shadows. Fields and secondary buttons have filled resting states.
-Primary focus and selection rings and error outlines remain visible; labels
-accompany state colors. AppPaperCanvas paints a static dot grid behind root chrome.
-Striped progress and section dividers paint theme-aware ink with transparent gaps
-and no enclosing border. Document pixels retain their own opaque viewer canvas.
-Bundled Lora supplies serif headings; body and navigation typography stay unchanged.
+canvas. Studio uses achromatic white and charcoal surfaces, restrained orange
+actions and fine neutral outlines without shadows. Fields and secondary buttons
+have filled resting states. Primary focus and error outlines retain two-pixel
+borders; labels accompany state colors. `AppPaperCanvas` paints a plain neutral
+background. The existing progress and divider presenters paint a solid rounded
+progress segment and a fine section rule, with no dot or stripe decoration.
+Document pixels retain their own opaque viewer canvas. Bundled Barlow Condensed
+provides strong page headings; DM Sans supplies body text, navigation, controls
+and form titles. The font files and their original OFL notices are included
+locally, with no runtime font download. The light-mode primary role uses the
+deeper Studio orange to keep small white action labels readable.
 See [shared UI components](components.md) for surfaces and typography.
 
 Appearance is passed to feature screens as an action widget. Foreign presentation

@@ -33,15 +33,7 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
         eyebrow: 'User settings',
         title: 'Your libraries',
         description: 'Manage your library access and accept invitations. Use the library picker above to switch libraries.',
-        actions: [
-          IconButton(
-            tooltip: 'Refresh libraries',
-            onPressed: model.loading || model.acting
-                ? null
-                : () => model.load(),
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        onRefresh: model.acting || model.loading ? null : () => model.load(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -139,7 +131,7 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
                             child: AppEmptyState(
                               icon: Icons.folder_shared_outlined,
                               title: 'No libraries to display',
-                              message: 'Refresh your libraries or accept an invitation to join one.',
+                              message: 'Pull down to refresh your libraries or accept an invitation to join one.',
                             ),
                           ),
                       ],

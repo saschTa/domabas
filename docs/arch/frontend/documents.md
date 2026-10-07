@@ -49,7 +49,7 @@ Empty filter-only searches do not need inference. The backend's existing
 fulltext and semantic modes remain available to API clients.
 
 Nonempty hybrid search omits an exact total because semantic relevance uses
-approximate indexed retrieval. The collection heading says “Search results” and
+approximate indexed retrieval. The collection footer says “Search results” and
 keeps Next, Previous, First and background refresh driven by cursors. Full-text,
 empty searches and browsing can still show exact counts. A missing total never
 becomes a displayed zero. Search validation failures have a search-specific
@@ -67,16 +67,19 @@ SHA-256, media type and size; painting results never hydrates metadata or OCR.
 Eligible PDF/image originals enter the existing bounded preview coordinator only
 with download authority. An absent search descriptor means Preview unavailable;
 email retains its email placeholder. Only a complete browse record can establish
-No original file. The single lazy collection scroll includes controls, cards and
-pagination, so controls remain reachable in short windows and enlarged text.
+No original file. The lazy collection scroll contains its cards followed by the
+count and pagination inside a fixed full-height surface. A compact progress slot
+above the cards stays the same height during refresh. Loading and error messages
+appear in a bounded, scrollable row below the collection and above phone navigation;
+healthy collections reserve no empty status row. Its separate persistent toolbar has bounded scrolling for short
+windows and enlarged text.
 
-Search width is capped at 560 pixels. A measured wide layout leaves at least 280
-pixels for the field and places Filters directly beside it, followed by Search
-and Clear search. Compact layouts retain the same field controller and focus node,
-with 48-pixel action icons below. Sort belongs to the collection toolbar on wide
-layouts and joins the search actions below 560 local pixels. Grid/list and Refresh
-remain with the count. Selected filters stay visible; healthy state needs no extra
-status row. Pending work, errors and stale results show readable status text.
+Search uses the available toolbar width beside Filters, Sort and Grid/List.
+Compact layouts keep search and the library picker above the controls.
+The field controller and focus node survive responsive changes. Search and clear
+actions are embedded in the field with 48-pixel targets. Type shortcuts and selected
+filters use a horizontally scrollable strip; healthy state needs no extra status
+row. Pending work, errors and stale results show readable status text.
 Filters select existing tags, senders and recipients from a namespace-scoped
 vocabulary. The authenticated composition injects a narrow vocabulary repository;
 a route-scoped Cubit owns one active field and abortable lookup. Tags keep AND
@@ -111,8 +114,17 @@ Refresh resolves the latest desired target and coalesces an identical active rea
 An empty later page recovers to the first page once. These are live results;
 metadata/OCR edits between requests can change ordering and membership.
 
-The visual language follows the shared Paper & Ink light and dark palettes.
-Rounded document cards use flat outlines without shadows or hover translation.
+The visual language follows the shared Studio neutral light and dark palettes.
+Rounded document cards use thin outlines without shadows or hover translation.
+The feature-owned toolbar contains search, filters, sorting and view selection.
+Pulling down from the top refreshes the collection, including an empty library,
+while preserving search criteria and the current page. The refresh indicator
+waits for the read to finish; failed reads keep the last snapshot and a Retry
+action. App composition places the toolbar in the persistent top bar beside the library
+picker; standalone screens use the same controls above their collection. The
+selected navigation identifies Documents; counts scroll with the pagination while
+the surrounding surface stays fixed. Opening a card or row
+goes directly to the original full-size document viewer.
 An opaque metadata pill fades over the preview to show original type, size and
 date without fetching additional data. The accent outline belongs to hover and
 does not persist after clicking. Keyboard focus retains Material feedback and
@@ -141,6 +153,10 @@ overlay the complete canvas, with no footer strip. They wrap and scroll when
 space is limited. PDF initialization and Fit account for the measured controls
 height so the complete page remains visible above them. Properties and extracted
 text remain available when a file cannot render, subject to the user's claims.
+PDF text selection keeps its touch handles and copy menu, with the additional
+selection magnifier disabled. Its context menu uses Flutter's adaptive toolbar
+and localizations so the renderer's separate Material/Cupertino UI dependency
+does not create a second localization requirement.
 
 PDF search uses PDFium's native text layer and highlights matching page text.
 Extracted-text search operates separately on OCR text. Scanned PDFs can have no
@@ -360,8 +376,8 @@ requests. Scope shutdown cancels all processing transport. Epoch and request
 guards reject late results. Loading another history page preserves the other
 list's extent. While browsing older pages, a notification replaces known rows
 in place and refreshes every loaded active older row; selected job detail always
-refreshes. A visible notice explains that explicit Refresh returns to the
-newest records.
+refreshes. Pulling down at the top refreshes the page, and a visible notice
+explains that this returns to the newest records.
 
 Every reindex request receives a secure UUID before transmission. An uncertain
 response retains that UUID and its observed configuration revision for a safe

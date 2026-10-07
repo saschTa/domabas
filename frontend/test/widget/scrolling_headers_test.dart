@@ -60,7 +60,7 @@ ScrollPosition position(WidgetTester tester, Finder list) => tester
 void main() {
   for (final desktop in [false, true]) {
     testWidgets(
-      'page heading scrolls away and returns with ${desktop ? 'desktop wheel' : 'phone drag'}',
+      'content scrolls within a fixed pane with ${desktop ? 'desktop wheel' : 'phone drag'}',
       (tester) async {
         late StateSetter refresh;
         var revision = 0;
@@ -91,7 +91,9 @@ void main() {
         final list = find.byKey(const Key('pageRecords'));
         final heading = find.text('Library members');
         final initialHeight = tester.getSize(list).height;
-        expect(heading.hitTestable(), findsOneWidget);
+        final surface = tester.getRect(find.byKey(const Key('pageSurface')));
+        final controls = tester.getRect(find.byKey(const Key('pageControls')));
+        expect(heading, findsNothing);
         expect(find.text('Member 99 · 0'), findsNothing);
         if (desktop) {
           await wheel(tester, list, 500);
@@ -100,7 +102,10 @@ void main() {
           await tester.pumpAndSettle();
         }
         expect(heading.hitTestable(), findsNothing);
-        expect(tester.getSize(list).height, greaterThan(initialHeight));
+        expect(tester.getSize(list).height, initialHeight);
+        expect(tester.getRect(find.byKey(const Key('pageSurface'))), surface);
+        expect(tester.getRect(find.byKey(const Key('pageControls'))), controls);
+        expect(find.text('Invite').hitTestable(), findsOneWidget);
         final scrolled = position(tester, list).pixels;
         expect(scrolled, greaterThan(0));
         refresh(() => revision++);
@@ -113,7 +118,7 @@ void main() {
           await tester.drag(list, const Offset(0, 5000));
           await tester.pumpAndSettle();
         }
-        expect(heading.hitTestable(), findsOneWidget);
+        expect(heading, findsNothing);
         expect(find.text('Invite').hitTestable(), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -167,45 +172,43 @@ void main() {
     expect(saved, isTrue);
     await tester.drag(list, const Offset(0, 1800));
     await tester.pumpAndSettle();
-    final headingScroll = find.descendant(
-      of: find.byType(SliverToBoxAdapter),
-      matching: find.byType(SingleChildScrollView),
-    );
+    final headingScroll = find.byKey(const Key('pageControls'));
     await tester.drag(headingScroll, const Offset(0, -2000));
     await tester.pumpAndSettle();
     expect(find.text('Refresh settings').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'invoice content reclaims heading space while preserving refresh position',
-    (tester) async {
-      final repository = FakeInvoiceRepository();
-      for (var index = 0; index < 20; index++) {
-        final invoice = invoiceFixture(index);
-        repository.records[invoice.id] = invoice;
-      }
-      final cubit = InvoicesCubit(repository, allowed: true)..setActive(true);
-      await mount(tester, InvoicesScreen(cubit: cubit));
-      final list = find.byKey(const PageStorageKey('invoiceWorkspaceScroll'));
-      expect(find.text('Invoices').hitTestable(), findsOneWidget);
-      await tester.drag(list, const Offset(0, -500));
-      await tester.pumpAndSettle();
-      expect(find.text('Invoices').hitTestable(), findsNothing);
-      final before = position(tester, list).pixels;
-      cubit.invalidate();
-      await tester.pumpAndSettle();
-      expect(position(tester, list).pixels, closeTo(before, .1));
-      expect(find.text('Invoices').hitTestable(), findsNothing);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await cubit.close();
-    },
-  );
+  testWidgets('invoice pane keeps its height and refresh position', (
+    tester,
+  ) async {
+    final repository = FakeInvoiceRepository();
+    for (var index = 0; index < 20; index++) {
+      final invoice = invoiceFixture(index);
+      repository.records[invoice.id] = invoice;
+    }
+    final cubit = InvoicesCubit(repository, allowed: true)..setActive(true);
+    await mount(tester, InvoicesScreen(cubit: cubit));
+    final list = find.byKey(const PageStorageKey('invoiceWorkspaceScroll'));
+    expect(find.text('Invoices'), findsNothing);
+    final surface = tester.getRect(find.byKey(const Key('pageSurface')));
+    await tester.drag(list, const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('Invoices').hitTestable(), findsNothing);
+    final before = position(tester, list).pixels;
+    cubit.invalidate();
+    await tester.pumpAndSettle();
+    expect(position(tester, list).pixels, closeTo(before, .1));
+    expect(tester.getRect(find.byKey(const Key('pageSurface'))), surface);
+    expect(find.text('Invoices').hitTestable(), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await cubit.close();
+  });
 
   for (final width in [390.0, 1440.0]) {
     testWidgets(
-      'chat heading collapses while composer and transcript follow survive at $width',
+      'chat controls stay fixed while composer and transcript follow survive at $width',
       (tester) async {
         final conversation = chatConversation('one');
         final repository = FakeChatRepository()
@@ -231,18 +234,16 @@ void main() {
         final list = find.byKey(const Key('chatTranscript'));
         await wheel(tester, list, -20000);
         await tester.pumpAndSettle();
-        expect(
-          find.text('AI chat').hitTestable(),
-          findsOneWidget,
-          reason:
-              'inner=${position(tester, list).pixels}, outer=${tester.state<NestedScrollViewState>(find.byType(NestedScrollView)).outerController.offset}',
-        );
+        expect(find.text('AI chat'), findsNothing);
+        final controls = tester.getRect(find.byKey(const Key('pageControls')));
         final composer = find.byKey(const Key('chatMessage'));
         final composerBottom = tester.getRect(composer).bottom;
         await tester.drag(list, const Offset(0, -450));
         await tester.pumpAndSettle();
         expect(find.text('AI chat').hitTestable(), findsNothing);
         expect(composer.hitTestable(), findsOneWidget);
+        expect(tester.getRect(find.byKey(const Key('pageControls'))), controls);
+        expect(find.byKey(const Key('newChat')).hitTestable(), findsOneWidget);
         expect(tester.getRect(composer).bottom, closeTo(composerBottom, .1));
         expect(find.text('Jump to latest').hitTestable(), findsOneWidget);
         final before = position(tester, list).pixels;
@@ -282,7 +283,7 @@ void main() {
   }
 
   testWidgets(
-    'loading earlier chat keeps the visible message and expanded heading in place',
+    'loading earlier chat keeps the visible message and fixed controls in place',
     (tester) async {
       final conversation = chatConversation('one');
       final repository = FakeChatRepository()
@@ -306,12 +307,14 @@ void main() {
         (widget) =>
             widget is ChatMessageCard && widget.message.id == 'answer-5',
       );
-      expect(find.text('AI chat').hitTestable(), findsOneWidget);
+      expect(find.text('AI chat'), findsNothing);
+      expect(find.byKey(const Key('newChat')).hitTestable(), findsOneWidget);
       final before = tester.getTopLeft(anchor).dy;
       await tester.tap(find.byKey(const Key('earlierChatMessages')));
       await tester.pumpAndSettle();
       expect(cubit.state.messages.length, 25);
-      expect(find.text('AI chat').hitTestable(), findsOneWidget);
+      expect(find.text('AI chat'), findsNothing);
+      expect(find.byKey(const Key('newChat')).hitTestable(), findsOneWidget);
       expect(tester.getTopLeft(anchor).dy, closeTo(before, 1));
       expect(tester.takeException(), isNull);
     },

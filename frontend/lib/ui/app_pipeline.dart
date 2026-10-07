@@ -52,8 +52,8 @@ final class AppPipelineDiagram extends StatelessWidget {
                   ? theme.colorScheme.error
                   : step.current
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.outline,
-              width: 2,
+                  : theme.colorScheme.outlineVariant,
+              width: step.failed || step.current ? 2 : 1,
             ),
           ),
           child: Column(

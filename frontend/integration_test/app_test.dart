@@ -228,11 +228,19 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(find.byKey(const Key('manageSystemUsers')));
           await tester.pumpAndSettle();
-          expect(find.text('System users'), findsOneWidget);
+          expect(
+            find.byWidgetPredicate(
+              (widget) => widget is AppPage && widget.title == 'System users',
+            ),
+            findsOneWidget,
+          );
         }
         await tester.tap(find.byKey(const Key('documentsNavigation')));
         await tester.pumpAndSettle();
-        expect(find.byKey(const Key('documentCount')), findsOneWidget);
+        expect(
+          find.byKey(const Key('documentCollectionScroll')),
+          findsOneWidget,
+        );
         expect(tester.takeException(), isNull);
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -426,6 +434,13 @@ void main() {
         'Browser account A',
       );
       expect(find.text(title), findsOneWidget);
+      expect(
+        tester
+            .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
+            .actions
+            .where((action) => action.id == 'newDocument'),
+        isEmpty,
+      );
       expect(find.byKey(const Key('newDocument')), findsNothing);
       expect(find.byKey(const Key('manageMembers')), findsNothing);
       expect(find.byKey(const Key('manageSystemUsers')), findsNothing);
@@ -567,7 +582,10 @@ void main() {
       await openLibrary('Browser account A');
       expect(find.text(title), findsOneWidget);
       expect(find.text('Private B $suffix'), findsNothing);
+      await revealWorkspaceAction(tester, 'newDocument');
       expect(find.byKey(const Key('newDocument')), findsOneWidget);
+      await tester.tap(find.byTooltip('Close actions'));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('manageMembers')), findsNothing);
       await openLibrary('Browser account B', pendingSearch: true);
       await exerciseDocumentWorkspace(

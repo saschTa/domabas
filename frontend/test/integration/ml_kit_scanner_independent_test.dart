@@ -209,6 +209,79 @@ void main() {
     );
   }
 
+  test('installed Play services startup failure keeps its SDK reference without installation advice', () async {
+    scan = () async => throw PlatformException(
+      code: 'scan_start_failed',
+      message: 'private SDK detail',
+      details: {
+        'stage': 'prepare',
+        'mlKitCode': 13,
+        'apiStatus': 17,
+        'playServicesStatus': 0,
+      },
+    );
+    await cubit.restore();
+    await cubit.addPage();
+    expect(cubit.state.error, contains('could not open'));
+    expect(
+      cubit.state.error,
+      contains('prepare / ML Kit 13 / API 17 / Play services 0'),
+    );
+    expect(cubit.state.error, isNot(contains('Install')));
+    expect(cubit.state.error, isNot(contains('private SDK detail')));
+    expect(cubit.state.stage, ScannerStage.review);
+    expect(lease.scratchBytes, 0);
+    scan = () async => jpeg;
+    await cubit.addPage();
+    expect(cubit.state.error, isNull);
+    expect(cubit.state.draft!.pages, hasLength(1));
+  });
+
+  for (final (code, guidance) in const [
+    ('scan_play_services_missing', 'missing in this Android profile'),
+    ('scan_play_services_update_required', 'needs an update'),
+    ('scan_play_services_disabled', 'is disabled'),
+    ('scan_play_services_updating', 'is updating'),
+    ('scan_play_services_invalid', 'could not verify'),
+    ('scan_network_error', 'internet connection'),
+    ('scan_read_failed', 'scanned page could not be read'),
+  ]) {
+    test(
+      '$code gives specific guidance and keeps the draft retryable',
+      () async {
+        await cubit.restore();
+        await cubit.addPage();
+        scan = () async => throw PlatformException(code: code);
+        await cubit.addPage();
+        expect(cubit.state.error, contains(guidance));
+        expect(cubit.state.stage, ScannerStage.review);
+        expect(cubit.state.draft!.pages, hasLength(1));
+        expect(lease.scratchBytes, 0);
+      },
+    );
+  }
+
+  test('malformed platform details do not expose private SDK text', () async {
+    scan = () async => throw PlatformException(
+      code: 'unknown',
+      message: 'private SDK detail',
+      details: {
+        'stage': 'private SDK detail',
+        'mlKitCode': 'private SDK detail',
+        'apiStatus': 100000000000,
+        'playServicesStatus': -123,
+        'resultCode': ['private SDK detail'],
+      },
+    );
+    await cubit.restore();
+    await cubit.addPage();
+    expect(
+      cubit.state.error,
+      'Google document scanning could not open. Try again.',
+    );
+    expect(lease.scratchBytes, 0);
+  });
+
   test(
     'failed page save keeps processed capture for retry without cropping',
     () async {

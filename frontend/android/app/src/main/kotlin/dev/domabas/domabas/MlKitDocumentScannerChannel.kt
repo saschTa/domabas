@@ -2,6 +2,11 @@ package dev.domabas.domabas
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -50,12 +55,16 @@ class MlKitDocumentScannerChannel(
     }
 
     private fun scan(id: String, result: MethodChannel.Result) {
-        if (pending != null || activity.isFinishing || activity.isDestroyed) {
-            result.error("scan_unavailable", "The document scanner is unavailable.", null)
+        if (pending != null) {
+            result.error("scan_busy", "A document scan is already in progress.", null)
+            return
+        }
+        if (activity.isFinishing || activity.isDestroyed) {
+            result.error("scan_activity_unavailable", "The scanner screen is closing.", null)
             return
         }
         if (nextRequestCode > 65535) {
-            result.error("scan_unavailable", "Restart the app before scanning again.", null)
+            result.error("scan_restart_required", "Restart the app before scanning again.", null)
             return
         }
         val request = PendingScan(id, nextRequestCode++, result)
@@ -75,16 +84,15 @@ class MlKitDocumentScannerChannel(
                         activity.startIntentSenderForResult(
                             intentSender, request.requestCode, null, 0, 0, 0,
                         )
-                    } catch (_: Exception) {
-                        fail(request, "scan_unavailable")
+                    } catch (error: Exception) {
+                        failStartup(request, "launch", error)
                     }
                 }
                 .addOnFailureListener { error ->
-                    val unsupported = error is MlKitException && error.errorCode == MlKitException.UNSUPPORTED
-                    fail(request, if (unsupported) "scan_unsupported" else "scan_unavailable")
+                    failStartup(request, "prepare", error)
                 }
-        } catch (_: Exception) {
-            fail(request, "scan_unavailable")
+        } catch (error: Exception) {
+            failStartup(request, "prepare", error)
         }
     }
 
@@ -98,7 +106,7 @@ class MlKitDocumentScannerChannel(
             return true
         }
         if (resultCode != Activity.RESULT_OK) {
-            fail(request, "scan_failed")
+            fail(request, "scan_failed", mapOf("stage" to "result", "resultCode" to resultCode))
             return true
         }
         val uri = try {
@@ -107,7 +115,7 @@ class MlKitDocumentScannerChannel(
             null
         }
         if (uri == null) {
-            fail(request, "scan_failed")
+            fail(request, "scan_result_invalid", mapOf("stage" to "result"))
             return true
         }
         reader.execute {
@@ -133,17 +141,51 @@ class MlKitDocumentScannerChannel(
                 }
             } catch (error: Exception) {
                 activity.runOnUiThread {
-                    fail(request, if (error is ScanTooLargeException) "scan_too_large" else "scan_failed")
+                    fail(
+                        request,
+                        if (error is ScanTooLargeException) "scan_too_large" else "scan_read_failed",
+                        mapOf("stage" to "read"),
+                    )
                 }
             }
         }
         return true
     }
 
-    private fun fail(request: PendingScan, code: String) {
+    private fun failStartup(request: PendingScan, stage: String, error: Exception) {
+        if (pending !== request) return
+        val causes = generateSequence<Throwable>(error) { it.cause }.take(8).toList()
+        val mlKitCode = causes.filterIsInstance<MlKitException>().firstOrNull()?.errorCode
+        val apiStatus = causes.filterIsInstance<ApiException>().firstOrNull()?.statusCode
+        val playServicesStatus = try {
+            GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(activity)
+        } catch (_: Exception) {
+            null
+        }
+        val code = when {
+            mlKitCode == MlKitException.UNSUPPORTED -> "scan_unsupported"
+            playServicesStatus == ConnectionResult.SERVICE_MISSING -> "scan_play_services_missing"
+            playServicesStatus == ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED -> "scan_play_services_update_required"
+            playServicesStatus == ConnectionResult.SERVICE_DISABLED -> "scan_play_services_disabled"
+            playServicesStatus == ConnectionResult.SERVICE_UPDATING -> "scan_play_services_updating"
+            playServicesStatus == ConnectionResult.SERVICE_INVALID -> "scan_play_services_invalid"
+            mlKitCode == MlKitException.NETWORK_ISSUE || apiStatus == CommonStatusCodes.NETWORK_ERROR -> "scan_network_error"
+            else -> "scan_start_failed"
+        }
+        val details = mapOf(
+            "stage" to stage,
+            "mlKitCode" to mlKitCode,
+            "apiStatus" to apiStatus,
+            "playServicesStatus" to playServicesStatus,
+        )
+        Log.w("DomabasScanner", "Scanner startup failed: $details", error)
+        fail(request, code, details)
+    }
+
+    private fun fail(request: PendingScan, code: String, details: Map<String, Any?>) {
         if (pending !== request) return
         pending = null
-        request.result.error(code, "Google document scanning could not finish.", null)
+        request.result.error(code, "Google document scanning could not finish.", details)
     }
 
     private fun cancel() {

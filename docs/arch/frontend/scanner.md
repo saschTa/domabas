@@ -27,7 +27,12 @@ The scanner SDK manages camera selection. Its public options do not expose a
 camera ID or lens choice, and do not guarantee automatic switching between
 physical lenses. Domabas therefore has no persisted lens preference for this
 scanner. Google Play services and supported hardware are required; the first
-scan can require an internet connection to download the scanner. Failure leaves
+scan can require an internet connection to download the scanner. The Android
+manifest declares the `document_ui` dependency so Play services can prepare it.
+Startup failures check the actual Play services status before suggesting
+installation, updates or enablement. Other failures retain a bounded error
+reference with the startup stage and SDK status codes; native startup exceptions
+are available in Android logs under `DomabasScanner`. Failure leaves
 the draft intact and explains how to retry. It does not open the custom camera
 as a fallback. See the [Google integration guide](https://developers.google.com/ml-kit/vision/doc-scanner/android)
 and [supported options](https://developers.google.com/android/reference/com/google/mlkit/vision/documentscanner/GmsDocumentScannerOptions.Builder).
@@ -215,7 +220,13 @@ automatically.
 
 Android pins `play-services-mlkit-document-scanner` 16.0.0 directly in the native
 app. Google Play services supplies its scanner UI and models; the application
-does not bundle those models. The iOS custom scanner uses the pinned
+does not bundle those models. Android release rules preserve the no-argument
+constructors of Firebase component registrars used to initialize ML Kit through
+reflection. The pinned transitive `firebase-components` version does not include
+the complete constructor keep rule needed by the Android build's strict R8 mode.
+Keep the targeted rules in `android/app/proguard-rules.pro` when changing release
+optimization settings. See the [upstream constructor rule](https://github.com/firebase/firebase-android-sdk/pull/6044).
+The iOS custom scanner uses the pinned
 `document_scan` wrapper and Apple's system Vision framework. The wrapper also
 includes an Android OpenCV detector in its package dependencies, but production
 Android capture does not invoke it. Vision is an operating system framework.

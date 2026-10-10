@@ -304,8 +304,9 @@ skipped; the production encoder still runs.
 `flutter test test/integration/ml_kit_scanner_independent_test.dart` exercises
 Android scanner channel results through the production adapter, draft and PDF
 encoder. It checks exact JPEG retention, cancellation, foreground transitions,
-late results, invalid/oversized images and retry after local save failure. These
-fixtures replace Google's UI; they do not validate the downloaded scanner itself.
+late results, invalid/oversized images, startup error guidance and retry after
+local save failure. These fixtures replace Google's UI; they do not validate the
+downloaded scanner itself.
 
 `flutter test integration_test/scanner_native_fixture_test.dart -d <device-id>`
 runs the real native detector on a simulator or supported device without opening
@@ -325,7 +326,9 @@ temporary test runner path that no longer exists.
 The test-only `integration_test/scanner_preview.dart` entry point supports browser
 inspection of the scanner UI without changing production platform factories.
 
-Native still fixtures and Android/iOS builds complement phone checks. On real
+Native still fixtures and Android/iOS builds complement phone checks. Use a
+minified release APK for Android device checks: debug builds cannot establish
+that ML Kit's reflected component registrars survive R8. On real
 Android hardware with Google Play services, verify first-use download, native
 capture/crop/cleanup, cancellation, return to the draft, repeated Add page,
 background/resume and unavailable-services errors. Compare physical scan quality

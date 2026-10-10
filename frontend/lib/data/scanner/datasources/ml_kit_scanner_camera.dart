@@ -121,13 +121,7 @@ final class MlKitScannerCamera implements ScanCaptureDataPort {
     } on PlatformException catch (error) {
       await _releaseInput();
       if (error.code == 'scan_cancelled') throw const ScanCancelled();
-      throw ScanFailure(switch (error.code) {
-        'scan_too_large' =>
-          'This scanned page exceeds 18 MiB. Scan a smaller document area.',
-        'scan_unsupported' =>
-          'Google document scanning is not supported on this device.',
-        _ => 'Google document scanning could not start or finish. Check that Google Play services is installed and up to date, connect to the internet for the first scan, then try again.',
-      });
+      throw _scannerFailure(error);
     } catch (_) {
       await _releaseInput();
       rethrow;
@@ -215,6 +209,55 @@ final class MlKitScannerCamera implements ScanCaptureDataPort {
       }
     }, cleanup: true);
   }
+}
+
+ScanFailure _scannerFailure(PlatformException error) {
+  final message = switch (error.code) {
+    'scan_too_large' =>
+      'This scanned page exceeds 18 MiB. Scan a smaller document area.',
+    'scan_unsupported' =>
+      'Google document scanning is not supported on this device.',
+    'scan_play_services_missing' => 'Google Play services is missing in this Android profile. Install it in this profile to use document scanning.',
+    'scan_play_services_update_required' =>
+      'Google Play services needs an update before document scanning can open.',
+    'scan_play_services_disabled' => 'Google Play services is disabled. Enable it in Android settings, then try again.',
+    'scan_play_services_updating' => 'Google Play services is updating. Wait for the update to finish, then try again.',
+    'scan_play_services_invalid' => 'Android could not verify this installation of Google Play services. Check its status in Android settings.',
+    'scan_network_error' => 'Google document scanning could not connect. Check your internet connection, then try again.',
+    'scan_busy' =>
+      'A scan is already open. Finish or cancel it, then try again.',
+    'scan_activity_unavailable' =>
+      'The scanner screen is closing. Open the draft again to scan a page.',
+    'scan_restart_required' => 'Restart Domabas before scanning again.',
+    'scan_result_invalid' || 'scan_read_failed' || 'scan_failed' =>
+      'The scanned page could not be read. Scan this page again.',
+    _ => 'Google document scanning could not open. Try again.',
+  };
+  final reference = <String>[];
+  final details = error.details;
+  if (details is Map) {
+    final stage = details['stage'];
+    if (stage is String &&
+        const {'prepare', 'launch', 'result', 'read'}.contains(stage)) {
+      reference.add(stage);
+    }
+    for (final (key, label) in const [
+      ('mlKitCode', 'ML Kit'),
+      ('apiStatus', 'API'),
+      ('playServicesStatus', 'Play services'),
+      ('resultCode', 'result'),
+    ]) {
+      final value = details[key];
+      if (value is int && value >= -1 && value <= 99999) {
+        reference.add('$label $value');
+      }
+    }
+  }
+  return ScanFailure(
+    reference.isEmpty
+        ? message
+        : '$message Error reference: ${reference.join(' / ')}.',
+  );
 }
 
 Future<({int width, int height, Uint8List preview})> _preparePageInBackground(

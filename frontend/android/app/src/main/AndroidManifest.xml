@@ -33,9 +33,14 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="document_ui" />
     </application>
 
     <queries>
+        <package android:name="com.google.android.gms" />
+        <package android:name="com.android.vending" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

@@ -8,14 +8,16 @@ import 'package:document_scan/document_scan.dart' as scan;
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 
-import '../../../domain/scanner/interfaces/scanner_camera.dart';
 import '../../../domain/scanner/models/scan.dart';
 import '../models/scan_assets.dart';
 import '../models/scan_image_limits.dart';
+import '../repos/scan_capture_data_port.dart';
 import 'adaptive_scan_detector.dart';
 import 'scan_storage_coordinator.dart';
 
-final class NativeScannerCamera implements ScannerCamera {
+final class NativeScannerCamera implements ScanCaptureDataPort {
+  @override
+  bool get usesSystemCapture => false;
   NativeScannerCamera(this.lease, {scan.DocumentDetector? detector})
     : _detector = AdaptiveScanDetector(detector: detector);
   final ScanStorageLease lease;
@@ -497,6 +499,7 @@ final class NativeScannerCamera implements ScannerCamera {
     }
   }
 
+  @override
   Future<CorrectedScanPage> correct(ScanCapture capture, ScanCorners corners) =>
       _run(() async {
         if (_captureId != capture.id ||

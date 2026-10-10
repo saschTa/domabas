@@ -14,7 +14,37 @@ availability there.
 
 ## Capture and presentation
 
-The rear camera detects page edges during framing. The scanner prefers the rear
+Android opens Google's ML Kit Document Scanner in full mode for each Add page
+action. Google Play services owns capture, automatic page detection, crop controls
+and image cleanup. The app requests one JPEG, with gallery import disabled, and
+saves the returned page directly into its existing draft. Users can add up to
+20 pages through repeated Add page actions, reorder them and upload one PDF.
+Returned JPEG bytes are preserved without another perspective correction or lossy
+encode. If local saving fails, the processed page remains available for Keep page
+or Retake page; it has no second set of corner controls.
+
+The scanner SDK manages camera selection. Its public options do not expose a
+camera ID or lens choice, and do not guarantee automatic switching between
+physical lenses. Domabas therefore has no persisted lens preference for this
+scanner. Google Play services and supported hardware are required; the first
+scan can require an internet connection to download the scanner. Failure leaves
+the draft intact and explains how to retry. It does not open the custom camera
+as a fallback. See the [Google integration guide](https://developers.google.com/ml-kit/vision/doc-scanner/android)
+and [supported options](https://developers.google.com/android/reference/com/google/mlkit/vision/documentscanner/GmsDocumentScannerOptions.Builder).
+Images are processed on-device; Google receives SDK usage and performance
+metrics. The draft screen discloses this before scanning. See
+[data and privacy](../../development/privacy.md#what-other-services-receive).
+
+Pending document properties are saved before opening Google's scanner; a save
+failure keeps the user in the draft. Launching the scanner temporarily backgrounds Flutter. That handoff retains
+the in-flight scan; cancelling Google's UI returns to the draft without an error.
+Closing the owning scope or signing out cancels its native request. Unique request
+identities reject late callbacks, and camera handoff waits for outstanding work.
+Native result reads run off the Android UI thread and are bounded to 18 MiB before
+crossing the platform channel. The data adapter validates JPEG dimensions before
+decoding and retains existing draft storage reservations and ownership.
+
+On iOS, the rear camera detects page edges during framing. The scanner prefers the rear
 wide lens when the device identifies it, requests the highest available capture
 resolution and JPEG quality 100, and enables automatic focus while framing.
 Automatic flash is disabled to avoid its preflash sequence. Supported cameras
@@ -63,6 +93,9 @@ available for precise corner adjustment. Invalid or crossed selections disable
 Keep page until corrected.
 
 `ScannerCamera` and `ScanDraftRepository` are the scanner's domain ports.
+`ScanCaptureDataPort` lets the local repository obtain page assets from either
+capture adapter. Android returns an already processed page; iOS performs the
+requested perspective correction. App composition selects the platform adapter.
 Immutable domain values describe camera state, captures, geometry, pages and
 draft outcomes. `ScannerCubit` owns interactions and operation state. Native
 camera, detector, files, image correction and PDF generation remain in scanner
@@ -73,7 +106,7 @@ The image presenter privately copies immutable domain byte views for Flutter's
 codec boundary and reuses its provider while the bounded image bytes are equal.
 Corner, property and theme updates therefore do not repeatedly decode the image.
 
-Only one frame detection runs at a time, with a minimum 100 ms interval. Camera
+For the custom iOS camera, only one frame detection runs at a time, with a minimum 100 ms interval. Camera
 shutdown drains actual initialization and detection work. A captured correction
 image has a separate lease from the camera controller, so backgrounding can
 release the camera while preserving correction. Discarding or closing waits for
@@ -180,9 +213,13 @@ automatically.
 
 ## Dependencies and evidence
 
-The pinned scanner uses OpenCV on Android and Apple's system Vision framework on
-iOS. Its wrapper and Android detector are open source; Vision is an operating
-system framework. The Dart `pdf` encoder creates image-only output. Skia's C++
+Android pins `play-services-mlkit-document-scanner` 16.0.0 directly in the native
+app. Google Play services supplies its scanner UI and models; the application
+does not bundle those models. The iOS custom scanner uses the pinned
+`document_scan` wrapper and Apple's system Vision framework. The wrapper also
+includes an Android OpenCV detector in its package dependencies, but production
+Android capture does not invoke it. Vision is an operating system framework.
+The Dart `pdf` encoder creates image-only output. Skia's C++
 PDF backend would require separate native bindings and binaries and is not the
 encoder used here.
 

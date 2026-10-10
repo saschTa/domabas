@@ -5,11 +5,11 @@ import '../../../domain/document/models/document.dart';
 import '../../../domain/scanner/interfaces/scan_draft_repository.dart';
 import '../../../domain/scanner/models/scan.dart';
 import '../../document/models/prepared_document_upload_metadata.dart';
-import '../datasources/native_scanner_camera.dart';
 import '../datasources/scan_draft_store.dart';
 import '../datasources/scan_pdf_encoder.dart';
 import '../datasources/scan_storage_coordinator.dart';
 import '../models/scan_image_limits.dart';
+import 'scan_capture_data_port.dart';
 import 'scan_upload_data_port.dart';
 
 final class LocalScanDraftRepository implements ScanDraftRepository {
@@ -21,7 +21,7 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
     required this.encoder,
   });
   final ScanStorageLease lease;
-  final NativeScannerCamera camera;
+  final ScanCaptureDataPort camera;
   final ScanUploadDataPort upload;
   final ScanDraftStore store;
   final ScanPdfEncoder encoder;

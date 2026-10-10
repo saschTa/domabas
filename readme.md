@@ -34,6 +34,9 @@ control. Already using Paperless-ngx? Import your existing documents from Settin
 Use Domabas in your browser, or build apps for **Android, iOS, Linux, macOS and
 Windows**. Native installation and platform requirements are covered in the
 [app guide](frontend/README.md); mobile scanning is available on Android and iOS.
+Android scanning uses Google ML Kit and requires Google Play services. Images are
+processed on-device; the SDK sends usage and performance metrics to Google. See
+[data and privacy](docs/development/privacy.md#what-other-services-receive).
 
 ## Choose your AI
 

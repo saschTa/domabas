@@ -116,6 +116,8 @@ void main() {
 }
 
 final class _Camera implements ScannerCamera {
+  @override
+  bool get usesSystemCapture => false;
   _Camera(this.bytes);
   final Uint8List bytes;
   @override

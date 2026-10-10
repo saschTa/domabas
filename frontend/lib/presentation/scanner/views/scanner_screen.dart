@@ -267,6 +267,29 @@ final class _ScannerScreenState extends State<ScannerScreen>
   }
 
   Widget _camera(BuildContext context, ScannerState state) {
+    if (widget.cubit.usesSystemCapture) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (state.busy) const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                state.busy
+                    ? 'Opening scanner and preparing your page…'
+                    : 'Ready to scan a page.',
+              ),
+              if (state.error case final error?) ...[
+                const SizedBox(height: 16),
+                AppNotice(message: error),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
     final ready = state.camera.status == ScanCameraStatus.ready;
     final taking = state.camera.status == ScanCameraStatus.capturing;
     final processing = state.camera.status == ScanCameraStatus.processing;
@@ -381,14 +404,18 @@ final class _ScannerScreenState extends State<ScannerScreen>
             ? widget.cubit.capture
             : null,
         icon: const Icon(Icons.camera_alt_outlined),
-        label: const Text('Capture page'),
+        label: Text(
+          widget.cubit.usesSystemCapture ? 'Open scanner' : 'Capture page',
+        ),
       ),
       if (state.camera.status != ScanCameraStatus.ready &&
           !state.busy &&
           state.camera.status != ScanCameraStatus.starting)
         OutlinedButton(
           onPressed: widget.cubit.addPage,
-          child: const Text('Open camera'),
+          child: Text(
+            widget.cubit.usesSystemCapture ? 'Open scanner' : 'Open camera',
+          ),
         ),
       TextButton(
         onPressed: state.busy ? null : widget.cubit.showReview,
@@ -403,6 +430,19 @@ final class _ScannerScreenState extends State<ScannerScreen>
     double previewHeight,
   ) {
     final capture = state.capture!;
+    if (capture.processed) {
+      return SizedBox(
+        height: previewHeight,
+        child: ScanImage(
+          bytes: capture.preview,
+          fit: BoxFit.contain,
+          semanticLabel: 'Scanned page ready to save',
+          errorBuilder: (_, _, _) => const Center(
+            child: Text('Preview unavailable. Retake this page.'),
+          ),
+        ),
+      );
+    }
     final point = state.corners!.points[_selectedCorner];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -623,6 +663,12 @@ final class _ScannerScreenState extends State<ScannerScreen>
         ],
         if (draft.editable) ...[
           const SizedBox(height: 12),
+          if (widget.cubit.usesSystemCapture) ...[
+            const Text(
+              'Scanning uses Google Play services. Images are processed on your device; Google receives scanner usage and performance metrics.',
+            ),
+            const SizedBox(height: 12),
+          ],
           Align(
             alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(

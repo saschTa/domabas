@@ -31,6 +31,14 @@ and [scan drafts](../arch/frontend/scanner.md).
 
 ## What other services receive
 
+**Android document scanning** uses Google ML Kit through Google Play services.
+Google processes the scan images on the device and does not send the images or
+scan output to its servers. The SDK can download resources and sends usage and
+performance metrics to Google. Its [terms and privacy description](https://developers.google.com/ml-kit/terms)
+explain this separate data flow. Domabas uploads the saved PDF to the configured
+library only when the user submits the draft. iOS retains its custom camera and
+system Vision detector.
+
 The backend sends original bytes to the configured **document processor** for
 extraction, OCR and thumbnails, and the supplied PDF password when unlocking.
 Extracted text passages and semantic-search queries go through that processor

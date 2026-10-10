@@ -21,11 +21,11 @@
   },
   {
     "name": "androidx.appcompat:appcompat",
-    "version": "1.1.0"
+    "version": "1.6.1"
   },
   {
     "name": "androidx.appcompat:appcompat-resources",
-    "version": "1.1.0"
+    "version": "1.6.1"
   },
   {
     "name": "androidx.arch.core:core-common",
@@ -42,10 +42,6 @@
   {
     "name": "androidx.browser:browser",
     "version": "1.9.0"
-  },
-  {
-    "name": "androidx.camera.featurecombinationquery:featurecombinationquery",
-    "version": "1.6.2"
   },
   {
     "name": "androidx.camera:camera-camera2",
@@ -65,6 +61,10 @@
   },
   {
     "name": "androidx.camera:camera-video",
+    "version": "1.6.2"
+  },
+  {
+    "name": "androidx.camera.featurecombinationquery:featurecombinationquery",
     "version": "1.6.2"
   },
   {
@@ -170,6 +170,14 @@
   {
     "name": "androidx.drawerlayout:drawerlayout",
     "version": "1.0.0"
+  },
+  {
+    "name": "androidx.emoji2:emoji2",
+    "version": "1.2.0"
+  },
+  {
+    "name": "androidx.emoji2:emoji2-views-helper",
+    "version": "1.2.0"
   },
   {
     "name": "androidx.exifinterface:exifinterface",
@@ -296,6 +304,10 @@
     "version": "1.0.0"
   },
   {
+    "name": "androidx.resourceinspection:resourceinspection-annotation",
+    "version": "1.0.1"
+  },
+  {
     "name": "androidx.savedstate:savedstate",
     "version": "1.4.0"
   },
@@ -352,10 +364,6 @@
     "version": "1.0.0"
   },
   {
-    "name": "androidx.window.extensions.core:core",
-    "version": "1.0.0"
-  },
-  {
     "name": "androidx.window:window",
     "version": "1.2.0"
   },
@@ -364,8 +372,40 @@
     "version": "1.2.0"
   },
   {
+    "name": "androidx.window.extensions.core:core",
+    "version": "1.0.0"
+  },
+  {
     "name": "com.getkeepsafe.relinker:relinker",
     "version": "1.4.5"
+  },
+  {
+    "name": "com.google.android.datatransport:transport-api",
+    "version": "2.2.1"
+  },
+  {
+    "name": "com.google.android.datatransport:transport-backend-cct",
+    "version": "2.3.3"
+  },
+  {
+    "name": "com.google.android.datatransport:transport-runtime",
+    "version": "2.2.6"
+  },
+  {
+    "name": "com.google.android.gms:play-services-base",
+    "version": "18.5.0"
+  },
+  {
+    "name": "com.google.android.gms:play-services-basement",
+    "version": "18.4.0"
+  },
+  {
+    "name": "com.google.android.gms:play-services-mlkit-document-scanner",
+    "version": "16.0.0"
+  },
+  {
+    "name": "com.google.android.gms:play-services-tasks",
+    "version": "18.2.0"
   },
   {
     "name": "com.google.auto.value:auto-value-annotations",
@@ -392,6 +432,22 @@
     "version": "2.41.0"
   },
   {
+    "name": "com.google.firebase:firebase-annotations",
+    "version": "16.0.0"
+  },
+  {
+    "name": "com.google.firebase:firebase-components",
+    "version": "16.1.0"
+  },
+  {
+    "name": "com.google.firebase:firebase-encoders",
+    "version": "16.1.0"
+  },
+  {
+    "name": "com.google.firebase:firebase-encoders-json",
+    "version": "17.1.0"
+  },
+  {
     "name": "com.google.guava:failureaccess",
     "version": "1.0.3"
   },
@@ -408,6 +464,10 @@
     "version": "3.1"
   },
   {
+    "name": "com.google.mlkit:common",
+    "version": "18.11.0"
+  },
+  {
     "name": "com.squareup.okio:okio",
     "version": "3.4.0"
   },
@@ -422,6 +482,10 @@
   {
     "name": "javax.inject:javax.inject",
     "version": "1"
+  },
+  {
+    "name": "org.jetbrains:annotations",
+    "version": "23.0.0"
   },
   {
     "name": "org.jetbrains.kotlin:kotlin-android-extensions-runtime",
@@ -482,10 +546,6 @@
   {
     "name": "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm",
     "version": "1.7.3"
-  },
-  {
-    "name": "org.jetbrains:annotations",
-    "version": "23.0.0"
   },
   {
     "name": "org.jspecify:jspecify",

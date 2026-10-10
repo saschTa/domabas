@@ -101,6 +101,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }
 
   final ScannerCamera _camera;
+  bool get usesSystemCapture => _camera.usesSystemCapture;
   final ScanDraftRepository _repository;
   final bool allowed;
   final void Function()? onAccepted;
@@ -216,6 +217,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
     } finally {
       if (!_closing) emit(state.copyWith(busy: false));
     }
+    if (_camera.usesSystemCapture && !_closing) await capture();
   }
 
   Future<void> setForeground(bool foreground) async {
@@ -267,6 +269,15 @@ final class ScannerCubit extends Cubit<ScannerState> {
     emit(state.copyWith(busy: true, clearError: true));
     _takingCapture = true;
     try {
+      if (_camera.usesSystemCapture) {
+        final saved = await flushProperties();
+        if (_closing) return;
+        if (!saved || !_foreground) {
+          emit(state.copyWith(stage: ScannerStage.review));
+          await _reconcileCamera();
+          return;
+        }
+      }
       final capture = await _camera.capture();
       if (_closing) return;
       final corners = capture.corners.validFor(capture.width, capture.height)
@@ -280,8 +291,30 @@ final class ScannerCubit extends Cubit<ScannerState> {
         ),
       );
       await _reconcileCamera();
+      if (capture.processed && !_closing) {
+        await _keepPage(capture, corners);
+      }
+    } on ScanCancelled {
+      if (!_closing) {
+        emit(
+          state.copyWith(
+            stage: ScannerStage.review,
+            clearCapture: true,
+            clearError: true,
+          ),
+        );
+      }
     } catch (error) {
-      if (!_closing) emit(state.copyWith(error: _message(error)));
+      if (!_closing) {
+        emit(
+          state.copyWith(
+            stage: _camera.usesSystemCapture && state.capture == null
+                ? ScannerStage.review
+                : state.stage,
+            error: _message(error),
+          ),
+        );
+      }
     } finally {
       _takingCapture = false;
       if (!_closing && state.stage == ScannerStage.camera) {
@@ -297,6 +330,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
 
   void moveCorner(int index, ScanPoint point) {
     if (!_canEdit ||
+        state.capture?.processed == true ||
         state.stage != ScannerStage.correction ||
         index < 0 ||
         index > 3 ||
@@ -310,13 +344,14 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }
 
   void resetCorners() {
-    if (_canEdit && state.capture != null) {
+    if (_canEdit && state.capture != null && !state.capture!.processed) {
       emit(state.copyWith(corners: ScanCorners.fullImage()));
     }
   }
 
   void moveEdge(int index, ScanPoint midpoint) {
     if (!_canEdit ||
+        state.capture?.processed == true ||
         state.stage != ScannerStage.correction ||
         index < 0 ||
         index > 3 ||
@@ -347,22 +382,26 @@ final class ScannerCubit extends Cubit<ScannerState> {
     final corners = state.corners!;
     emit(state.copyWith(busy: true, clearError: true));
     try {
-      if (!await flushProperties() || _closing) return;
-      final draft = await _repository.keepPage(capture, corners);
-      if (_closing) return;
-      emit(
-        state.copyWith(
-          draft: draft,
-          clearCapture: true,
-          stage: ScannerStage.review,
-        ),
-      );
-      await _camera.releaseCapture(capture.id);
+      await _keepPage(capture, corners);
     } catch (error) {
       if (!_closing) emit(state.copyWith(error: _message(error)));
     } finally {
       if (!_closing) emit(state.copyWith(busy: false));
     }
+  }
+
+  Future<void> _keepPage(ScanCapture capture, ScanCorners corners) async {
+    if (!await flushProperties() || _closing) return;
+    final draft = await _repository.keepPage(capture, corners);
+    if (_closing) return;
+    emit(
+      state.copyWith(
+        draft: draft,
+        clearCapture: true,
+        stage: ScannerStage.review,
+      ),
+    );
+    await _camera.releaseCapture(capture.id);
   }
 
   Future<void> retake() async {
@@ -379,6 +418,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
     } finally {
       if (!_closing) emit(state.copyWith(busy: false));
     }
+    if (_camera.usesSystemCapture && !_closing) await this.capture();
   }
 
   Future<void> showReview() async {

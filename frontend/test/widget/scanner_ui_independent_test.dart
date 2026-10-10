@@ -11,6 +11,61 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../integration_test/scanner_fixtures.dart';
 
 void main() {
+  testWidgets('system scan has no custom camera or second crop controls', (
+    tester,
+  ) async {
+    final camera = FixtureScannerCamera()
+      ..usesSystemCapture = true
+      ..captureGate = Completer<ScanCapture>();
+    final repository = _ProcessedPageSaveRepository();
+    final cubit = ScannerCubit(
+      camera: camera,
+      repository: repository,
+      allowed: true,
+    );
+    addTearDown(camera.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScannerScreen(
+          cubit: cubit,
+          previewBuilder: (_) => const Text('Custom camera preview'),
+          canReadDocuments: false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Google receives scanner usage'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('addScanPage')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Opening scanner'), findsOneWidget);
+    expect(find.text('Custom camera preview'), findsNothing);
+    camera.captureGate!.complete(
+      ScanCapture(
+        id: 'processed',
+        width: 200,
+        height: 300,
+        corners: ScanCorners.fullImage(),
+        preview: scanJpeg(200, 300),
+        processed: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Save failed. Try again.'), findsOneWidget);
+    expect(find.text('Corner controls'), findsNothing);
+    expect(find.byType(ScanFrame), findsNothing);
+    expect(find.byKey(const Key('keepScanPage')), findsOneWidget);
+    repository.fail = false;
+    await tester.tap(find.byKey(const Key('keepScanPage')));
+    await tester.pumpAndSettle();
+    expect(cubit.state.stage, ScannerStage.review);
+    expect(cubit.state.draft!.pages, hasLength(1));
+    expect(camera.captures, 1);
+  });
+
   for (final layout in [
     (const Size(800, 1280), 1200, 1600),
     (const Size(1280, 800), 1600, 1200),
@@ -640,4 +695,13 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+}
+
+final class _ProcessedPageSaveRepository extends FixtureScanRepository {
+  bool fail = true;
+  @override
+  Future<ScanDraft> keepPage(ScanCapture capture, ScanCorners corners) {
+    if (fail) throw const ScanFailure('Save failed. Try again.');
+    return super.keepPage(capture, corners);
+  }
 }

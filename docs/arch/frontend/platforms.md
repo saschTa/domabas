@@ -125,13 +125,18 @@ See the [platform build guide](../../development/index.md#native-targets) for ho
 
 ## Mobile scanner
 
-Camera scanning is available on Android and iOS. The camera permission is requested
-when entering capture; both iOS property-list configurations describe its purpose.
-Android keeps API 24 as its minimum and does not require Google Play Services for
-edge detection. The native detector uses OpenCV on Android and the installed
-Vision framework on iOS. Unsupported targets do not initialize these plugins.
+Camera scanning is available on Android and iOS. Android keeps API 24 as its
+minimum and uses Google ML Kit Document Scanner 16.0.0 through Google Play
+services. Google owns its camera UI, lens selection and permission; the first
+scan can require downloading scanner resources. Unsupported or missing services
+produce a retryable error without changing saved pages. The public scanner API
+has no lens-selection option, so there is no persisted camera preference.
+On iOS, camera permission is requested when entering the custom capture flow;
+both property-list configurations describe its purpose. This flow uses the
+installed Vision framework for rectangle detection. Unsupported targets do not
+initialize mobile capture.
 
-The app owns the camera preview bridge and coordinates controller handoff. Durable
+The app owns the iOS camera preview bridge and coordinates capture handoff. Durable
 draft storage is scoped to the API endpoint, user and library and survives signing
 out. Android backup rules preserve the existing secure-session exclusions; iOS
 marks the scanner root as excluded from backup. See [scanner ownership and limits](scanner.md).

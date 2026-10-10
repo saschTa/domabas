@@ -659,26 +659,26 @@
   {
     "id": "maven:androidx.appcompat:appcompat",
     "name": "androidx.appcompat:appcompat",
-    "version": "1.1.0",
+    "version": "1.6.1",
     "component": "Android native runtime",
-    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat/1.1.0/appcompat-1.1.0.pom",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat/1.6.1/appcompat-1.6.1.pom",
     "license": "Apache-2.0",
     "urls": [
       "https://www.apache.org/licenses/LICENSE-2.0.txt"
     ],
-    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
   },
   {
     "id": "maven:androidx.appcompat:appcompat-resources",
     "name": "androidx.appcompat:appcompat-resources",
-    "version": "1.1.0",
+    "version": "1.6.1",
     "component": "Android native runtime",
-    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat-resources/1.1.0/appcompat-resources-1.1.0.pom",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat-resources/1.6.1/appcompat-resources-1.6.1.pom",
     "license": "Apache-2.0",
     "urls": [
       "https://www.apache.org/licenses/LICENSE-2.0.txt"
     ],
-    "note": "Resolved from Android releaseRuntimeClasspath on 2026-09-26. Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Native dependencies are not locked by pubspec.lock; verify the dependency graph and additional native-binary notices for each release."
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
   },
   {
     "id": "maven:androidx.arch.core:core-common",
@@ -2343,5 +2343,190 @@
       "frontend/assets/licenses/dmsans-source.txt"
     ],
     "license": "OFL-1.1"
+  },
+  {
+    "id": "maven:androidx.emoji2:emoji2",
+    "name": "androidx.emoji2:emoji2",
+    "version": "1.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/emoji2/emoji2/1.2.0/emoji2-1.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:androidx.emoji2:emoji2-views-helper",
+    "name": "androidx.emoji2:emoji2-views-helper",
+    "version": "1.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/emoji2/emoji2-views-helper/1.2.0/emoji2-views-helper-1.2.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:androidx.resourceinspection:resourceinspection-annotation",
+    "name": "androidx.resourceinspection:resourceinspection-annotation",
+    "version": "1.0.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/androidx/resourceinspection/resourceinspection-annotation/1.0.1/resourceinspection-annotation-1.0.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.datatransport:transport-api",
+    "name": "com.google.android.datatransport:transport-api",
+    "version": "2.2.1",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/datatransport/transport-api/2.2.1/transport-api-2.2.1.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.datatransport:transport-backend-cct",
+    "name": "com.google.android.datatransport:transport-backend-cct",
+    "version": "2.3.3",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/datatransport/transport-backend-cct/2.3.3/transport-backend-cct-2.3.3.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.datatransport:transport-runtime",
+    "name": "com.google.android.datatransport:transport-runtime",
+    "version": "2.2.6",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/datatransport/transport-runtime/2.2.6/transport-runtime-2.2.6.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.gms:play-services-base",
+    "name": "com.google.android.gms:play-services-base",
+    "version": "18.5.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-base/18.5.0/play-services-base-18.5.0.pom",
+    "license": "Android Software Development Kit License",
+    "urls": [],
+    "files": [
+      "third_party/licenses/native/google-play-services-TERMS.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"Android Software Development Kit License\",\"url\":\"https://developer.android.com/studio/terms.html\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Google proprietary terms apply; this component is not covered by the application MIT license. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.gms:play-services-basement",
+    "name": "com.google.android.gms:play-services-basement",
+    "version": "18.4.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-basement/18.4.0/play-services-basement-18.4.0.pom",
+    "license": "Android Software Development Kit License",
+    "urls": [],
+    "files": [
+      "third_party/licenses/native/google-play-services-TERMS.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"Android Software Development Kit License\",\"url\":\"https://developer.android.com/studio/terms.html\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Google proprietary terms apply; this component is not covered by the application MIT license. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.gms:play-services-mlkit-document-scanner",
+    "name": "com.google.android.gms:play-services-mlkit-document-scanner",
+    "version": "16.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-mlkit-document-scanner/16.0.0/play-services-mlkit-document-scanner-16.0.0.pom",
+    "license": "ML Kit Terms of Service",
+    "urls": [],
+    "files": [
+      "third_party/licenses/native/ml-kit-TERMS.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"ML Kit Terms of Service\",\"url\":\"https://developers.google.com/ml-kit/terms\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Google proprietary terms apply; this component is not covered by the application MIT license. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.android.gms:play-services-tasks",
+    "name": "com.google.android.gms:play-services-tasks",
+    "version": "18.2.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-tasks/18.2.0/play-services-tasks-18.2.0.pom",
+    "license": "Android Software Development Kit License",
+    "urls": [],
+    "files": [
+      "third_party/licenses/native/google-play-services-TERMS.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"Android Software Development Kit License\",\"url\":\"https://developer.android.com/studio/terms.html\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Google proprietary terms apply; this component is not covered by the application MIT license. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.firebase:firebase-annotations",
+    "name": "com.google.firebase:firebase-annotations",
+    "version": "16.0.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/firebase/firebase-annotations/16.0.0/firebase-annotations-16.0.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.firebase:firebase-components",
+    "name": "com.google.firebase:firebase-components",
+    "version": "16.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/firebase/firebase-components/16.1.0/firebase-components-16.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.firebase:firebase-encoders",
+    "name": "com.google.firebase:firebase-encoders",
+    "version": "16.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/firebase/firebase-encoders/16.1.0/firebase-encoders-16.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.firebase:firebase-encoders-json",
+    "name": "com.google.firebase:firebase-encoders-json",
+    "version": "17.1.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/firebase/firebase-encoders-json/17.1.0/firebase-encoders-json-17.1.0.pom",
+    "license": "Apache-2.0",
+    "urls": [
+      "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"The Apache Software License, Version 2.0\",\"url\":\"http://www.apache.org/licenses/LICENSE-2.0.txt\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
+  },
+  {
+    "id": "maven:com.google.mlkit:common",
+    "name": "com.google.mlkit:common",
+    "version": "18.11.0",
+    "component": "Android native runtime",
+    "sourceUrl": "https://dl.google.com/dl/android/maven2/com/google/mlkit/common/18.11.0/common-18.11.0.pom",
+    "license": "ML Kit Terms of Service",
+    "urls": [],
+    "files": [
+      "third_party/licenses/native/ml-kit-TERMS.txt"
+    ],
+    "note": "Exact published POM license declarations: [{\"name\":\"ML Kit Terms of Service\",\"url\":\"https://developers.google.com/ml-kit/terms\"}]. Selected by the Android releaseRuntimeClasspath with ML Kit document scanner 16.0.0. Google proprietary terms apply; this component is not covered by the application MIT license. Native dependencies are not locked by pubspec.lock; verify the graph and packaged notices for each release."
   }
 ]

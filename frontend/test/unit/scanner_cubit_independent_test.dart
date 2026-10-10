@@ -26,6 +26,35 @@ void main() {
     await cubit.keepPage();
   }
 
+  for (final background in [false, true]) {
+    test(
+      'system scan saves properties before handoff, background=$background',
+      () async {
+        camera.usesSystemCapture = true;
+        await cubit.restore();
+        repository.saveGate = Completer<void>();
+        cubit.setProperties(
+          scanProperties({'title': 'Saved before native handoff'}),
+        );
+        final adding = cubit.addPage();
+        await Future<void>.delayed(Duration.zero);
+        expect(camera.captures, 0);
+        expect(repository.saves, 1);
+        final backgrounding = background
+            ? cubit.setForeground(false)
+            : Future<void>.value();
+        repository.saveGate!.complete();
+        await Future.wait([adding, backgrounding]);
+        expect(
+          repository.draft.properties.title,
+          'Saved before native handoff',
+        );
+        expect(camera.captures, background ? 0 : 1);
+        expect(cubit.state.stage, ScannerStage.review);
+      },
+    );
+  }
+
   for (var edge = 0; edge < 4; edge++) {
     test(
       'edge $edge moves both endpoints and preserves its slope at image bounds',

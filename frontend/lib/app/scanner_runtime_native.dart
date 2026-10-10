@@ -12,10 +12,13 @@ import 'package:path_provider/path_provider.dart';
 
 import '../data/document/datasources/document_upload_remote_data_source.dart';
 import '../data/scanner/datasources/native_scanner_camera.dart';
+import '../data/scanner/datasources/ml_kit_scanner_camera.dart';
+import '../data/scanner/datasources/vision_kit_scanner_camera.dart';
 import '../data/scanner/datasources/scan_draft_store.dart';
 import '../data/scanner/datasources/scan_pdf_encoder.dart';
 import '../data/scanner/datasources/scan_storage_coordinator.dart';
 import '../data/scanner/repos/local_scan_draft_repository.dart';
+import '../data/scanner/repos/scan_capture_data_port.dart';
 import '../domain/identity/models/identity.dart';
 import '../domain/scanner/models/scan.dart';
 import 'scanner_document_upload_adapter.dart';
@@ -103,7 +106,9 @@ final class _NativeScannerFactory implements ScannerScopeFactory {
       await lease.release();
       throw const ScanFailure('This scanner session has ended.');
     }
-    final camera = NativeScannerCamera(lease);
+    final ScanCaptureDataPort camera = Platform.isAndroid
+        ? MlKitScannerCamera(lease)
+        : VisionKitScannerCamera(lease);
     final repository = LocalScanDraftRepository(
       lease: lease,
       camera: camera,
@@ -140,7 +145,7 @@ final class _NativeScannerFactory implements ScannerScopeFactory {
 final class _NativeScannerScope implements ScannerScope {
   _NativeScannerScope(this.camera, this.repository, this.lease);
   @override
-  final NativeScannerCamera camera;
+  final ScanCaptureDataPort camera;
   @override
   final LocalScanDraftRepository repository;
   final ScanStorageLease lease;
@@ -148,7 +153,10 @@ final class _NativeScannerScope implements ScannerScope {
   Future<void>? _closing;
   @override
   Widget Function(BuildContext) get previewBuilder => (_) {
-    final controller = camera.currentController;
+    final source = camera;
+    final controller = source is NativeScannerCamera
+        ? source.currentController
+        : null;
     if (controller == null || !controller.value.isInitialized) {
       return const SizedBox.shrink();
     }

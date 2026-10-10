@@ -98,6 +98,16 @@ The Go module and Flutter lockfile record the pinned versions.
 
 ## Android embedded notices
 
+The Android scanner pins Google ML Kit Document Scanner 16.0.0. Its scanner and
+common runtime have [ML Kit terms](licenses/native/ml-kit-TERMS.txt); the selected
+Google Play services libraries declare the [Android SDK license](licenses/native/google-play-services-TERMS.txt).
+The supplemental inventory records exact POM declarations and selected runtime
+versions, including Apache-licensed transport and Firebase support libraries.
+The scanner UI and models are supplied by Google Play services rather than
+bundled by Domabas. These Google components have terms separate from Domabas's
+MIT license. See [scanner behaviour](../docs/arch/frontend/scanner.md) and
+[privacy](../docs/development/privacy.md#what-other-services-receive).
+
 CameraX camera-core 1.6.2 includes statically linked libyuv. The
 [CameraX release source](https://developer.android.com/jetpack/androidx/releases/camera#1.6.2)
 is AndroidX `9046f07948c1e7a89aaec581463730f4d666611b`; its CMake target links

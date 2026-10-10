@@ -289,9 +289,11 @@ authenticated upload and backend storage. Production factories have no synthetic
 camera switch. Changes to the shared PDF dependencies also require existing viewer
 regression checks.
 
-Run the camera adapter fixtures from `frontend` with `flutter test
+Run the retained custom-camera adapter fixtures from `frontend` with `flutter test
 test/integration/scanner_camera_independent_test.dart`. They replace camera
-hardware while exercising the production capture, isolate and crop paths.
+hardware while exercising the custom capture, isolate and crop paths. Production
+Android and iOS use ML Kit and VisionKit respectively; these fixtures are not
+evidence that either system scanner's camera UI works.
 Held detector and shutter futures verify that capture does not wait for live
 analysis, preparation starts only after the photo returns, and suspension/closure
 drain owned work. Widget tests inspect actual preview bounds on portrait and
@@ -300,6 +302,21 @@ The storage fixture also uses `pdfinfo` and `pdftoppm` to independently inspect
 PDF pages when both tools are installed (`poppler-utils` on Debian-based runners,
 `poppler` with Homebrew). Without them, that external inspection is explicitly
 skipped; the production encoder still runs.
+
+`flutter test test/integration/ml_kit_scanner_independent_test.dart` exercises
+Android scanner channel results through the production adapter, draft and PDF
+encoder. It checks exact JPEG retention, cancellation, foreground transitions,
+late results, invalid/oversized images, startup error guidance and retry after
+local save failure. These fixtures replace Google's UI; they do not validate the
+downloaded scanner itself.
+
+`flutter test test/integration/vision_kit_scanner_independent_test.dart` exercises
+iOS batch results through the production adapter, draft and PDF encoder with a
+mocked native channel. It covers ordered JPEG retention, one-page-at-a-time reads,
+remaining capacity, cancellation, foreground transitions and late results. Failure
+fixtures cover read/save retry with stable page identity, explicit discard of
+pending pages, image limits, camera handoff and iOS permission guidance. These
+tests do not open VisionKit or prove physical camera behavior.
 
 `flutter test integration_test/scanner_native_fixture_test.dart -d <device-id>`
 runs the real native detector on a simulator or supported device without opening
@@ -319,13 +336,30 @@ temporary test runner path that no longer exists.
 The test-only `integration_test/scanner_preview.dart` entry point supports browser
 inspection of the scanner UI without changing production platform factories.
 
-Native still fixtures and Android/iOS builds complement phone checks. On real
-hardware, verify edge alignment in all orientations, skewed-page correction,
-manual corner adjustment, permission denial, background/resume, camera cancellation,
-adding/removing/reordering pages, app-restart draft restoration and upload. Compare
-tap-to-photo timing and sharpness in bright and dim lighting, keeping the tablet
-steady until capture changes to preparation. A build or injected
-camera test does not substitute for this checklist. Report executed checks and
+Native still fixtures and Android/iOS builds complement phone checks. Use a
+minified release APK for Android device checks: debug builds cannot establish
+that ML Kit's reflected component registrars survive R8. On real
+Android hardware with Google Play services, verify first-use download, native
+capture/crop/cleanup, cancellation, return to the draft, repeated Add page,
+background/resume and unavailable-services errors. Compare physical scan quality
+in bright and dim lighting. The native detector fixtures still exercise the
+packaged OpenCV detector, not the production ML Kit scanner UI.
+On iOS hardware, verify real VisionKit presentation, capture and its crop/review
+controls in both landscape orientations and portrait. Check permission denial,
+normal cancellation, background/resume, one-page and multiple-page return, and
+the order of pages saved into the draft. Check remaining-capacity rejection,
+retry after a paused import, explicit discard of unsaved pages and the leave
+confirmation even when a read failure occurs before a preview exists. Verify
+that earlier committed pages remain saved, upload/new capture stay blocked while
+pages are pending, and only committed pages restore after app restart. Exercise
+adding/removing/reordering pages and upload. Compare physical capture sharpness
+in bright and dim lighting. The system owns camera settings and image cleanup.
+
+Use a signed install/run path that preserves an existing phone installation and
+its data. Flutter integration runners can uninstall their test app; do not run
+them against a user's installed Domabas app as a shortcut to camera validation.
+A build or injected camera test does not substitute for this checklist. Report
+executed checks and
 remaining hardware limits in the task or pull request report.
 See [scanner architecture and limits](../arch/frontend/scanner.md) for the
 production behavior these checks cover.

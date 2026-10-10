@@ -84,12 +84,14 @@ final class ScanCapture {
     required this.height,
     required this.corners,
     required Uint8List preview,
+    this.processed = false,
   }) : preview = Uint8List.fromList(preview).asUnmodifiableView();
   final String id;
   final int width;
   final int height;
   final ScanCorners corners;
   final Uint8List preview;
+  final bool processed;
 }
 
 final class ScanPage {
@@ -134,6 +136,10 @@ final class ScanFailure implements Exception {
   final String message;
   @override
   String toString() => message;
+}
+
+final class ScanCancelled implements Exception {
+  const ScanCancelled();
 }
 
 final class ScanSubmission {

@@ -5,11 +5,11 @@ import '../../../domain/document/models/document.dart';
 import '../../../domain/scanner/interfaces/scan_draft_repository.dart';
 import '../../../domain/scanner/models/scan.dart';
 import '../../document/models/prepared_document_upload_metadata.dart';
-import '../datasources/native_scanner_camera.dart';
 import '../datasources/scan_draft_store.dart';
 import '../datasources/scan_pdf_encoder.dart';
 import '../datasources/scan_storage_coordinator.dart';
 import '../models/scan_image_limits.dart';
+import 'scan_capture_data_port.dart';
 import 'scan_upload_data_port.dart';
 
 final class LocalScanDraftRepository implements ScanDraftRepository {
@@ -21,7 +21,7 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
     required this.encoder,
   });
   final ScanStorageLease lease;
-  final NativeScannerCamera camera;
+  final ScanCaptureDataPort camera;
   final ScanUploadDataPort upload;
   final ScanDraftStore store;
   final ScanPdfEncoder encoder;
@@ -98,9 +98,10 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
             0,
             (sum, p) => sum + ((p as Map)['fileLength'] as int),
           );
-          if (total + corrected.bytes.length > 18 * 1024 * 1024) {
+          if (total + corrected.bytes.length >
+              ScanImageLimits.maxDraftPageBytes) {
             throw const ScanFailure(
-              'Saved page images must total at most 18 MiB. Remove a page before adding another.',
+              'Saved page images must total at most 98 MiB. Remove a page before adding another.',
             );
           }
           final id = ScanDraftStore.newId();
@@ -201,7 +202,9 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
             ),
           );
           await store.cleanupUnreferenced();
-          final reservation = await lease.reserve(20 * 1024 * 1024 + 32768);
+          final reservation = await lease.reserve(
+            ScanImageLimits.maxPdfBytes + 32768,
+          );
           try {
             if (token.isCompleted) {
               throw const ScanFailure('Upload cancelled before preparation.');
@@ -278,7 +281,7 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
         manifest,
         attempt,
         'pdf',
-        20 * 1024 * 1024,
+        ScanImageLimits.maxPdfBytes,
       );
       final metadataBytes = await store.verifyAsset(
         manifest,

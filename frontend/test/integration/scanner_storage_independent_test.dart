@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:domabas/data/document/datasources/document_upload_remote_data_source.dart';
 import 'package:domabas/data/document/models/prepared_document_upload_metadata.dart';
 import 'package:domabas/data/scanner/datasources/native_scanner_camera.dart';
@@ -56,8 +57,12 @@ void main() {
     int height, {
     int red = 230,
     int green = 30,
+    int? byteLength,
   }) async {
-    final bytes = scanJpeg(width, height, red: red, green: green);
+    final jpeg = scanJpeg(width, height, red: red, green: green);
+    final bytes = byteLength == null
+        ? jpeg
+        : (Uint8List(byteLength)..setRange(0, jpeg.length, jpeg));
     final thumbnail = scanJpeg(100, 100, red: red, green: green);
     final page = <String, dynamic>{
       'id': id,
@@ -182,7 +187,7 @@ void main() {
   });
   test('owner, scratch and global reservations account pending bytes and release idempotently', () async {
     final store = await open();
-    final first = await store.lease.reserve(30 * 1024 * 1024);
+    final first = await store.lease.reserve(190 * 1024 * 1024);
     await expectLater(
       store.lease.reserve(11 * 1024 * 1024),
       throwsA(isA<ScanFailure>()),
@@ -217,14 +222,14 @@ void main() {
     final usage = _GatedUsage();
     coordinator = ScanStorageCoordinator(() async => root, usage: usage);
     final store = await open();
-    final pending = await store.lease.reserve(30 * 1024 * 1024);
+    final pending = await store.lease.reserve(190 * 1024 * 1024);
     usage.gate = Completer<void>();
     final allocating = store.lease.reserve(15 * 1024 * 1024);
     final check = expectLater(allocating, throwsA(isA<ScanFailure>()));
     await usage.scanned.future;
     final file = await File('${store.lease.directory.path}/committed.pdf')
         .open(mode: FileMode.write);
-    await file.truncate(30 * 1024 * 1024);
+    await file.truncate(190 * 1024 * 1024);
     await file.close();
     pending.release();
     usage.gate!.complete();
@@ -262,6 +267,95 @@ void main() {
     expect((await retry.retryUpload()).draft.status, ScanDraftStatus.blocked);
     expect(upload.pdfs, hasLength(2));
   });
+  test(
+    '98 MiB of pages submit and cached PDFs up to 100 MiB restore and retry',
+    () async {
+      final store = await open();
+      for (var i = 0; i < 7; i++) {
+        await addPage(
+          store,
+          'page-$i',
+          120,
+          180,
+          red: 100 + i,
+          byteLength: 14 * 1024 * 1024,
+        );
+      }
+      final upload = _Upload();
+      final repo = repository(store, upload);
+      expect((await repo.restore()).status, ScanDraftStatus.editable);
+      expect((await repo.submit()).draft.status, ScanDraftStatus.uncertain);
+      expect(upload.pdfs.single.length, greaterThan(98 * 1024 * 1024));
+      expect(upload.pdfs.single.length, lessThanOrEqualTo(100 * 1024 * 1024));
+
+      final pdf = Uint8List(100 * 1024 * 1024)
+        ..fillRange(0, 100 * 1024 * 1024, 32);
+      pdf.setRange(0, upload.pdfs.single.length, upload.pdfs.single);
+      final next = store.copy();
+      final attempt = next['attempt'] as Map<String, dynamic>;
+      final file = store.asset(next, attempt['pdf'] as String);
+      await file.writeAsBytes(pdf, flush: true);
+      store.describe(attempt, 'pdf', attempt['pdf'] as String, pdf);
+      await store.commit(next);
+
+      final restored = ScanDraftStore(store.lease);
+      final retry = repository(restored, upload);
+      expect((await retry.restore()).status, ScanDraftStatus.uncertain);
+      expect(
+        (await retry.retryUpload()).draft.status,
+        ScanDraftStatus.uncertain,
+      );
+      expect(upload.pdfs.last.length, 100 * 1024 * 1024);
+      expect(sha256.convert(upload.pdfs.last), sha256.convert(pdf));
+      expect(upload.metadata.last, upload.metadata.first);
+
+      final oversized = Uint8List(pdf.length + 1)..setRange(0, pdf.length, pdf);
+      await file.writeAsBytes(oversized, flush: true);
+      store.describe(attempt, 'pdf', attempt['pdf'] as String, oversized);
+      await store.commit(next);
+      final blocked = repository(ScanDraftStore(store.lease), upload);
+      expect((await blocked.restore()).status, ScanDraftStatus.blocked);
+      await expectLater(blocked.retryUpload(), throwsA(isA<ScanFailure>()));
+      expect(upload.pdfs, hasLength(2));
+    },
+  );
+  test(
+    'oversized page totals block restore and PDFs above 100 MiB fail encoding',
+    () async {
+      final store = await open();
+      final pages = <ScanPdfPage>[];
+      for (var i = 0; i < 6; i++) {
+        await addPage(
+          store,
+          'page-$i',
+          120,
+          180,
+          red: 100 + i,
+          byteLength: 17 * 1024 * 1024,
+        );
+        final page = (store.record!['pages'] as List).last as Map;
+        pages.add(
+          ScanPdfPage(
+            store.asset(store.record!, page['file'] as String).path,
+            120,
+            180,
+          ),
+        );
+      }
+      final repo = repository(ScanDraftStore(store.lease), _Upload());
+      expect((await repo.restore()).status, ScanDraftStatus.blocked);
+      await expectLater(
+        ScanPdfEncoder().encode(pages),
+        throwsA(
+          isA<ScanFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('100 MiB'),
+          ),
+        ),
+      );
+    },
+  );
   test('moves commit only order and revision, with final indices and unchanged assets', () async {
     final store = await open();
     for (final id in ['one', 'two', 'three']) {

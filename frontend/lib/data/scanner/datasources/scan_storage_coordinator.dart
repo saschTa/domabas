@@ -77,7 +77,9 @@ final class ScanStorageCoordinator {
             );
           }
           if (total + _reserved + bytes > 256 * 1024 * 1024 ||
-              !scratch && used + ownerReserved + bytes > 40 * 1024 * 1024) {
+              !scratch &&
+                  used + ownerReserved + bytes >
+                      ScanImageLimits.maxDraftStorageBytes) {
             throw const ScanFailure(
               'Scanner storage is full. Remove pages or discard a saved draft.',
             );

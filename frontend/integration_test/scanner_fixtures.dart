@@ -58,6 +58,8 @@ Uint8List scanJpeg(
 }
 
 class FixtureScannerCamera implements ScannerCamera {
+  @override
+  bool usesSystemCapture = false;
   final controller = StreamController<ScanCameraState>.broadcast(sync: true);
   @override
   ScanCameraState state = const ScanCameraState();
@@ -104,6 +106,7 @@ class FixtureScannerCamera implements ScannerCamera {
       height: 300,
       corners: ScanCorners.fullImage(),
       preview: scanJpeg(200, 300),
+      processed: usesSystemCapture,
     );
   }
 

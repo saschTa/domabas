@@ -28,6 +28,8 @@ final class ScannerState {
     Map<String, String> validation = const {},
     this.validationAttempt = 0,
     this.discarded = false,
+    this.pendingPages = 0,
+    this.batchTotalPages = 0,
   }) : validation = Map.unmodifiable(validation);
 
   final ScanDraft? draft;
@@ -45,6 +47,8 @@ final class ScannerState {
   final Map<String, String> validation;
   final int validationAttempt;
   final bool discarded;
+  final int pendingPages;
+  final int batchTotalPages;
   bool get editable => draft?.editable == true && !busy && !loading;
   bool get validCorners =>
       capture != null &&
@@ -68,6 +72,8 @@ final class ScannerState {
     Map<String, String>? validation,
     int? validationAttempt,
     bool? discarded,
+    int? pendingPages,
+    int? batchTotalPages,
   }) => ScannerState(
     draft: draft ?? this.draft,
     properties: properties ?? this.properties,
@@ -84,6 +90,8 @@ final class ScannerState {
     validation: validation ?? this.validation,
     validationAttempt: validationAttempt ?? this.validationAttempt,
     discarded: discarded ?? this.discarded,
+    pendingPages: pendingPages ?? this.pendingPages,
+    batchTotalPages: batchTotalPages ?? this.batchTotalPages,
   );
 }
 
@@ -101,6 +109,12 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }
 
   final ScannerCamera _camera;
+  bool get usesSystemCapture => _camera.usesSystemCapture;
+  bool get supportsBatchCapture => _camera is ScannerBatchCamera;
+  String? get systemCaptureNotice => switch (_camera) {
+    final ScannerSystemCapture source => source.systemCaptureNotice,
+    _ => null,
+  };
   final ScanDraftRepository _repository;
   final bool allowed;
   final void Function()? onAccepted;
@@ -203,7 +217,10 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }
 
   Future<void> addPage() async {
-    if (!_canEdit || state.capture != null || state.draft!.pages.length >= 20) {
+    if (!_canEdit ||
+        state.capture != null ||
+        state.pendingPages > 0 ||
+        state.draft!.pages.length >= 20) {
       return;
     }
     emit(
@@ -216,6 +233,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
     } finally {
       if (!_closing) emit(state.copyWith(busy: false));
     }
+    if (_camera.usesSystemCapture && !_closing) await capture();
   }
 
   Future<void> setForeground(bool foreground) async {
@@ -267,6 +285,28 @@ final class ScannerCubit extends Cubit<ScannerState> {
     emit(state.copyWith(busy: true, clearError: true));
     _takingCapture = true;
     try {
+      if (_camera.usesSystemCapture) {
+        final saved = await flushProperties();
+        if (_closing) return;
+        if (!saved || !_foreground) {
+          emit(state.copyWith(stage: ScannerStage.review));
+          await _reconcileCamera();
+          return;
+        }
+      }
+      if (_camera case final ScannerBatchCamera batch) {
+        await batch.beginBatch(maxPages: 20 - state.draft!.pages.length);
+        if (_closing) return;
+        emit(
+          state.copyWith(
+            pendingPages: batch.pendingPageCount,
+            batchTotalPages: batch.pendingPageCount,
+            stage: ScannerStage.review,
+          ),
+        );
+        await _importPendingPages(batch);
+        return;
+      }
       final capture = await _camera.capture();
       if (_closing) return;
       final corners = capture.corners.validFor(capture.width, capture.height)
@@ -280,8 +320,32 @@ final class ScannerCubit extends Cubit<ScannerState> {
         ),
       );
       await _reconcileCamera();
+      if (capture.processed && !_closing) {
+        await _keepPage(capture, corners);
+      }
+    } on ScanCancelled {
+      if (!_closing) {
+        emit(
+          state.copyWith(
+            stage: ScannerStage.review,
+            clearCapture: true,
+            clearError: true,
+            pendingPages: _pendingPageCount,
+          ),
+        );
+      }
     } catch (error) {
-      if (!_closing) emit(state.copyWith(error: _message(error)));
+      if (!_closing) {
+        emit(
+          state.copyWith(
+            stage: _camera.usesSystemCapture && state.capture == null
+                ? ScannerStage.review
+                : state.stage,
+            error: _message(error),
+            pendingPages: _pendingPageCount,
+          ),
+        );
+      }
     } finally {
       _takingCapture = false;
       if (!_closing && state.stage == ScannerStage.camera) {
@@ -297,6 +361,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
 
   void moveCorner(int index, ScanPoint point) {
     if (!_canEdit ||
+        state.capture?.processed == true ||
         state.stage != ScannerStage.correction ||
         index < 0 ||
         index > 3 ||
@@ -310,13 +375,14 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }
 
   void resetCorners() {
-    if (_canEdit && state.capture != null) {
+    if (_canEdit && state.capture != null && !state.capture!.processed) {
       emit(state.copyWith(corners: ScanCorners.fullImage()));
     }
   }
 
   void moveEdge(int index, ScanPoint midpoint) {
     if (!_canEdit ||
+        state.capture?.processed == true ||
         state.stage != ScannerStage.correction ||
         index < 0 ||
         index > 3 ||
@@ -342,22 +408,16 @@ final class ScannerCubit extends Cubit<ScannerState> {
   }
 
   Future<void> keepPage() async {
+    if (state.pendingPages > 0) {
+      await retryPendingPages();
+      return;
+    }
     if (!_canEdit || !state.validCorners) return;
     final capture = state.capture!;
     final corners = state.corners!;
     emit(state.copyWith(busy: true, clearError: true));
     try {
-      if (!await flushProperties() || _closing) return;
-      final draft = await _repository.keepPage(capture, corners);
-      if (_closing) return;
-      emit(
-        state.copyWith(
-          draft: draft,
-          clearCapture: true,
-          stage: ScannerStage.review,
-        ),
-      );
-      await _camera.releaseCapture(capture.id);
+      await _keepPage(capture, corners);
     } catch (error) {
       if (!_closing) emit(state.copyWith(error: _message(error)));
     } finally {
@@ -365,8 +425,106 @@ final class ScannerCubit extends Cubit<ScannerState> {
     }
   }
 
+  Future<void> _keepPage(ScanCapture capture, ScanCorners corners) async {
+    if (!await flushProperties() || _closing) return;
+    final draft = await _repository.keepPage(capture, corners);
+    if (_closing) return;
+    emit(
+      state.copyWith(
+        draft: draft,
+        clearCapture: true,
+        stage: ScannerStage.review,
+      ),
+    );
+    await _camera.releaseCapture(capture.id);
+  }
+
+  int get _pendingPageCount => switch (_camera) {
+    final ScannerBatchCamera batch => batch.pendingPageCount,
+    _ => 0,
+  };
+
+  Future<void> _importPendingPages(ScannerBatchCamera batch) async {
+    while (!_closing && batch.pendingPageCount > 0) {
+      final capture = await batch.captureNextPage();
+      if (_closing) return;
+      emit(
+        state.copyWith(
+          capture: capture,
+          corners: capture.corners,
+          stage: ScannerStage.correction,
+          pendingPages: batch.pendingPageCount,
+        ),
+      );
+      if (!await flushProperties() || _closing) return;
+      final draft = await _repository.keepPage(capture, capture.corners);
+      if (_closing) return;
+      emit(state.copyWith(draft: draft));
+      await batch.acknowledgePage(capture.id);
+      if (_closing) return;
+      emit(
+        state.copyWith(
+          clearCapture: true,
+          stage: ScannerStage.review,
+          pendingPages: batch.pendingPageCount,
+        ),
+      );
+    }
+  }
+
+  Future<void> retryPendingPages() async {
+    if (!_canEdit || !_foreground || state.pendingPages == 0) return;
+    final camera = switch (_camera) {
+      final ScannerBatchCamera batch => batch,
+      _ => null,
+    };
+    if (camera == null) return;
+    emit(state.copyWith(busy: true, clearError: true));
+    try {
+      await _importPendingPages(camera);
+    } catch (error) {
+      if (!_closing) emit(state.copyWith(error: _message(error)));
+    } finally {
+      if (!_closing) {
+        emit(
+          state.copyWith(busy: false, pendingPages: camera.pendingPageCount),
+        );
+      }
+    }
+  }
+
+  Future<void> discardPendingPages() async {
+    if (!_canEdit || state.pendingPages == 0) return;
+    final camera = switch (_camera) {
+      final ScannerBatchCamera batch => batch,
+      _ => null,
+    };
+    if (camera == null) return;
+    emit(state.copyWith(busy: true, clearError: true));
+    try {
+      await camera.discardPendingPages();
+      if (_closing) return;
+      emit(
+        state.copyWith(
+          clearCapture: true,
+          stage: ScannerStage.review,
+          pendingPages: 0,
+          batchTotalPages: 0,
+        ),
+      );
+    } catch (error) {
+      if (!_closing) emit(state.copyWith(error: _message(error)));
+    } finally {
+      if (!_closing) {
+        emit(
+          state.copyWith(busy: false, pendingPages: camera.pendingPageCount),
+        );
+      }
+    }
+  }
+
   Future<void> retake() async {
-    if (!_canEdit || state.capture == null) return;
+    if (!_canEdit || state.capture == null || state.pendingPages > 0) return;
     final capture = state.capture!;
     emit(state.copyWith(busy: true, clearError: true));
     try {
@@ -379,6 +537,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
     } finally {
       if (!_closing) emit(state.copyWith(busy: false));
     }
+    if (_camera.usesSystemCapture && !_closing) await this.capture();
   }
 
   Future<void> showReview() async {
@@ -430,6 +589,7 @@ final class ScannerCubit extends Cubit<ScannerState> {
   Future<void> submit() async {
     if (!_canEdit ||
         state.stage != ScannerStage.review ||
+        state.pendingPages > 0 ||
         state.draft!.pages.isEmpty) {
       return;
     }
@@ -556,6 +716,11 @@ final class ScannerCubit extends Cubit<ScannerState> {
     try {
       await _saving;
       if (_closing) return false;
+      if (_camera case final ScannerBatchCamera batch) {
+        await batch.discardPendingPages();
+        if (_closing) return false;
+        emit(state.copyWith(pendingPages: 0, batchTotalPages: 0));
+      }
       final capture = state.capture;
       if (capture != null) {
         await _camera.releaseCapture(capture.id);

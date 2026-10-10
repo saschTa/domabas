@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import '../data/document/datasources/document_upload_remote_data_source.dart';
 import '../data/scanner/datasources/native_scanner_camera.dart';
 import '../data/scanner/datasources/ml_kit_scanner_camera.dart';
+import '../data/scanner/datasources/vision_kit_scanner_camera.dart';
 import '../data/scanner/datasources/scan_draft_store.dart';
 import '../data/scanner/datasources/scan_pdf_encoder.dart';
 import '../data/scanner/datasources/scan_storage_coordinator.dart';
@@ -107,7 +108,7 @@ final class _NativeScannerFactory implements ScannerScopeFactory {
     }
     final ScanCaptureDataPort camera = Platform.isAndroid
         ? MlKitScannerCamera(lease)
-        : NativeScannerCamera(lease);
+        : VisionKitScannerCamera(lease);
     final repository = LocalScanDraftRepository(
       lease: lease,
       camera: camera,

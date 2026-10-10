@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
-import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
-import 'package:image/image.dart' as img;
 
+import '../../../domain/scanner/interfaces/scanner_camera.dart';
 import '../../../domain/scanner/models/scan.dart';
 import '../models/scan_assets.dart';
 import '../models/scan_image_limits.dart';
 import '../repos/scan_capture_data_port.dart';
 import 'scan_draft_store.dart';
 import 'scan_storage_coordinator.dart';
+import 'processed_scan_page.dart';
 
-final class MlKitScannerCamera implements ScanCaptureDataPort {
+final class MlKitScannerCamera
+    implements ScanCaptureDataPort, ScannerSystemCapture {
   MlKitScannerCamera(
     this.lease, {
     this.channel = const MethodChannel('dev.domabas/document_scanner'),
@@ -34,6 +34,9 @@ final class MlKitScannerCamera implements ScanCaptureDataPort {
 
   @override
   bool get usesSystemCapture => true;
+  @override
+  String get systemCaptureNotice =>
+      'Scanning uses Google Play services. Images are processed on your device; Google receives scanner usage and performance metrics.';
   @override
   ScanCameraState get state => _state;
   @override
@@ -101,7 +104,7 @@ final class MlKitScannerCamera implements ScanCaptureDataPort {
       }
       _emit(ScanCameraStatus.processing);
       final prepared = await lease.coordinator.imageWork(
-        () => _preparePageInBackground(bytes),
+        () => prepareProcessedScanPage(bytes),
       );
       _checkActive();
       final file = File('${lease.directory.path}/scratch-$id.jpg');
@@ -150,7 +153,7 @@ final class MlKitScannerCamera implements ScanCaptureDataPort {
         }
         final bytes = await file.readAsBytes();
         final thumbnail = await lease.coordinator.imageWork(
-          () => _thumbnailInBackground(bytes),
+          () => createProcessedScanThumbnail(bytes),
         );
         _checkActive();
         return CorrectedScanPage(bytes, thumbnail, saved.width, saved.height);
@@ -257,57 +260,5 @@ ScanFailure _scannerFailure(PlatformException error) {
     reference.isEmpty
         ? message
         : '$message Error reference: ${reference.join(' / ')}.',
-  );
-}
-
-Future<({int width, int height, Uint8List preview})> _preparePageInBackground(
-  Uint8List bytes,
-) => Isolate.run(() => _preparePage(bytes));
-
-Future<Uint8List> _thumbnailInBackground(Uint8List bytes) => Isolate.run(
-  () => _preview(_decodePage(bytes), 400, ScanImageLimits.maxThumbnailBytes),
-);
-
-img.Image _decodePage(Uint8List bytes) {
-  final header = img.JpegDecoder().startDecode(bytes);
-  if (header == null ||
-      !ScanImageLimits.validDimensions(header.width, header.height)) {
-    throw const ScanFailure(
-      'Scanned pages must be JPEGs of at most 50 megapixels.',
-    );
-  }
-  final image = img.decodeJpg(bytes);
-  if (image == null) {
-    throw const ScanFailure('The scanned page could not be read.');
-  }
-  return image;
-}
-
-({int width, int height, Uint8List preview}) _preparePage(Uint8List bytes) {
-  final image = _decodePage(bytes);
-  return (
-    width: image.width,
-    height: image.height,
-    preview: _preview(image, 1200, ScanImageLimits.maxPreviewBytes),
-  );
-}
-
-Uint8List _preview(img.Image image, int longestSide, int limit) {
-  final scale = math.min(
-    1.0,
-    longestSide / math.max(image.width, image.height),
-  );
-  final resized = img.copyResize(
-    image,
-    width: math.max(1, (image.width * scale).round()),
-    height: math.max(1, (image.height * scale).round()),
-    interpolation: img.Interpolation.average,
-  );
-  for (final quality in [85, 70, 55, 40]) {
-    final bytes = img.encodeJpg(resized, quality: quality);
-    if (bytes.length <= limit) return bytes;
-  }
-  throw const ScanFailure(
-    'The scanned page preview exceeds its storage limit.',
   );
 }

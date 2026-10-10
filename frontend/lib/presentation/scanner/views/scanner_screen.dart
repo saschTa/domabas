@@ -94,10 +94,12 @@ final class _ScannerScreenState extends State<ScannerScreen>
     _leaving = true;
     try {
       final state = widget.cubit.state;
-      if (state.capture != null || state.busy) {
+      if (state.capture != null || state.busy || state.pendingPages > 0) {
         final confirmed = await _confirm(
           'Leave this scan?',
-          state.busy
+          state.pendingPages > 0 || state.busy && !state.submitting
+              ? 'Saved pages and properties remain in your draft. Leaving discards scanned pages that have not finished saving.'
+              : state.busy
               ? 'Saved pages are retained. If an upload is in progress, it may have reached the library. Check the library before retrying.'
               : 'The page being corrected has not been kept. Leaving removes this capture; your kept pages and properties remain saved.',
           'Leave scan',
@@ -150,6 +152,17 @@ final class _ScannerScreenState extends State<ScannerScreen>
     }
   }
 
+  Future<void> _discardPending() async {
+    if (await _confirm(
+          'Discard pending scanned pages?',
+          'This removes only the scanned pages that have not finished saving. Pages already saved in your draft remain.',
+          'Discard pending pages',
+        ) &&
+        mounted) {
+      await widget.cubit.discardPendingPages();
+    }
+  }
+
   @override
   Widget build(BuildContext context) => BlocBuilder<ScannerCubit, ScannerState>(
     bloc: widget.cubit,
@@ -168,7 +181,10 @@ final class _ScannerScreenState extends State<ScannerScreen>
           ),
           title: Text(switch (state.stage) {
             ScannerStage.camera => 'Scan a page',
-            ScannerStage.correction => 'Adjust page corners',
+            ScannerStage.correction =>
+              state.capture?.processed == true
+                  ? 'Save scanned pages'
+                  : 'Adjust page corners',
             ScannerStage.review => 'Scan document',
           }),
           actions: [?widget.appearanceAction],
@@ -220,7 +236,7 @@ final class _ScannerScreenState extends State<ScannerScreen>
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
           child: ListView(
-            key: ValueKey(state.stage),
+            key: ValueKey((state.stage, state.pendingPages > 0)),
             padding: const EdgeInsets.all(16),
             children: [
               if (state.busy) ...[
@@ -249,6 +265,21 @@ final class _ScannerScreenState extends State<ScannerScreen>
                       : null,
                 ),
                 const SizedBox(height: 16),
+              ],
+              if (state.pendingPages > 0) ...[
+                Text(
+                  '${state.batchTotalPages - state.pendingPages} of ${state.batchTotalPages} scanned pages saved. ${state.pendingPages} pending.',
+                  key: const Key('scanBatchProgress'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Keep this scan open to save the remaining pages. Only saved pages are retained when you leave.',
+                ),
+                const SizedBox(height: 12),
+                if (state.stage != ScannerStage.correction) ...[
+                  _pendingActions(state),
+                  const SizedBox(height: 16),
+                ],
               ],
               switch (state.stage) {
                 ScannerStage.camera => const SizedBox.shrink(),
@@ -437,8 +468,12 @@ final class _ScannerScreenState extends State<ScannerScreen>
           bytes: capture.preview,
           fit: BoxFit.contain,
           semanticLabel: 'Scanned page ready to save',
-          errorBuilder: (_, _, _) => const Center(
-            child: Text('Preview unavailable. Retake this page.'),
+          errorBuilder: (_, _, _) => Center(
+            child: Text(
+              state.pendingPages > 0
+                  ? 'Preview unavailable. Retry saving or discard the pending scans.'
+                  : 'Preview unavailable. Retake this page.',
+            ),
           ),
         ),
       );
@@ -537,24 +572,44 @@ final class _ScannerScreenState extends State<ScannerScreen>
     );
   }
 
-  Widget _correctionActions(ScannerState state) => Wrap(
+  Widget _pendingActions(ScannerState state) => Wrap(
     spacing: 12,
     runSpacing: 12,
     children: [
       FilledButton.icon(
-        key: const Key('keepScanPage'),
-        onPressed: state.editable && state.validCorners
-            ? widget.cubit.keepPage
-            : null,
-        icon: const Icon(Icons.check),
-        label: const Text('Keep page'),
+        key: const Key('retryPendingScans'),
+        onPressed: state.editable ? widget.cubit.retryPendingPages : null,
+        icon: const Icon(Icons.save_outlined),
+        label: const Text('Retry pending scans'),
       ),
       OutlinedButton(
-        onPressed: state.editable ? widget.cubit.retake : null,
-        child: const Text('Retake page'),
+        key: const Key('discardPendingScans'),
+        onPressed: state.editable ? _discardPending : null,
+        child: const Text('Discard pending pages'),
       ),
     ],
   );
+
+  Widget _correctionActions(ScannerState state) => state.pendingPages > 0
+      ? _pendingActions(state)
+      : Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            FilledButton.icon(
+              key: const Key('keepScanPage'),
+              onPressed: state.editable && state.validCorners
+                  ? widget.cubit.keepPage
+                  : null,
+              icon: const Icon(Icons.check),
+              label: const Text('Keep page'),
+            ),
+            OutlinedButton(
+              onPressed: state.editable ? widget.cubit.retake : null,
+              child: const Text('Retake page'),
+            ),
+          ],
+        );
 
   Widget _review(BuildContext context, ScannerState state) {
     final draft = state.draft!;
@@ -663,9 +718,13 @@ final class _ScannerScreenState extends State<ScannerScreen>
         ],
         if (draft.editable) ...[
           const SizedBox(height: 12),
-          if (widget.cubit.usesSystemCapture) ...[
-            const Text(
-              'Scanning uses Google Play services. Images are processed on your device; Google receives scanner usage and performance metrics.',
+          if (widget.cubit.systemCaptureNotice case final notice?) ...[
+            Text(notice),
+            const SizedBox(height: 12),
+          ],
+          if (widget.cubit.supportsBatchCapture) ...[
+            Text(
+              'You can scan up to ${20 - draft.pages.length} more pages. Save within this limit to add them to your draft.',
             ),
             const SizedBox(height: 12),
           ],
@@ -673,7 +732,10 @@ final class _ScannerScreenState extends State<ScannerScreen>
             alignment: Alignment.centerLeft,
             child: OutlinedButton.icon(
               key: const Key('addScanPage'),
-              onPressed: state.editable && draft.pages.length < 20
+              onPressed:
+                  state.editable &&
+                      state.pendingPages == 0 &&
+                      draft.pages.length < 20
                   ? widget.cubit.addPage
                   : null,
               icon: const Icon(Icons.add_a_photo_outlined),
@@ -715,12 +777,15 @@ final class _ScannerScreenState extends State<ScannerScreen>
             children: [
               FilledButton.icon(
                 key: const Key('uploadScan'),
-                onPressed: state.editable && draft.pages.isNotEmpty
+                onPressed:
+                    state.editable &&
+                        state.pendingPages == 0 &&
+                        draft.pages.isNotEmpty
                     ? widget.cubit.submit
                     : null,
                 icon: const Icon(Icons.cloud_upload_outlined),
                 label: Text(
-                  state.busy ? 'Preparing / uploading…' : 'Upload PDF',
+                  state.submitting ? 'Preparing / uploading…' : 'Upload PDF',
                 ),
               ),
               OutlinedButton(

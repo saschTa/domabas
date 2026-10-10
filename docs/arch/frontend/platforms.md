@@ -131,20 +131,27 @@ services. Google owns its camera UI, lens selection and permission; the first
 scan can require downloading scanner resources. Unsupported or missing services
 produce a retryable error without changing saved pages. The public scanner API
 has no lens-selection option, so there is no persisted camera preference.
-On iOS, camera permission is requested when entering the custom capture flow;
-both property-list configurations describe its purpose. This flow uses the
-installed Vision framework for rectangle detection. Unsupported targets do not
+On iOS, Apple's VisionKit document camera owns capture, crop and review. It is
+checked for device support and camera authorization before presentation; both
+property-list configurations describe the camera's purpose. VisionKit is part of
+the operating system and requires no added Flutter package or deployment-target
+increase. ML Kit Document Scanner is Android-only. Unsupported targets do not
 initialize mobile capture.
 
-The app owns the iOS camera preview bridge and coordinates capture handoff. Durable
+VisionKit pages enter the draft sequentially through a native session. The app
+shows the remaining page capacity and rejects results above it because Apple's
+public API has no page-limit setting. Pending pages can be retried or explicitly
+discarded while committed pages remain saved. The app owns presentation and
+session cleanup and coordinates capture handoff. Durable
 draft storage is scoped to the API endpoint, user and library and survives signing
 out. Android backup rules preserve the existing secure-session exclusions; iOS
 marks the scanner root as excluded from backup. See [scanner ownership and limits](scanner.md).
 
 Camera and native dependency changes require Android/iOS build checks. A simulator
-can exercise native still detection and correction but cannot validate physical
-framing or live camera alignment. Check those on a camera-capable phone, including
-both landscape orientations, permission denial and background/resume. The
+can exercise retained custom-detector fixtures but does not establish production
+VisionKit camera behavior. Check the system capture and review on a camera-capable
+phone, including multiple pages, both landscape orientations, permission denial,
+cancellation and background/resume. The
 [scanner guide](scanner.md) describes dependencies and device validation limits.
 
 ## Document rendering

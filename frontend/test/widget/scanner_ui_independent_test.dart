@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:domabas/domain/scanner/interfaces/scanner_camera.dart';
 import 'package:domabas/domain/scanner/models/scan.dart';
 import 'package:domabas/presentation/scanner/cubits/scanner_cubit.dart';
 import 'package:domabas/presentation/scanner/views/scanner_screen.dart';
@@ -14,7 +15,7 @@ void main() {
   testWidgets('system scan has no custom camera or second crop controls', (
     tester,
   ) async {
-    final camera = FixtureScannerCamera()
+    final camera = _SystemFixtureScannerCamera()
       ..usesSystemCapture = true
       ..captureGate = Completer<ScanCapture>();
     final repository = _ProcessedPageSaveRepository();
@@ -695,6 +696,13 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+}
+
+final class _SystemFixtureScannerCamera extends FixtureScannerCamera
+    implements ScannerSystemCapture {
+  @override
+  String get systemCaptureNotice =>
+      'Scanning uses Google Play services. Images are processed on your device; Google receives scanner usage and performance metrics.';
 }
 
 final class _ProcessedPageSaveRepository extends FixtureScanRepository {

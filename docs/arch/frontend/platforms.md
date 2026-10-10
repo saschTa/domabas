@@ -58,8 +58,10 @@ namespace, with automatic destructive reset and algorithm migration disabled.
 The shipped plugin requires Android API 24 even though its README discusses
 API 23 cipher support. Backup rules exclude the data, wrapped key and algorithm
 preferences from cloud backup and device transfer. iOS uses unlocked,
-device-only Keychain entries without iCloud synchronization or shared app groups;
-all three Runner configurations select `Runner.entitlements`. The resolved
+device-only Keychain entries without iCloud synchronization. The iOS Share
+Extension shares the app's default Keychain access group to read the original
+credential; there is no App Group file container. See [mobile sharing](mobile-sharing.md).
+All three Runner configurations select `Runner.entitlements`. The resolved
 Darwin plugin supports iOS 13; Domabas keeps its existing iOS 15 deployment target.
 
 Native operations have a five-second caller deadline. Operations remain ordered

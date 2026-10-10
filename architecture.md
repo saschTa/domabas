@@ -71,7 +71,7 @@ from widgets. **OpenAPI generators** produce the shared HTTP boundary, while
    document AI. A failure there leaves the document searchable. Thumbnail jobs
    separately create the previews used in document lists.
 
-Uploads from the scanner, IMAP and Paperless ultimately use the same document
+Uploads from mobile share sheets, the scanner, IMAP and Paperless ultimately use the same document
 pipeline. Metadata-only records do not start file processing. Users can correct
 extracted text; lexical search sees the correction while new embeddings are
 prepared. See [document ingestion](docs/arch/backend/document-ingestion.md),

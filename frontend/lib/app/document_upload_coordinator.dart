@@ -206,6 +206,19 @@ final class DocumentUploadCoordinator implements DocumentUploadScheduler {
     );
   }
 
+  Set<String> receiveSharedPaths(
+    DocumentUploadsCubit target,
+    List<String> paths,
+  ) {
+    if (!identical(_target, target) || !canAcquire) return const {};
+    final selection = acquisition.captureNativePaths(
+      paths,
+      reserve: (count) => _reserve(target, count),
+    );
+    _receive(target, target.generation, selection);
+    return selection.candidates.map((candidate) => candidate.id).toSet();
+  }
+
   void _native(DocumentUploadsCubit target, DesktopUploadEvent event) {
     if (!identical(_target, target)) return;
     if (event.hover case final hover?) {

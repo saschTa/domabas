@@ -68,6 +68,34 @@ Users have personal libraries and can accept invitations to shared libraries.
 Library managers assign roles and additional permissions; system administrators
 manage system access separately. See [authentication and sessions](../docs/arch/frontend/identity.md).
 
+## Sharing from other apps
+
+Sign in to Domabas and select your destination library. In Photos, Files or
+another app, select images or PDF files, tap **Share**, and choose **Domabas**.
+On iOS, you may need to enable Domabas under the share sheet's **More** menu.
+
+iOS shows the server and library inside the share sheet. Tap **Upload** and keep
+the sheet open until the results appear, then tap **Done**. Android opens Domabas
+with an **Upload** confirmation and uses the normal upload progress panel. Both
+require upload permission. If the result is unknown, check the library before
+sharing again; sharing does not create a durable offline queue.
+
+Share up to 20 files, each no larger than 100 MiB. Android supports PDF, PNG and
+JPEG, with a 200 MiB combined batch limit. iOS also converts other single-frame
+images such as HEIC to JPEG (up to 4096 pixels on the longest edge). PDF, PNG and
+JPEG originals keep their bytes. Webpage links and text shares are not supported.
+Download cloud files in their source app if they cannot be read.
+
+For a signed iOS installation, set your app identifier in
+`ios/Flutter/Share.xcconfig`, select the same development team for **Runner** and
+**ShareExtension**, and enable Keychain Sharing for both targets using the main
+app identifier as their common group. Provision both bundle IDs; the extension
+ID adds `.ShareExtension`. Keep the original identifier when upgrading an
+existing installation so its Keychain sessions remain accessible. A simulator
+or unsigned build alone does not verify phone provisioning or sharing behavior.
+See [the sharing architecture](../docs/arch/frontend/mobile-sharing.md) and
+[device checks](../docs/development/testing.md#mobile-share-checks).
+
 ## Run tests
 
 Unless marked otherwise, run commands from `frontend/`:

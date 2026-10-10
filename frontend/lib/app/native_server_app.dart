@@ -173,6 +173,7 @@ final class _ServerApplicationState extends State<_ServerApplication> {
     serverConfiguration: widget.configuration,
     auth: _dependencies.auth,
     uploads: _dependencies.uploads,
+    shares: _dependencies.shares,
     authenticate: _dependencies.authenticate,
   );
 }

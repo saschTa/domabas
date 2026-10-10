@@ -417,6 +417,10 @@ generation fences, search consistency and eventual file deletion.
 
 ## Original uploads
 
+Mobile apps also accept PDFs and images from other apps. See
+[mobile sharing](mobile-sharing.md) for the native entry points, confirmation,
+supported formats and session ownership.
+
 The workspace exposes Upload files under `documents:upload`, independently of
 read or metadata-create permission. Create metadata keeps the existing fileless
 record flow. Selection accepts originals from all five target platforms; an

@@ -494,3 +494,58 @@ statement that the amount could not be verified. These live checks can fail when
 the installed model makes poor retrieval decisions; they are not baseline CI tests.
 
 Resource scheduling tests run in the existing Go unit, isolated PostgreSQL, compiled API and browser suites. They require no additional runtime dependency. Retained-reservation, concurrent admission, FIFO feasibility and admin revision tests use random disposable schemas. The existing GitHub fast-check job automatically discovers scheduler and workload UI tests; full local verification still needs PostgreSQL/pgvector, Temporal, the document processor and Chrome as described above.
+
+## Mobile share checks
+
+`flutter test test/unit/mobile_share_cubit_test.dart` from `frontend/` covers
+pending shares through sign-in, explicit confirmation, duplicate event delivery,
+late reads after library replacement, queue capacity, permission gates, cleanup
+and the iOS credential fingerprint context. These tests are included in
+`task check`. `task test:e2e` covers the common UI/API/storage upload workflow.
+
+On macOS, build the embedded extension with `task build:ios -- --simulator`.
+Run its native file, image-conversion, multipart, receipt, response-limit and
+identity tests with the following command from `frontend/ios/`, substituting
+an installed simulator ID from `xcrun simctl list devices available`:
+
+```sh
+xcodebuild -project Runner.xcodeproj -scheme ShareExtensionTests -configuration Debug \
+  -destination 'platform=iOS Simulator,id=<simulator-id>' \
+  test
+```
+
+`task build:ios` also checks the unsigned device release build.
+`task build:android -- --release` checks the Android receiver in the minified
+release artifact. Run Flutter builds sequentially: platform generation shares
+files in the frontend working directory. Full native builds require enough free
+disk space for Xcode, Gradle and Flutter intermediates.
+
+For device acceptance, use a signed iOS app with both targets provisioned for the
+same Keychain group, and an Android release APK. Use a test account and library.
+
+1. Share a PDF from Files/a file manager and one or several photos from Photos or
+   a gallery. Check the share target, filenames, destination and per-file results.
+   On iOS, also share HEIC and verify the orientation and converted JPEG quality.
+2. Exercise cold start, an already-open app and a backgrounded app. On Android,
+   receive while signed out and complete server setup/sign-in before confirming.
+   Reopening the app must not replay a consumed share.
+3. On iOS, confirm shared Keychain access after upgrading a signed installation
+   with an existing session. Check locked-device behavior, missing login, initial
+   password change, upload-only permission and denied upload permission.
+4. Change library/server or sign out while a file is being prepared. No pending
+   content may be sent using a replacement identity. Confirm an iOS sheet's
+   displayed destination against the library where the original was accepted.
+5. Try cloud-backed files, revoked URI grants, empty files, unsupported data,
+   21 files, a file above 100 MiB, and an Android batch above 200 MiB. No rejected
+   Android batch may partly upload. A second Android share must preserve the first.
+6. Test cancellation before sending and during transfer, duplicate files, loss of
+   network, HTTP LAN access, trusted HTTPS and rejected certificates. Verify that
+   uncertainty asks users to check the library and never triggers an automatic
+   retry. iOS must not follow a redirect with the authenticated upload.
+7. Inspect temporary-file cleanup after success, discard, session replacement
+   and process restart. Neither platform adds a broad storage permission or stores
+   bearer tokens in its file cache.
+
+OS share-sheet discovery, URI grants, phone provisioning and extension termination
+cannot be established by browser tests or unsigned compilation. Report which
+platforms and device scenarios were actually exercised in the PR.

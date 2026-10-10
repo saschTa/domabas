@@ -12,6 +12,7 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    MobileShareChannel.register(with: engineBridge.applicationRegistrar.messenger())
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VisionKitDocumentScannerChannel") {
       VisionKitDocumentScannerChannel.register(with: registrar)
     }

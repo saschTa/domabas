@@ -30,6 +30,8 @@ one filterable jobs list, shared pipeline boxes and a common detail-page structu
 with recorded step progress and failures.
 See [mobile document scanning](scanner.md) for camera capture, durable local
 drafts and explicit PDF submission on Android and iOS.
+See [mobile sharing](mobile-sharing.md) for receiving images and PDFs from other
+apps, iOS Keychain sharing and Android upload confirmation.
 
 ## Layers and composition
 

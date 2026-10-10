@@ -19,6 +19,7 @@ invoices to warranties and everyday mail, everything has a home on your own serv
 | What you can do | How it helps |
 | --- | --- |
 | **Bring every document home** | Upload PDFs, images and emails (EML) from your computer or phone. Preview your originals in one library. |
+| **Save from another mobile app** | Share PDFs and images to Domabas on iOS or Android, confirm the destination library and upload. See [mobile setup](frontend/README.md#sharing-from-other-apps). |
 | **Find it without the exact filename** | Text recognition and full-text indexing make your paperwork searchable. Semantic search finds related content by meaning, with tags and filters to narrow the results. |
 | **Let your inbox file itself** | Connect an IMAP account for automatic email archiving. Supported attachments are extracted into their own documents and linked to the original email. |
 | **Read German e-invoices** | Extract structured invoice data embedded in PDFs, including ZUGFeRD/Factur-X, and view the details alongside the source document. See [supported formats](docs/arch/backend/invoices.md#extraction). |

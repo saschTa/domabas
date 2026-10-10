@@ -138,14 +138,18 @@ This uses application storage isolation, not an additional encryption scheme.
 The scanner accepts at most 20 pages. Input stills are checked against 40 MiB and
 50 million pixels before decoding. Corrected JPEGs preserve the dimensions
 derived from the selected corners, with at most 50 million pixels and 18 MiB per
-page and 18 MiB combined. Oversized pages fail explicitly instead of being
+page and 98 MiB combined. Oversized pages fail explicitly instead of being
 silently downsampled or compressed at lower quality. More detailed pages can
 therefore fill a draft with fewer pages. Thumbnails and correction
 previews are bounded separately. The PDF preserves image proportions and page
 order and embeds the corrected JPEG pixels without another lossy encode, with a
-physical longest edge at most 842 points and a 20 MiB file ceiling.
+physical longest edge at most 842 points and a 100 MiB file ceiling. The combined
+page limit leaves 2 MiB for PDF overhead. Saved upload attempts use the same
+100 MiB ceiling when restored or retried.
 Storage admission accounts for durable files, temporary work and pending cleanup;
-it never evicts another owner's draft. Scratch admission covers one 40 MiB input,
+it allows 200 MiB per owner for pages, thumbnails, manifests and the cached PDF,
+with a 256 MiB global ceiling, and never evicts another owner's draft.
+Scratch admission covers one 40 MiB input,
 one 18 MiB corrected image and their bounded previews. Image work is serialized;
 full-resolution decoding and perspective correction still need memory
 proportional to the camera's negotiated image size.

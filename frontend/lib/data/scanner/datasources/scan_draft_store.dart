@@ -123,7 +123,7 @@ final class ScanDraftStore {
           throw const FormatException('Invalid saved thumbnail');
         }
       }
-      if (total > 18 * 1024 * 1024) {
+      if (total > ScanImageLimits.maxDraftPageBytes) {
         throw const FormatException('Page total exceeds limit');
       }
       if (const {'uncertain', 'duplicate'}.contains(value['status'])) {
@@ -131,7 +131,7 @@ final class ScanDraftStore {
           value,
           value['attempt'] as Map<String, dynamic>,
           'pdf',
-          20 * 1024 * 1024,
+          ScanImageLimits.maxPdfBytes,
         );
         await verifyAsset(
           value,

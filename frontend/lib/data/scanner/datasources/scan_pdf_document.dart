@@ -36,9 +36,9 @@ Future<Uint8List> encodeScanPdf(List<ScanPdfImage> pages) async {
     );
   }
   final bytes = await pdf.save();
-  if (bytes.length > 20 * 1024 * 1024) {
+  if (bytes.length > ScanImageLimits.maxPdfBytes) {
     throw const ScanFailure(
-      'This PDF exceeds 20 MiB. Remove a page and try again.',
+      'This PDF exceeds 100 MiB. Remove a page and try again.',
     );
   }
   return bytes;

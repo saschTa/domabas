@@ -98,9 +98,10 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
             0,
             (sum, p) => sum + ((p as Map)['fileLength'] as int),
           );
-          if (total + corrected.bytes.length > 18 * 1024 * 1024) {
+          if (total + corrected.bytes.length >
+              ScanImageLimits.maxDraftPageBytes) {
             throw const ScanFailure(
-              'Saved page images must total at most 18 MiB. Remove a page before adding another.',
+              'Saved page images must total at most 98 MiB. Remove a page before adding another.',
             );
           }
           final id = ScanDraftStore.newId();
@@ -201,7 +202,9 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
             ),
           );
           await store.cleanupUnreferenced();
-          final reservation = await lease.reserve(20 * 1024 * 1024 + 32768);
+          final reservation = await lease.reserve(
+            ScanImageLimits.maxPdfBytes + 32768,
+          );
           try {
             if (token.isCompleted) {
               throw const ScanFailure('Upload cancelled before preparation.');
@@ -278,7 +281,7 @@ final class LocalScanDraftRepository implements ScanDraftRepository {
         manifest,
         attempt,
         'pdf',
-        20 * 1024 * 1024,
+        ScanImageLimits.maxPdfBytes,
       );
       final metadataBytes = await store.verifyAsset(
         manifest,

@@ -26,17 +26,19 @@ Each file is standalone. No override files, `.env` files or local builds are
 needed. All three files use the same storage preparation and run every service
 as **UID/GID `950:950`**.
 
-**Public GitHub image references will follow.** The examples currently use
-`example.invalid/replace-me/domabas-<component>:REPLACE_WITH_RELEASE` placeholders
-for the initializer, backend, document processor and web app. These placeholders
-cannot be pulled or deployed. Before deploying, replace the whole `image` value
-in `x-init`, `services.backend`, `services.document-processor` and `services.web`
-with real, matching release versions and digests from a registry your NAS can
-access. Keep the `x-init` anchor so all initialization services share its image.
-The examples require `linux/amd64` images. If your chosen registry requires
-authentication, configure it under **Apps > Configuration > Sign-in to a Docker
-registry**. For a deployment built from a checkout, use the
-[Compose guide](../docs/development/compose.md). Maintainers can find container publishing and version selection in the
+The initializer, backend, document processor and web app are pinned to the
+matching [v0.0.10 release](https://github.com/saschTa/domabas/releases/tag/v0.0.10)
+images in `ghcr.io/saschta`, with immutable SHA-256 digests. The examples require
+`linux/amd64`. For upgrades, update all four image references together using the
+digests from one release. Keep the `x-init` anchor so all initialization services
+share its image.
+
+Public GHCR packages allow anonymous pulls. If the packages are private,
+configure an account with package access under **Apps > Configuration > Sign-in
+to a Docker registry** before deploying. Repository visibility and package
+visibility are separate settings. For a deployment built from a checkout, use
+the [Compose guide](../docs/development/compose.md). Maintainers can find manual
+container publishing and version selection in the
 [release guide](../docs/development/releases.md). No native app downloads are published.
 
 ## 2. Prepare the dataset
@@ -112,9 +114,8 @@ contexts. Verify the exclusion with
 Keep completed YAML and its backups private; do not force-add them or
 attach them to issues. On other systems, restrict the file to your own account.
 
-In the private copy, replace the image placeholders described in step 1, then
-edit `x-settings` at the top. Leave the YAML anchor names (`&...`) and references
-(`*...`) intact.
+In the private copy, edit `x-settings` at the top. Leave the YAML anchor names
+(`&...`) and references (`*...`) intact.
 
 | Setting | What to enter |
 | --- | --- |
@@ -143,8 +144,9 @@ Check your private copy without printing resolved credentials:
 docker compose -f truenas/compose.cpu.local.yaml config --quiet
 ```
 
-Use the matching filename for CUDA or ROCm. This validates syntax only; empty
-passwords and placeholder images must still be replaced before deployment.
+Use the matching filename for CUDA or ROCm. This validates syntax only; passwords
+and dataset settings must still be filled in, and the NAS must be able to pull
+the images before deployment.
 
 Open Domabas directly at `http://<NAS-address>:<web_port>`, for example
 `http://192.168.0.230:8088`, and set `public_origin` to that exact origin.

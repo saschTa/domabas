@@ -11,26 +11,22 @@ export const RELEASE_IMAGES = [
   { name: "init", dockerfile: "infra/init/Dockerfile", services: ["database-init", "temporal-schema", "temporal-init"] },
 ] as const;
 
-export interface ReleaseConfiguration { repository: string; sha: string }
+export interface ReleaseConfiguration { repository: string; sha: string; bump: ReleaseBump }
 export interface ReleaseImage { name: string; tag: string; reference: string; platform: "linux/amd64" }
 export interface GitHubRelease { id: number; draft: boolean; tag_name: string; target_commitish: string; html_url: string }
 interface GitHubTag { name: string; commit: { sha: string } }
-interface ReleasePullRequest {
-  merged_at: string | null;
-  merge_commit_sha: string | null;
-  base: { ref: string; repo: { full_name: string } };
-  labels: { name: string }[];
-}
 type ReleaseRequest = (url: string, options: RequestInit) => Promise<Response>;
 export type ReleaseBump = "patch" | "minor" | "major";
 
 export function releaseConfiguration(env: Environment): ReleaseConfiguration {
-  if (env.GITHUB_EVENT_NAME !== "push" || env.GITHUB_REF !== "refs/heads/main") throw new Error("Releases require a push to main.");
+  if (env.GITHUB_EVENT_NAME !== "workflow_dispatch" || env.GITHUB_REF !== "refs/heads/main") throw new Error("Releases require a manual workflow dispatch on main.");
   if (env.GITHUB_SERVER_URL !== "https://github.com" || env.GITHUB_API_URL !== "https://api.github.com") throw new Error("Releases require GitHub.com.");
   const sha = required(env, "GITHUB_SHA"), repository = required(env, "GITHUB_REPOSITORY");
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error("Release requires the exact event commit SHA.");
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error("Invalid GitHub repository.");
-  return { repository, sha };
+  const bump = env.RELEASE_BUMP;
+  if (bump !== "patch" && bump !== "minor" && bump !== "major") throw new Error("Release requires RELEASE_BUMP to be patch, minor or major.");
+  return { repository, sha, bump };
 }
 
 function versionParts(tag: string): number[] | undefined {
@@ -47,12 +43,6 @@ export function nextReleaseVersion(tags: string[], bump: ReleaseBump): string {
   const parts = bump === "major" ? [major! + 1, 0, 0] : bump === "minor" ? [major!, minor! + 1, 0] : [major!, minor!, patch! + 1];
   if (parts.some(part => !Number.isSafeInteger(part))) throw new Error("Release version exceeds safe integer limits.");
   return `v${parts.join(".")}`;
-}
-
-export function releaseBump(pulls: ReleasePullRequest[], config: ReleaseConfiguration): ReleaseBump {
-  const labels = new Set(pulls.filter(pr => pr.merged_at && pr.merge_commit_sha === config.sha && pr.base.ref === "main" && pr.base.repo.full_name.toLowerCase() === config.repository.toLowerCase()).flatMap(pr => pr.labels.map(label => label.name)));
-  if (labels.has("release:major") && labels.has("release:minor")) throw new Error("Choose only one release:major or release:minor label.");
-  return labels.has("release:major") ? "major" : labels.has("release:minor") ? "minor" : "patch";
 }
 
 export class GitHubReleaseClient {
@@ -93,8 +83,7 @@ export class GitHubReleaseClient {
     const previous = releases.filter(release => release.target_commitish === this.config.sha && versionParts(release.tag_name));
     if (previous.length > 1 || previous[0] && previous[0].tag_name !== version) throw new Error("Existing release tag changed or was removed; refusing to create another version.");
     if (!version) {
-      const pulls = await this.list<ReleasePullRequest>(`/commits/${this.config.sha}/pulls`);
-      version = nextReleaseVersion([...tags.map(tag => tag.name), ...releases.map(release => release.tag_name)], releaseBump(pulls, this.config));
+      version = nextReleaseVersion([...tags.map(tag => tag.name), ...releases.map(release => release.tag_name)], this.config.bump);
       await this.api("/git/refs", "POST", { ref: `refs/tags/${version}`, sha: this.config.sha });
     }
     await this.verifyTag(version);

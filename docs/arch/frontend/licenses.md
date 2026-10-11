@@ -40,8 +40,9 @@ index, deduplicating identical text by SHA-256 while preserving copyright text.
 Normal generation/checks are offline and do not need dependency caches. Evidence
 collection is an explicit maintainer step; missing grants remain visible entries.
 See [inventory workflow](../../../third_party/README.md#complete-inventory-and-app-screen)
-and [commercial review](../../../third_party/COMMERCIAL_LICENSE_REVIEW.md) for
-scope, evidence gaps and source-distribution obligations.
+for evidence scope and [artifact notices](../../../third_party/README.md#artifact-notices)
+for distribution requirements. Retaining notices does not resolve missing grants
+or satisfy separate source-distribution obligations.
 
 Repository tests cover bundled loading, runtime merging, immutability and invalid
 assets. Widget tests cover search, paging/reset, notices, retries, lifecycle,

@@ -1,3 +1,5 @@
+# Modified by Domabas contributors from desktop_drop 0.8.4; see CHANGES.md.
+
 name: desktop_drop
 description: Domabas-owned Linux and Windows physical-file drop adapter.
 version: 0.8.4+domabas.1

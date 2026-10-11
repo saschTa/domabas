@@ -120,9 +120,10 @@ while as images and models download.
 
 Use the [self-hosting guide](docs/development/compose.md) for configuration,
 HTTPS, storage and upgrades. The [TrueNAS guide](truenas/README.md) provides
-CPU, NVIDIA and AMD examples with application image placeholders. **Public GitHub
-image references will follow.** Replace the placeholders with matching real image
-versions and digests before deploying those examples. The
+CPU, NVIDIA and AMD examples pinned to the matching
+[v0.0.10 container images](https://github.com/saschTa/domabas/releases/tag/v0.0.10).
+Set your passwords, dataset path and network addresses before deploying. Private
+GHCR packages require registry authentication. The
 [release guide](docs/development/releases.md) describes versioned GHCR containers
 and the checks that run before publication.
 

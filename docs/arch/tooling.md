@@ -141,20 +141,27 @@ deadlines bound CI checks, Compose smoke and release work even on older runners
 that ignore YAML job timeouts;
 PR concurrency groups cancel obsolete commits without cancelling main releases.
 GitHub Actions runs `task check` and isolated PostgreSQL integration/database
-regeneration on PRs and main pushes. It uses GitHub-hosted Ubuntu runners. Full
-Temporal, browser, API E2E, model and Compose checks remain explicit local tasks.
+regeneration on PRs, main pushes and manual release runs. It uses GitHub-hosted
+Ubuntu runners. Full Temporal, browser, API E2E, model and Compose checks remain
+explicit local tasks.
 The local full harness retains Docker gateway discovery and unique projects.
 
-Main pushes also run checksum-pinned OSV-Scanner against Go, Dart and Bun inputs.
+Main pushes and manual release runs on main also run checksum-pinned OSV-Scanner
+against Go, Dart and Bun inputs.
 The TypeScript adapter renders all findings and blocks only critical ratings;
 scanner failures also fail the job. Source scanning does not cover image OS or
 native library vulnerabilities.
 
-The serialized release job uses GitHub's `queue: max` to retain pending merges.
+Releases require a manual `workflow_dispatch` on `main`; merges and pushes only
+run checks. The workflow and TypeScript entry point both enforce that boundary.
+The serialized release job uses GitHub's `queue: max` to retain pending release
+runs.
 The publisher lists every page of tags and releases, reserves a semantic version
-as a lightweight tag at the exact event commit, and creates a draft. PR labels
-select minor or major; patch is the default. Reserved tags survive interrupted
-builds. Retrying the same commit reuses its version; moved/deleted tags or
+as a lightweight tag at the exact event commit, and creates a draft. The manual
+`release_bump` input selects patch, minor or major, with patch as the default.
+The entry point validates that choice before publication; PR labels are not read.
+Reserved tags survive interrupted builds. Retrying the same commit reuses its
+version regardless of a later increment choice; moved/deleted tags or
 ambiguous versions fail. Published retries do no writes or builds.
 
 Docker Buildx builds and loads backend, web, document-processor and init images
@@ -164,8 +171,8 @@ pass does the publisher push the scanned images to GHCR, without rebuilding.
 The publisher checks local tag identities again before each push. All target
 Linux AMD64; the web image contains the Flutter web build.
 No native applications are published. The job token receives repository and
-package write access only in the main-push job. Docker credentials are scoped
-to that runner's configuration, restored on exit and excluded from build process
+package write access only in the manual main release job. Docker credentials are
+scoped to that runner's configuration, restored on exit and excluded from build process
 environments. OCI labels record source, revision, version and the project license.
 The images retain the third-party license catalog.
 

@@ -50,7 +50,7 @@ tasks:
     cmds: [bun --no-env-file scripts/ci/setup-flutter.ts]
 
   release:
-    desc: Publish versioned GHCR containers and a GitHub release from a tested main push
+    desc: Publish versioned GHCR containers and a GitHub release from a manual main workflow run
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/release/release.ts]
 

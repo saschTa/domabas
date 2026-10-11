@@ -75,11 +75,11 @@ test("a failing backend suite stops later tests in either mode", async () => {
   }
 });
 
-test("GitHub PRs use read-only fast checks and isolated PostgreSQL; only main can publish", async () => {
+test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main runs can publish", async () => {
   type Step = { run?: string; uses?: string; with?: Record<string, unknown>; env?: Record<string, string> };
   type Job = { if?: string; needs?: string[]; "runs-on": string; "timeout-minutes": number; permissions?: Record<string, string>; steps: Step[]; concurrency?: { queue: string; "cancel-in-progress": boolean }; services?: Record<string, { image: string }> };
   const workflow = Bun.YAML.parse(await Bun.file(join(ROOT, ".github/workflows/ci.yml")).text()) as {
-    on: { push: { branches: string[] }; pull_request: unknown; workflow_dispatch: unknown };
+    on: { push: { branches: string[] }; pull_request: unknown; workflow_dispatch: { inputs: Record<string, { type: string; required: boolean; default: string; options: string[] }> } };
     permissions: Record<string, string>;
     concurrency: { group: string; "cancel-in-progress": string };
     jobs: Record<string, Job>;
@@ -87,6 +87,7 @@ test("GitHub PRs use read-only fast checks and isolated PostgreSQL; only main ca
   expect(workflow.on.push.branches).toEqual(["main"]);
   expect(workflow.on).toHaveProperty("pull_request");
   expect(workflow.on).not.toHaveProperty("pull_request_target");
+  expect(workflow.on.workflow_dispatch.inputs.release_bump).toMatchObject({ type: "choice", required: true, default: "patch", options: ["patch", "minor", "major"] });
   expect(workflow.permissions).toEqual({ contents: "read" });
   for (const job of Object.values(workflow.jobs)) {
     expect(job["runs-on"]).toBe("ubuntu-latest");
@@ -105,17 +106,27 @@ test("GitHub PRs use read-only fast checks and isolated PostgreSQL; only main ca
   expect(integration.services!.postgres!.image).toBe(compose.services.postgres.image);
   const release = workflow.jobs.release!;
   expect(release.needs).toEqual(["checks", "integration", "dependencies"]);
-  expect(release.permissions).toEqual({ contents: "write", packages: "write", "pull-requests": "read" });
+  expect(release.permissions).toEqual({ contents: "write", packages: "write" });
+  expect(release.steps.find(step => step.run === "task release")?.env?.RELEASE_BUMP).toBe("${{ inputs.release_bump }}");
+  expect(release.steps.find(step => step.uses?.startsWith("actions/checkout@"))?.with?.ref).toBe("${{ github.sha }}");
   expect(release.concurrency?.queue).toBe("max");
   expect(release.concurrency?.["cancel-in-progress"]).toBe(false);
   for (const [event_name, ref, expected] of [
-    ["pull_request", "refs/heads/main", false], ["push", "refs/heads/main", true],
-    ["push", "refs/heads/feature", false], ["workflow_dispatch", "refs/heads/main", false],
+    ["pull_request", "refs/heads/main", false], ["push", "refs/heads/main", false],
+    ["push", "refs/heads/feature", false], ["workflow_dispatch", "refs/heads/main", true],
+    ["workflow_dispatch", "refs/heads/feature", false], ["workflow_dispatch", "refs/tags/v0.0.1", false],
   ] as const) {
     const select = new Function("github", "return (" + release.if + ");");
     expect(select({ event_name, ref })).toBe(expected);
   }
   expect(workflow.jobs.dependencies!.steps.some(step => step.run === "task security:dependencies")).toBe(true);
+  for (const [event_name, ref, expected] of [
+    ["push", "refs/heads/main", true], ["workflow_dispatch", "refs/heads/main", true],
+    ["pull_request", "refs/heads/main", false], ["workflow_dispatch", "refs/heads/feature", false],
+  ] as const) {
+    const select = new Function("github", "return (" + workflow.jobs.dependencies!.if + ");");
+    expect(select({ event_name, ref })).toBe(expected);
+  }
   expect(workflow.concurrency.group).toContain("github.run_id");
   expect(workflow.concurrency["cancel-in-progress"]).toContain("github.event_name == 'pull_request'");
   for (const job of Object.values(workflow.jobs)) for (const step of job.steps) {

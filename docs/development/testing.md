@@ -174,7 +174,7 @@ These tests use the existing local validation commands and require no additional
 ## GitHub Actions
 
 [The workflow](../../.github/workflows/ci.yml) uses GitHub-hosted `ubuntu-latest`
-for pull requests, pushes to `main` and manual checks. Feature-branch and tag
+for pull requests, pushes to `main` and manual release runs. Feature-branch and tag
 pushes do not create duplicate pipelines. New commits cancel older runs of the
 same PR. Main runs are retained; only publication is serialized.
 
@@ -183,8 +183,13 @@ same PR. Main runs are retained; only publication is serialized.
 | `task check`: TypeScript, Go vet, Flutter analysis, API/icon/license generation, Bun, Go race/structure and Flutter unit/widget/repository tests | Required | Required | Required |
 | `task test:integration` and `task generate:db:check` | Required | Required | Required |
 | `task security:dependencies`: critical-only OSV gate | — | Required | Required |
-| Build and Trivy-scan four container images, then push and release | — | After all checks | — |
+| Build and Trivy-scan four container images, then push and release | — | — | After all checks |
 | Temporal, focused Chrome, API/browser E2E, live models and Compose smoke | Local | Local | Local |
+
+Start a release with **Actions → CI and releases → Run workflow**, selecting
+`main` and `release_bump` (`patch`, `minor` or `major`). The run checks and
+publishes its captured commit. Merges and pushes never trigger publication.
+Manual runs on other refs run checks without publishing.
 
 The integration job starts only a pinned pgvector PostgreSQL service. It prepares
 shared extensions with `task ci:database`, then uses the existing disposable

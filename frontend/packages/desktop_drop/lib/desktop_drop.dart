@@ -1,3 +1,5 @@
+// Modified by Domabas contributors from desktop_drop 0.8.4; see ../CHANGES.md.
+
 import 'dart:async';
 import 'dart:convert';
 

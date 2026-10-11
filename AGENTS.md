@@ -19,7 +19,6 @@ evaluating or hosting the app; this file is the working guide for coding agents.
 | Containers and runtime resources | [Compose guide](docs/development/compose.md), [resource guide](docs/development/resources.md), [Compose definition](compose.yaml) |
 | Checks and runner requirements | [Testing guide](docs/development/testing.md), [Taskfile](Taskfile.yml), [GitHub workflow](.github/workflows/ci.yml) |
 | Development plans and research | Local working notes in `docs/plans/` (ignored by Git) |
-| Release readiness | [OSS release checklist](OSS_RELEASE_CHECKLIST.md) |
 
 ## Setup and daily commands
 
@@ -77,8 +76,8 @@ changing database ports, API origins, model runtimes or external services.
    for the change in the task or PR report. Keep tracked documentation focused on
    current behavior, prerequisites, required checks and support limits; do not
    add workstation histories, past test reports or test logs. Record lasting
-   decisions in the appropriate topic guide and completion status in the release
-   checklist. Do not link tracked documentation to local plans.
+   decisions in the appropriate topic guide. Do not link tracked documentation
+   to local plans.
 5. Review the diff, run the checks below that apply, and report unavailable checks
    with their reason. Do not claim another host's native build passed.
 

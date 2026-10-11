@@ -132,8 +132,7 @@ Both notices keep their actual copyright holders. The existing Maven entries in
 addresses and notice hashes; the generated catalog and Flutter asset include
 these complete texts.
 Recheck the resolved Gradle graph and packaged APK whenever native dependencies
-change. See the [release checklist](../OSS_RELEASE_CHECKLIST.md#4-licenses-and-attribution-in-downloads)
-for publication requirements and distribution scope.
+change. Verify notices and source obligations for each published artifact.
 
 ## Linux dbus source
 
@@ -177,10 +176,10 @@ on phones). Both paths let you search components and read their retained notices
 without a backend connection. Web needs an initial page and asset load before
 offline reading. This adds Go, Bun, native, model and infrastructure evidence to
 Flutter's existing registry.
-The [generated inventory](licenses/INDEX.md) links exact package identities;
-[commercial license review](COMMERCIAL_LICENSE_REVIEW.md) records copyleft,
-missing grants, vendor conditions and binary coverage limits. Read that report
-before treating this source inventory as commercial distribution clearance.
+The [generated inventory](licenses/INDEX.md) links exact package identities.
+Review copyleft obligations, missing grants, vendor conditions and binary coverage
+for each distribution. This source inventory is not commercial distribution
+clearance.
 
 `licenses/catalog.json` is the retained evidence snapshot, with full notice texts
 indexed by SHA-256. All four project images copy `third_party/`, so the catalog
@@ -195,9 +194,7 @@ explicit summaries in that manifest, including Bun's statically linked LGPL
 components, LLVM exceptions and PDFium's bundled libraries. Wrapped license
 text is recognized without treating copyleft compatibility references as grants.
 Missing license evidence remains marked for review; a label is not distribution
-clearance. The
-[commercial review](COMMERCIAL_LICENSE_REVIEW.md#resolved-nexus-license-evidence)
-describes the Nexus distribution containing the upstream MIT grant.
+clearance.
 Git permits trailing blank lines in retained native notices so upstream license
 files can remain byte-for-byte unchanged.
 
@@ -233,7 +230,7 @@ from `frontend/android` with `JAVA_HOME` set to the local JDK.
 Re-resolve after native dependency changes, compare selected coordinates and
 update their exact POM/parent-POM evidence in `licenses/supplemental.json`.
 The normal generator intentionally does not claim to resolve every native SDK or
-OS image. Review the report's release-artifact gaps separately.
+OS image. Review each release artifact's dependencies and notices separately.
 
 `task check` and GitHub CI run the offline consistency check. A change to a repository
 dependency input fails until the evidence is refreshed. New, unignored inputs are
@@ -270,5 +267,4 @@ Compare the extracted license and catalog with the release checkout, and inspect
 the relevant upstream OS notices. Standalone executables distributed outside
 these images must be accompanied by the root `LICENSE` and this notice directory.
 Retaining notices does not establish complete binary license coverage or satisfy
-separate source-delivery obligations. The [release checklist](../OSS_RELEASE_CHECKLIST.md#4-licenses-and-attribution-in-downloads)
-tracks artifact validation requirements and their completion status.
+separate source-delivery obligations.

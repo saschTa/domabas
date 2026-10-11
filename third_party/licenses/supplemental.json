@@ -2223,6 +2223,13 @@
     ]
   },
   {
+    "appendTo": "dart:desktop_drop",
+    "version": "0.8.4+domabas.1",
+    "files": [
+      "frontend/packages/desktop_drop/CHANGES.md"
+    ]
+  },
+  {
     "appendTo": "dart:dbus",
     "version": "0.7.15",
     "files": [

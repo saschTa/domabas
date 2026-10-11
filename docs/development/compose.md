@@ -178,7 +178,10 @@ changing this file alone is insufficient.
 Edit only the private file to add deployment settings, such as
 `CORS_ORIGINS=http://192.168.0.230:8088` with your actual browser origin.
 HTTP works directly on the published web port. To use HTTPS, configure a proxy
-separately and use its HTTPS origin. Keep private service ports on loopback.
+separately and use its HTTPS origin. Keep `BIND_ADDRESS=127.0.0.1` and
+`PRIVATE_BIND_ADDRESS=127.0.0.1` in the private file. Changing `BIND_ADDRESS`
+also exposes PostgreSQL, Temporal and Temporal UI; use the
+[web-only override](#allow-web-access-from-another-machine) for remote web access.
 Compose supplies internal service addresses and passes `POSTGRES_PASSWORD` to
 the backend as `PGPASSWORD`; no deployment `DATABASE_URL` needs to be copied from
 the development file.
@@ -208,13 +211,48 @@ attach completed files or resolved Compose output to issues. Keep any backups
 of these files private too. For standalone TrueNAS YAML, follow the
 [private-copy workflow](../../truenas/README.md#3-fill-in-your-settings).
 
+### Allow web access from another machine
+
+For a trusted LAN, keep both bind settings above on loopback and save this as
+`compose.web.local.yaml`. Replace `192.168.0.230` with the Docker host's LAN
+address and set `CORS_ORIGINS=http://192.168.0.230:8088` in
+`.env.deployment.local` to match your address and web port.
+
+```yaml
+services:
+  web:
+    ports: !override
+      - "192.168.0.230:${WEB_PORT:-8088}:8080"
+```
+
+This requires Docker Compose 2.24.4 or newer. The
+[`!override` tag](https://docs.docker.com/reference/compose-file/merge/#replace-value)
+replaces the web port mapping instead of appending another one. PostgreSQL,
+Temporal, Temporal UI, Ollama and the processor keep their loopback bindings.
+The backend remains reachable through the web proxy without its own host port.
+
+Use both files for every command, including shutdown:
+
+```sh
+git check-ignore .env.deployment.local compose.web.local.yaml
+docker compose --env-file .env.deployment.local -f compose.yaml -f compose.web.local.yaml config --quiet
+docker compose --env-file .env.deployment.local -f compose.yaml -f compose.web.local.yaml up --build --wait
+docker compose --env-file .env.deployment.local -f compose.yaml -f compose.web.local.yaml ps
+docker compose --env-file .env.deployment.local -f compose.yaml -f compose.web.local.yaml down
+```
+
+Ordinary `down` retains the data volumes. HTTP sends credentials and sessions
+without encryption; for HTTPS, place a TLS proxy in front of the web endpoint
+and set `CORS_ORIGINS` to its exact HTTPS origin. A proxy running on the Docker
+host can reach the default loopback web port without this LAN override.
+
 ### Persistent data
 
 Container connections use service DNS (`postgres`, `temporal`), while native
 tools use published localhost ports. If changing a native port, update its
-`DATABASE_URL` or `TEMPORAL_ADDRESS` too. To bind for another machine on a trusted
-network, set `BIND_ADDRESS` deliberately; configure TLS termination for
-credentials and sessions.
+`DATABASE_URL` or `TEMPORAL_ADDRESS` too. For another machine's web access, use
+the [web-only override](#allow-web-access-from-another-machine) and configure TLS
+termination for credentials and sessions.
 
 Configure `OLLAMA_MAX_QUEUE=128` consistently on Ollama, backend replicas and the processor, then use Admin settings → Workload limits to adjust worker, Ollama and external-provider capacity. The shared Ollama background budget is at most 64 jobs and defaults to one. Worker capacity defaults to ten jobs, and external provider origins to two. Running requests are never cancelled merely because ingestion arrives. The former `DOCUMENT_INGESTION_CONCURRENCY` and `DOCUMENT_AI_CONCURRENCY` settings no longer control admission. An external Ollama queue cannot be discovered through its API; configure its matching budget explicitly. Actual computation still depends on model parallelism and the processor’s ten OCR slots.
 The processor image stages waiting originals in private disk-backed `/app/tmp`;
@@ -314,9 +352,10 @@ The processor startup budget is ten minutes; Task wrappers allow fifteen minutes
 for infrastructure readiness. Complete retained caches start without downloading
 again. Corrupt caches fail readiness rather than silently selecting another model.
 
-Ollama's published port binds only to loopback for native Go development, using
-`LLM_OLLAMA_PORT` (default 11435). The processor's host port always binds
-to loopback, even if `BIND_ADDRESS` is changed. Native development uses
+Ollama and the processor use `PRIVATE_BIND_ADDRESS`, independently of
+`BIND_ADDRESS`; its default is `127.0.0.1`. Keep it on loopback for these private
+endpoints. `LLM_OLLAMA_PORT` selects Ollama's host port (default 11435).
+Native development uses
 `DOCUMENT_PROCESSOR_URL=http://127.0.0.1:8091`; adjust that URL when changing
 `DOCUMENT_PROCESSOR_PORT`. These private inference endpoints have no account
 authentication and must stay private. System administrators configure supported
@@ -388,8 +427,10 @@ configured `TEMPORAL_NAMESPACE`, and supplies the link shown under
 both the published port and the default link. A nonempty `TEMPORAL_UI_URL` overrides the
 complete browser-facing HTTP(S) URL for remote browsers or a TLS proxy, for example
 `TEMPORAL_UI_URL=http://nas.example.test:8233`. Replace the fictional hostname
-`nas.example.test` with your browser-reachable NAS hostname or address. Set
-`BIND_ADDRESS` to a reachable interface for direct access from another machine.
+`nas.example.test` with your browser-reachable NAS hostname or address. Changing
+this URL does not publish the UI port. Keep its binding on loopback and use an
+authenticated proxy or SSH tunnel for remote administration; do not broaden
+`BIND_ADDRESS` just to expose the dashboard.
 A deployment base path is allowed; credentials, query strings and fragments
 are rejected.
 

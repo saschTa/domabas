@@ -22,7 +22,7 @@ x-settings:
 
 x-init: &init
   user: "950:950"
-  image: example.invalid/replace-me/domabas-init:REPLACE_WITH_RELEASE
+  image: ghcr.io/saschta/domabas-init:v0.0.10@sha256:a2e6013d237d35908f608cd678ddcf722f5eefb3fec901bebd4887d3685f3066
   platform: linux/amd64
   restart: "no"
 
@@ -214,7 +214,7 @@ services:
 
   document-processor:
     user: "950:950"
-    image: example.invalid/replace-me/domabas-document-processor:REPLACE_WITH_RELEASE
+    image: ghcr.io/saschta/domabas-document-processor:v0.0.10@sha256:c28aa8926cd74bbe8f8c5fdcd2fa44eb9a556cb554560b6edd0d50cbf08167f7
     platform: linux/amd64
     restart: unless-stopped
     environment:
@@ -252,7 +252,7 @@ services:
   backend:
     mem_limit: *backend-memory-limit
     user: "950:950"
-    image: example.invalid/replace-me/domabas-backend:REPLACE_WITH_RELEASE
+    image: ghcr.io/saschta/domabas-backend:v0.0.10@sha256:898aa6107b9823ede463838fe2432792706ffea5010ed1c451aac8ec356cfa7a
     platform: linux/amd64
     restart: unless-stopped
     environment:
@@ -307,7 +307,7 @@ services:
     tmpfs:
       - /var/cache/nginx:uid=950,gid=950,mode=0700
       - /var/run:uid=950,gid=950,mode=0755
-    image: example.invalid/replace-me/domabas-web:REPLACE_WITH_RELEASE
+    image: ghcr.io/saschta/domabas-web:v0.0.10@sha256:d8ecd3c51dbaf3d6b924aa6d954a2846a7673bf90bce535d18f9bd56711982fc
     platform: linux/amd64
     restart: unless-stopped
     ports:

@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease, publishScannedImages, releaseBump, releaseCompose, releaseConfiguration, type GitHubRelease, type ReleaseImage } from "./release.ts";
+import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease, publishScannedImages, releaseCompose, releaseConfiguration, type GitHubRelease, type ReleaseBump, type ReleaseImage } from "./release.ts";
 import { ROOT } from "../shared/runtime.ts";
 import { FLUTTER_SHA256, FLUTTER_VERSION } from "../ci/setup-flutter.ts";
 
-const env = { GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", GITHUB_SHA: "a".repeat(40), GITHUB_REPOSITORY: "Example-Owner/Domabas", GITHUB_SERVER_URL: "https://github.com", GITHUB_API_URL: "https://api.github.com" };
+const env = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/main", GITHUB_SHA: "a".repeat(40), GITHUB_REPOSITORY: "Example-Owner/Domabas", GITHUB_SERVER_URL: "https://github.com", GITHUB_API_URL: "https://api.github.com", RELEASE_BUMP: "patch" };
 const config = releaseConfiguration(env);
 const source = await Bun.file(`${ROOT}/compose.yaml`).text();
 const images = (version: string): ReleaseImage[] => RELEASE_IMAGES.map(image => ({ name: image.name, tag: `ghcr.io/example-owner/domabas-${image.name}:${version}`, reference: `ghcr.io/example-owner/domabas-${image.name}@sha256:${"b".repeat(64)}`, platform: "linux/amd64" }));
-const pull = (labels: string[]) => ({ merged_at: "2026-09-29T12:00:00Z", merge_commit_sha: config.sha, base: { ref: "main", repo: { full_name: config.repository } }, labels: labels.map(name => ({ name })) });
 
 describe("release versions and triggers", () => {
   test("starts at 0.0.1 and increments semantic versions numerically", () => {
@@ -18,18 +17,13 @@ describe("release versions and triggers", () => {
     expect(nextReleaseVersion(["v1.2.3", "v0.99.99"], "patch")).toBe("v1.2.4");
     expect(() => nextReleaseVersion(["v1.2.9007199254740991"], "patch")).toThrow("safe integer");
   });
-  test("only a matching merged PR selects minor or major", () => {
-    expect(releaseBump([], config)).toBe("patch");
-    expect(releaseBump([pull(["release:minor"])], config)).toBe("minor");
-    expect(releaseBump([pull(["release:major"])], config)).toBe("major");
-    expect(() => releaseBump([pull(["release:minor", "release:major"])], config)).toThrow("only one");
-    for (const change of [{ merged_at: null }, { merge_commit_sha: "c".repeat(40) }, { base: { ref: "other", repo: { full_name: config.repository } } }, { base: { ref: "main", repo: { full_name: "other/repository" } } }]) {
-      expect(releaseBump([{ ...pull(["release:major"]), ...change }], config)).toBe("patch");
-    }
+  test("requires an explicit valid version increment from the manual input", () => {
+    for (const bump of ["patch", "minor", "major"] as const) expect(releaseConfiguration({ ...env, RELEASE_BUMP: bump }).bump).toBe(bump);
+    for (const bump of [undefined, "", "latest", "MINOR"]) expect(() => releaseConfiguration({ ...env, RELEASE_BUMP: bump })).toThrow("RELEASE_BUMP");
   });
-  test("rejects non-main events, credentials in URLs and invalid commits", () => {
-    for (const change of [{ GITHUB_REF: "refs/tags/v0.0.1" }, { GITHUB_EVENT_NAME: "pull_request" }, { GITHUB_EVENT_NAME: "workflow_dispatch" }, { GITHUB_REF: "refs/heads/feature" }]) {
-      expect(() => releaseConfiguration({ ...env, ...change })).toThrow("push to main");
+  test("rejects automatic events, non-main refs, credentials in URLs and invalid commits", () => {
+    for (const change of [{ GITHUB_REF: "refs/tags/v0.0.1" }, { GITHUB_EVENT_NAME: "pull_request" }, { GITHUB_EVENT_NAME: "push" }, { GITHUB_EVENT_NAME: "schedule" }, { GITHUB_REF: "refs/heads/feature" }]) {
+      expect(() => releaseConfiguration({ ...env, ...change })).toThrow("manual workflow dispatch on main");
     }
     expect(() => releaseConfiguration({ ...env, GITHUB_SHA: "main" })).toThrow("exact event commit");
     expect(() => releaseConfiguration({ ...env, GITHUB_API_URL: "https://secret@example.test" })).toThrow("GitHub.com");
@@ -65,11 +59,12 @@ describe("release deployment", () => {
   });
 });
 
-function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[]; releases?: GitHubRelease[]; labels?: string[]; forbidden?: boolean; failDraft?: boolean } = {}) {
+function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[]; releases?: GitHubRelease[]; bump?: ReleaseBump; forbidden?: boolean; failDraft?: boolean } = {}) {
   const calls: { method: string; path: string; body?: any }[] = [];
   const tags = [...options.tags ?? []], releases = [...options.releases ?? []];
   let nextDraftFails = options.failDraft;
-  const client = new GitHubReleaseClient(config, "test-token", async (url, init) => {
+  const releaseConfig = { ...config, bump: options.bump ?? config.bump };
+  const client = new GitHubReleaseClient(releaseConfig, "test-token", async (url, init) => {
     const path = new URL(url).pathname.replace(`/repos/${config.repository}`, "");
     const method = init.method ?? "GET", body = init.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({ method, path: path + new URL(url).search, body });
@@ -77,7 +72,6 @@ function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[
     const paginated = (items: unknown[]) => { const page = Number(new URL(url).searchParams.get("page")); return Response.json(items.slice((page - 1) * 100, page * 100)); };
     if (method === "GET" && path === "/tags") return paginated(tags);
     if (method === "GET" && path === "/releases") return paginated(releases);
-    if (path.endsWith("/pulls")) return Response.json([pull(options.labels ?? [])]);
     if (method === "GET" && path.startsWith("/git/ref/tags/")) {
       const tag = tags.find(tag => path.endsWith(`/${tag.name}`));
       return tag ? Response.json({ object: { type: "commit", sha: tag.commit.sha } }) : new Response(null, { status: 404 });
@@ -95,7 +89,7 @@ function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[
     if (method === "PATCH") { Object.assign(releases.find(release => path === `/releases/${release.id}`)!, body); return Response.json({}); }
     throw new Error(`Unexpected ${method} ${path}`);
   });
-  return { client, calls, tags, releases };
+  return { client, calls, tags, releases, releaseConfig };
 }
 
 const reservedTag = { name: "v0.0.1", commit: { sha: config.sha } };
@@ -122,11 +116,12 @@ describe("GitHub publication and recovery", () => {
     await publishRelease(config, fake.client, async () => { throw new Error("must not build"); }, source);
     expect(fake.calls.every(call => call.method === "GET")).toBe(true);
   });
-  test("a failed build remains a draft and a retry ignores later label changes and versions", async () => {
+  test("a failed build remains a draft and a retry ignores a different bump and later versions", async () => {
     const fake = fakeGitHub();
     await expect(publishRelease(config, fake.client, async () => { throw new Error("build failed"); }, source)).rejects.toThrow("build failed");
     expect(fake.releases[0]!.draft).toBe(true);
     fake.tags.push({ name: "v0.0.2", commit: { sha: "c".repeat(40) } });
+    fake.releaseConfig.bump = "major";
     await publishRelease(config, fake.client, async version => { expect(version).toBe("v0.0.1"); return images(version); }, source);
     expect(fake.calls.filter(call => call.method === "POST" && call.path === "/git/refs")).toHaveLength(1);
   });
@@ -161,11 +156,11 @@ describe("GitHub publication and recovery", () => {
       expect(fake.releases[0]!.draft).toBe(true);
     }
   });
-  test("uses labels for the next version and paginates old tags and releases", async () => {
+  test("uses the selected increment for the next version and paginates old tags and releases", async () => {
     const tags = Array.from({ length: 100 }, (_, index) => ({ name: `v0.0.${index + 1}`, commit: { sha: "c".repeat(40) } }));
     tags.push({ name: "v2.0.0", commit: { sha: "c".repeat(40) } });
     const releases = Array.from({ length: 100 }, (_, index) => ({ ...draft, id: index + 2, target_commitish: "c".repeat(40), tag_name: `v0.0.${index + 1}` }));
-    const fake = fakeGitHub({ tags, releases, labels: ["release:minor"] });
+    const fake = fakeGitHub({ tags, releases, bump: "minor" });
     expect((await fake.client.prepare()).tag_name).toBe("v2.1.0");
     expect(fake.calls.some(call => call.path === "/tags?per_page=100&page=2")).toBe(true);
     expect(fake.calls.some(call => call.path === "/releases?per_page=100&page=2")).toBe(true);

@@ -1,3 +1,5 @@
+// Modified by Domabas contributors from desktop_drop 0.8.4; see ../CHANGES.md.
+
 #include "include/desktop_drop/desktop_drop_plugin.h"
 
 #include <flutter_linux/flutter_linux.h>

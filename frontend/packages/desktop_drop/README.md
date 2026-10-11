@@ -1,5 +1,8 @@
 # Domabas desktop file drop adapter
 
+Domabas contributors modified this upstream package. See [CHANGES.md](CHANGES.md)
+for the modified files and their changes.
+
 Derived from the published `desktop_drop` 0.8.4 archive:
 https://pub.dev/api/archives/desktop_drop-0.8.4.tar.gz
 

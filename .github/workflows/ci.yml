@@ -5,6 +5,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      release_bump:
+        description: Version increment for a release from main
+        required: true
+        default: patch
+        type: choice
+        options: [patch, minor, major]
 
 permissions:
   contents: read
@@ -111,13 +118,12 @@ jobs:
   release:
     name: Publish containers
     needs: [checks, integration, dependencies]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: write
       packages: write
-      pull-requests: read
     concurrency:
       group: domabas-container-releases
       queue: max
@@ -146,6 +152,7 @@ jobs:
       - run: task release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BUMP: ${{ inputs.release_bump }}
       - name: Retain image vulnerability reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

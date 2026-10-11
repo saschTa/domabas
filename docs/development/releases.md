@@ -1,9 +1,11 @@
 # GitHub container releases
 
-Every successful push to `main`, including a PR merge, publishes four images and
-one GitHub release after the [required checks](testing.md#github-actions) pass.
-Pull requests and manual runs only check the code. Image names come from the
-GitHub repository, so no remote URL or maintainer namespace is hard-coded:
+Releases start manually from **Actions → CI and releases → Run workflow**.
+Select `main` and a version increment. The run publishes four images and one
+GitHub release after the [required checks](testing.md#github-actions) pass.
+Pull requests and pushes to `main`, including merges, run checks without publishing.
+Manual runs on other branches or tags cannot publish. Image names come from the
+GitHub repository:
 
 ```text
 ghcr.io/<owner>/<repository>-backend:v0.0.1
@@ -18,21 +20,29 @@ pins and are not republished.
 
 ## Selecting the next version
 
-The first ordinary main push creates `v0.0.1`. Each subsequent push increments
-the patch number. Before merging, apply one of these labels to the PR:
+Choose `release_bump` when starting the workflow. It defaults to `patch`; the
+first patch release creates `v0.0.1`. The selected increment applies to the
+highest existing semantic release tag or reserved release version:
 
-| Label | Next version after `v0.2.7` |
+| Version increment | Next version after `v0.2.7` |
 | --- | --- |
-| No release label | `v0.2.8` |
-| `release:minor` | `v0.3.0` |
-| `release:major` | `v1.0.0` |
+| `patch` | `v0.2.8` |
+| `minor` | `v0.3.0` |
+| `major` | `v1.0.0` |
 
-Create the two labels in GitHub once. Labels work with merge, squash and rebase
-merges because the publisher looks up the merged PR associated with the event
-commit. It accepts labels only from a merged PR targeting this repository's
-`main`. A direct push defaults to patch. Conflicting minor and major labels fail
-before reserving a version. Labels are read when publication starts; set them
-before merging and leave them unchanged until the version is reserved.
+The workflow must be present on the repository's default branch before GitHub
+offers **Run workflow**. Users with write access can also start a release with
+GitHub CLI:
+
+```sh
+gh workflow run ci.yml --ref main -f release_bump=patch
+```
+
+The publisher uses the exact commit captured by the manual run, even if `main`
+advances while checks run. It rejects automatic events and non-main refs.
+PR labels do not select versions. See GitHub's
+[manual workflow documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
+for access requirements and dispatch options.
 
 Versions below 1.0.0 are marked as GitHub prereleases. Moving to 1.0.0 should be
 an intentional support decision. There is no floating `latest` container tag;
@@ -44,8 +54,8 @@ Publication is serialized using GitHub's
 [concurrency queue](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
 Up to 100 pending release jobs are retained. They run in queue arrival order,
 which can differ from commit order when checks take different amounts of time.
-If that limit is exceeded, rerun cancelled main runs. PR cancellation does not
-cancel releases.
+If that limit is exceeded, rerun cancelled manual release runs. PR cancellation
+does not cancel releases.
 
 The publisher reserves a version with a Git tag at the exact tested commit and
 creates a draft release. It builds the four `linux/amd64` images with Docker
@@ -58,12 +68,13 @@ commands and a complete Compose configuration pinned to those digests. Save the 
 
 A failure can leave a reserved tag and draft. A registry failure after scanning
 can also leave some image tags. Rerun the same workflow run to resume that
-version. Draft retries can replace incomplete images;
-published retries skip builds and publication. Do not move or delete reserved
+version. A later manual run for the same commit also reuses its reserved version,
+even if a different increment is selected. Draft retries can replace incomplete
+images; published retries skip builds and publication. Do not move or delete reserved
 release tags: the publisher rejects changed tags, mismatched commits and
 ambiguous versions. Reserved but unfinished releases can leave version gaps.
-A newer merge can publish after an older release failed. GitHub releases are not
-promoted through a mutable latest pointer.
+A later manual release can publish after an older release failed. GitHub releases
+are not promoted through a mutable latest pointer.
 
 The release job has 60 minutes including setup, with a 50-minute command deadline.
 Docker reuses layers within the job; this initial workflow does not promise a
@@ -85,9 +96,9 @@ Only **critical** findings block publication: a grouped CVSS score of at least
 9.0 or an explicit critical advisory rating. High, medium, low and unscored
 findings appear in the log and job summary without blocking. Download, checksum,
 API and malformed-report failures fail the scan rather than masquerading as a
-clean result. PR checks do not run this scan; main pushes and manual checks on
-main do. Review dependencies regularly and rerun the workflow on main when
-checking new advisories between releases.
+clean result. PR checks do not run this scan; main pushes and manual release runs
+on main do. Run `task security:dependencies` locally to check new advisories between
+releases without starting publication.
 
 This is a dependency inventory scan, not proof of exploitability. It does not
 scan container OS packages, statically linked OCR libraries, downloaded models
@@ -116,13 +127,13 @@ which accounts for distribution backports. The images are not rebuilt between
 scanning and pushing. A later registry/network failure can leave some already
 scanned images pushed while the GitHub release remains a draft.
 
-This runs only in the main-push publication job, after its source and database
-checks pass. PRs do not build or scan images. The job summary shows severity
-counts and up to 100 findings per image, with critical findings first. Complete
+This runs only in the manually triggered publication job on main, after its
+source and database checks pass. PRs do not build or scan images. The job summary
+shows severity counts and up to 100 findings per image, with critical findings first. Complete
 JSON reports are retained as `image-vulnerabilities-<attempt>` workflow artifacts
 for 14 days, including on failure. Scanning stops at the first failure; reports
 exist only for images reached in that run. The Trivy database is cached across
-main runs, including failed scans, with normal freshness checks enabled. A scan
+release runs, including failed scans, with normal freshness checks enabled. A scan
 has a ten-minute timeout within the release command's overall budget.
 
 For a local image, inspect its full ID and pass it to the same scanner:
@@ -149,29 +160,28 @@ releases; this workflow does not yet schedule them.
 ## Activate a new GitHub repository
 
 1. Add the intended GitHub remote and publish a branch named `main`; set it as
-   the default branch. This checkout had no remote and used `master` when the
-   workflow was added. No remote or branch was changed by the CI implementation.
+   the default branch.
 2. Enable GitHub Actions and permit the pinned actions in
    [the workflow](../../.github/workflows/ci.yml). Use GitHub-hosted
-   `ubuntu-latest`, not a self-hosted runner. The first push runs checks and may
-   publish immediately if every gate passes.
+   `ubuntu-latest`, not a self-hosted runner. The first push runs checks.
 3. Permit the release job's `GITHUB_TOKEN` to write repository contents and
-   packages and read PR metadata. No personal access token or custom registry
+   packages. No personal access token or custom registry
    secret is needed. Rules protecting `v*` tags must allow this workflow to create
    them. PR jobs keep read-only permissions and do not persist checkout credentials.
 4. Require **Fast checks** and **PostgreSQL integration** in the `main` branch
    ruleset before merging. Require PR review for workflow and release-tooling
    changes. Configure these rules after the first run makes check names available.
-5. Create `release:minor` and `release:major` labels. Push an ordinary first
-   commit for `v0.0.1`; do not manually create release tags.
+5. When ready to publish, open **Actions → CI and releases → Run workflow**,
+   select `main` and the desired version increment. The publisher creates the
+   release tag after that run's checks pass.
 6. Set each of the four GHCR packages to **Public** after first publication.
    GitHub packages can start private even for a public repository. Verify the
    repository is linked and its workflow can write each package. See
    [GitHub's registry permissions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 7. From a logged-out Docker configuration, pull all four release images and run
-   a clean Compose install. Replace the TrueNAS image placeholders with the real
-   repository's matching image digests. Record hosted check timing, publication,
-   anonymous pulls and installation evidence before closing those checklist items.
+   a clean Compose install. Keep the TrueNAS examples aligned with the published
+   image versions and digests. Verify hosted checks, publication, anonymous pulls
+   and installation before advertising the release.
 
 ## Supported artifacts
 

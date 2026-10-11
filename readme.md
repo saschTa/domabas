@@ -1,87 +1,94 @@
-![Domabas document grid with previews and tags for fictional household documents](docs/screenshots/document-grid.png)
-
 # Domabas
 
-**All your home documents. One searchable home.**
+**All your documents, searchable in one central place.**
 
-Stop digging through basement boxes for that one receipt. Domabas is an
-all-in-one solution for digital home document management: collect your paperwork,
-keep it organized, and find it when you need it. From insurance policies and
-invoices to warranties and everyday mail, everything has a home on your own server.
+Domabas is a self-hosted document library. Upload and organize your documents,
+search their contents, and share libraries with other users. Storage, document
+processing and AI can all run on your own hardware.
 
-[Features](#features) · [Screenshots](#screenshots) ·
+[Features](#features) · [AI](#how-ai-is-used) · [Screenshots](#screenshots) ·
 [Hosting](#what-you-need-to-host-it) · [Components](#how-it-fits-together) ·
 [Build an app](#build-an-app-on-your-computer) ·
 [Development guide](docs/development/index.md)
 
 ## Features
 
-| What you can do | How it helps |
-| --- | --- |
-| **Bring every document home** | Upload PDFs, images and emails (EML) from your computer or phone. Preview your originals in one library. |
-| **Save from another mobile app** | Share PDFs and images to Domabas on iOS or Android, confirm the destination library and upload. See [mobile setup](frontend/README.md#sharing-from-other-apps). |
-| **Find it without the exact filename** | Text recognition and full-text indexing make your paperwork searchable. Semantic search finds related content by meaning, with tags and filters to narrow the results. |
-| **Let your inbox file itself** | Connect an IMAP account for automatic email archiving. Supported attachments are extracted into their own documents and linked to the original email. |
-| **Read German e-invoices** | Extract structured invoice data embedded in PDFs, including ZUGFeRD/Factur-X, and view the details alongside the source document. See [supported formats](docs/arch/backend/invoices.md#extraction). |
-| **Spend less time typing invoice data** | Optional AI extracts invoice details from ordinary PDFs and emails. Accuracy depends on the model you choose; extracted values remain available for review. |
-| **Turn paper into a PDF on your phone** | Android and iOS apps include a document scanner with page-edge detection, perspective correction and multi-page drafts. Capture, review and upload to your library. |
-| **Ask your documents** | AI RAG chat searches and reads documents you can access to help answer your questions. Answer quality depends heavily on the model used. |
-| **Keep processing through interruptions** | A durable jobs framework powered by Temporal keeps imports and processing moving through restarts, with retries, visible progress and failure details. |
-| **Organize with less effort** | Categorize documents with tags, or enable AI to generate tags and other document properties for you. |
+- **Upload documents:** Upload PDFs, PNG/JPEG images and email files (EML).
+  Domabas extracts text, runs OCR where needed and creates thumbnails for PDFs
+  and images.
+- **Scan documents on mobile:** Use the camera on Android or iOS to scan pages,
+  review them and upload a PDF to your library.
+- **Search documents:** Use full-text and semantic search to find documents by
+  their words or meaning.
+- **Organize documents:** Add tags and properties, then filter by tag, document
+  type, sender or recipient.
+- **Import email automatically:** Connect an IMAP mailbox to import emails on a
+  schedule. Supported attachments become separate, linked documents.
+- **Read German invoice data:** Read structured invoice data embedded in PDFs,
+  including ZUGFeRD/Factur-X. Optional AI extracts invoice details from ordinary
+  documents. See [supported formats](docs/arch/backend/invoices.md#extraction).
+- **AI chat:** Ask questions about documents you can access, with links to the
+  documents used in the answer.
+- **Import from Paperless-ngx:** Move your documents and supported metadata,
+  including tags, into Domabas.
+- **Multiple libraries and users:** Each user gets a personal library and can
+  share it with other users. Switch between your own and shared libraries, with
+  roles and permissions controlling access.
+- **Run privately:** Host storage, processing, search and AI locally. No cloud
+  account is required. See [data and privacy](docs/development/privacy.md) for
+  optional external services and mobile scanner data flows.
+- **Web, mobile and desktop:** Use the browser app or build apps for Android,
+  iOS, Linux, macOS and Windows. Mobile apps also support sharing documents from
+  other apps. See the [app guide](frontend/README.md).
 
-Keep a personal library or invite others into a shared one with permissions you
-control. Already using Paperless-ngx? Import your existing documents from Settings.
+## How AI is used
 
-Use Domabas in your browser, or build apps for **Android, iOS, Linux, macOS and
-Windows**. Native installation and platform requirements are covered in the
-[app guide](frontend/README.md); mobile scanning is available on Android and iOS.
-Android scanning uses Google ML Kit and requires Google Play services. Images are
-processed on-device; the SDK sends usage and performance metrics to Google. See
-[data and privacy](docs/development/privacy.md#what-other-services-receive).
+Ollama runs the embedding model that turns document text and search queries into
+representations of their meaning. These embeddings make semantic search possible
+and run locally in the default setup, even when optional AI features are disabled.
 
-## Choose your AI
+Ollama can also run models for chat, document properties and invoice extraction.
+Smaller models need less memory and are a starting point. For better answers and
+extraction, we recommend larger, more capable models when your hardware allows.
+You can also connect an OpenAI-compatible service, including one you host yourself.
 
-New installations use `qwen3.5:4b` for chat, document properties and invoice AI.
-Upgrades preserve saved model choices and context settings. Property extraction
-and invoice AI start disabled; administrators can enable them under
-Admin → Document processing. See the [AI configuration guide](docs/development/property-extraction.md)
-for model selection, external providers and GPU setup.
-
-Run models locally with Ollama or connect an OpenAI-compatible service. AI chat
-has its own model settings under Admin → AI chat. Choose models that suit your
-hardware and documents, and review AI-generated results.
-
-Open **User settings → Licenses** to search third-party components and read their
-license notices offline. Distributors should also read the
-[license inventory and commercial review](third_party/README.md#complete-inventory-and-app-screen).
+Chat and AI extraction are still under heavy development. Results depend on the
+model and documents, so review them before relying on them. Property and invoice
+AI start disabled; administrators can enable them under Admin → Document
+processing. Chat has separate settings under Admin → AI chat. See the
+[AI configuration guide](docs/development/property-extraction.md) for model
+selection, providers and GPU setup.
 
 ## Screenshots
 
-The grid at the top and the views below are captured from the running local app
-with fictional sample content.
+These screenshots show the web app with fictional documents and users.
 
-### Follow every job
+**Document grid**
 
-See how an upload becomes a searchable document, then follow its separate invoice
-and AI processing. Jobs & pipeline brings progress and outcomes into one view.
+![Document grid with PDF thumbnails, tags and search controls](docs/screenshots/document-grid.png)
 
-![A completed Domabas ingestion job showing the pipeline from original email to searchable document](docs/screenshots/job-pipeline.png)
+<details>
+<summary>Invoices</summary>
 
-### Connect your email
+![Invoice list showing suppliers, invoice numbers, dates and amounts](docs/screenshots/invoices.png)
 
-Set up your mailbox, choose an import schedule, and let new emails and supported
-attachments arrive in your library automatically.
+</details>
 
-![Domabas email account setup with IMAP connection and automatic import settings](docs/screenshots/email-setup.png)
+<details>
+<summary>Users and shared libraries</summary>
 
-### Make AI work for your setup
+![Library members with their access roles](docs/screenshots/library-members.png)
 
-Choose a local or external model and enable invoice extraction and document
-properties independently.
+</details>
 
-![Domabas document AI settings with provider, model and extraction controls](docs/screenshots/ai-settings.png)
+<details>
+<summary>Processing jobs</summary>
 
-See [screenshot notes](docs/screenshots/index.md) for capture details and more views.
+![A completed document processing job and its recorded stages](docs/screenshots/job-pipeline.png)
+
+</details>
+
+See the [screenshot guide](docs/screenshots/index.md) for capture details.
 
 ## What you need to host it
 
@@ -91,7 +98,7 @@ other development tools on the host.
 | Requirement | Starting point |
 | --- | --- |
 | **Container runtime** | Docker with [Compose v2 or newer](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the current web build stage. |
-| **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for Ollama models when using AI. Leave capacity for your operating system and other services. |
+| **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for Ollama's embedding model and any chat or extraction models. Leave capacity for your operating system and other services. |
 | **Storage** | Persistent space for original files, the database, encryption keys and model caches, plus temporary processing space and backups. Size this for your library and chosen models. |
 | **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |
 | **GPU** | Optional. CPU operation is supported; NVIDIA and AMD setups need compatible hardware and drivers. |
@@ -157,22 +164,23 @@ deletion limits, encryption responsibilities and sensitive logging behavior.
 
 ## How it fits together
 
-The app talks to one Go backend. PostgreSQL stores records and job state;
-original files live in persistent storage. Temporal keeps background work moving
-through restarts. The document processor reads files and recognizes text, while
-Ollama provides local models for search and AI features.
+The Flutter app talks to one Go backend, which serves the API and runs background
+workers. PostgreSQL stores application records and job progress, with separate
+databases for Temporal's workflow history. Original files live in persistent
+storage. Temporal coordinates jobs through restarts. A private document processor
+extracts text, runs OCR, creates thumbnails and asks Ollama for search embeddings.
+The backend uses local or optional external models for chat and AI extraction.
 
 ```mermaid
 flowchart TD
-  Browser[Browser] --> Web[Web server and Flutter app]
-  Native[Phone and desktop apps] --> Backend[Go API and background workers]
+  Browser[Flutter web app] --> Web[Web server]
+  Native[Flutter mobile and desktop apps] --> Backend[Go API and background workers]
   Web --> Backend
-  Backend --> Postgres[(PostgreSQL)]
+  Backend --> Postgres[(PostgreSQL: application data)]
   Backend --> Files[(Documents and encryption keys)]
   Backend <--> Temporal[Temporal job orchestration]
-  Temporal --> Postgres
-  Dashboard[Temporal dashboard] --> Temporal
-  Backend --> Processor[Document processor: PDF and text recognition]
+  Temporal --> History[(PostgreSQL: Temporal databases)]
+  Backend --> Processor[Document processor: text, OCR and thumbnails]
   Processor --> Ollama[Ollama: local models]
   Backend --> Ollama
   Backend -. optional .-> External[External AI provider]

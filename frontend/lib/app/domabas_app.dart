@@ -19,6 +19,8 @@ import '../ui/domabas_ui.dart';
 import 'account_workspace.dart';
 import 'app_dependencies.dart';
 import 'document_upload_coordinator.dart';
+import 'mobile_share_cubit.dart';
+import 'mobile_share_host.dart';
 import 'public_licenses_access.dart';
 import '../presentation/document/widgets/document_upload_host.dart';
 
@@ -31,10 +33,12 @@ final class DomabasApp extends StatefulWidget {
     this.appearanceCubit,
     this.serverConfiguration,
     this.uploads,
+    this.shares,
   });
 
   final AuthRepository auth;
   final DocumentUploadCoordinator? uploads;
+  final MobileShareCubit? shares;
   final AppearanceRepository appearance;
   final AppearanceCubit? appearanceCubit;
   final ServerConfigurationCubit? serverConfiguration;
@@ -68,6 +72,7 @@ final class _DomabasAppState extends State<DomabasApp>
         (AppearanceCubit(widget.appearance)..restore());
     _sessions = SessionCubit(widget.auth);
     _sessionSubscription = _sessions.stream.listen(_changed);
+    widget.shares?.attach(null, null, busy: true);
     unawaited(_sessions.restore());
   }
 
@@ -90,6 +95,7 @@ final class _DomabasAppState extends State<DomabasApp>
             });
     }
     widget.uploads?.attach(_scope?.uploads, busy: state.busy);
+    widget.shares?.attach(session, _scope?.uploads, busy: state.busy);
     setState(() {});
   }
 
@@ -107,8 +113,12 @@ final class _DomabasAppState extends State<DomabasApp>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) =>
-      widget.uploads?.lifecycleChanged(state);
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    widget.uploads?.lifecycleChanged(state);
+    if (state == AppLifecycleState.resumed) {
+      widget.shares?.attach(_session, _scope?.uploads, busy: _sessions.busy);
+    }
+  }
 
   @override
   void didChangeAccessibilityFeatures() {
@@ -157,7 +167,10 @@ final class _DomabasAppState extends State<DomabasApp>
               : const AnimationStyle(duration: Duration(milliseconds: 200)),
           builder: (context, child) => DocumentUploadHost(
             cubit: _scope?.uploads,
-            child: child ?? const SizedBox.shrink(),
+            child: MobileShareHost(
+              shares: widget.shares,
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
           home: Builder(builder: _home),
         ),

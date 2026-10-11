@@ -17,6 +17,19 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		A5A4E0000000000000000065 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000001; };
+		A5A4E0000000000000000066 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000002; };
+		A5A4E000000000000000006F = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000001; };
+		A5A4E0000000000000000071 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000003; };
+		A5A4E0000000000000000072 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000004; };
+		A5A4E0000000000000000073 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000005; };
+		A5A4E0000000000000000079 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000001; };
+		A5A4E000000000000000007B = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000003; };
+		A5A4E000000000000000007C = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000004; };
+		A5A4E0000000000000000015 /* ShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000014; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A5A4E0000000000000000502 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000501; };
+		A5A4E0000000000000000602 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000601; };
+		A5A4E0000000000000000603 = {isa = PBXBuildFile; fileRef = A5A4E0000000000000000601; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +40,7 @@
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
 		};
+		A5A4E0000000000000000017 = {isa = PBXContainerItemProxy; containerPortal = 97C146E61CF9000F007C117D; proxyType = 1; remoteGlobalIDString = A5A4E000000000000000001E; remoteInfo = ShareExtension; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -38,6 +52,15 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A5A4E0000000000000000016 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (A5A4E0000000000000000015, );
+			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -61,6 +84,15 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A5A4E0000000000000000001 /* ShareSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSupport/ShareSessionStore.swift; sourceTree = SOURCE_ROOT; };
+		A5A4E0000000000000000002 /* MobileShareChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Runner/MobileShareChannel.swift; sourceTree = SOURCE_ROOT; };
+		A5A4E0000000000000000003 /* ShareUploadFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtension/ShareUploadFile.swift; sourceTree = SOURCE_ROOT; };
+		A5A4E0000000000000000004 /* ShareHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtension/ShareHTTPClient.swift; sourceTree = SOURCE_ROOT; };
+		A5A4E0000000000000000005 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtension/ShareViewController.swift; sourceTree = SOURCE_ROOT; };
+		A5A4E0000000000000000014 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5A4E0000000000000000501 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests/ShareUploadTests.swift; sourceTree = SOURCE_ROOT; };
+		A5A4E0000000000000000258 /* ShareExtensionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShareExtensionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5A4E0000000000000000601 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareExtension/ShareAttachmentReceiver.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
+				A5A4E0000000000000000501,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -98,6 +131,12 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
+				A5A4E0000000000000000001,
+				A5A4E0000000000000000002,
+				A5A4E0000000000000000003,
+				A5A4E0000000000000000004,
+				A5A4E0000000000000000005,
+				A5A4E0000000000000000601,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -110,6 +149,8 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				A5A4E0000000000000000258 /* ShareExtensionTests.xctest */,
+				A5A4E0000000000000000014 /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -159,12 +200,14 @@
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
+				A5A4E0000000000000000016 /* Embed App Extensions */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A5A4E0000000000000000018,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -173,6 +216,28 @@
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A5A4E000000000000000001E /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A5A4E0000000000000000028;
+			buildPhases = (A5A4E000000000000000001F, );
+			buildRules = ();
+			dependencies = ();
+			name = ShareExtension;
+			productName = ShareExtension;
+			productReference = A5A4E0000000000000000014;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A5A4E000000000000000025A /* ShareExtensionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A5A4E000000000000000025B;
+			buildPhases = (A5A4E0000000000000000259, );
+			buildRules = ();
+			dependencies = ();
+			name = ShareExtensionTests;
+			productName = ShareExtensionTests;
+			productReference = A5A4E0000000000000000258;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -210,6 +275,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				A5A4E000000000000000025A /* ShareExtensionTests */,
+				A5A4E000000000000000001E /* ShareExtension */,
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 			);
@@ -285,12 +352,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+				A5A4E0000000000000000065,
+				A5A4E0000000000000000066,
 				A73141002FE023E000CCD100 /* VisionKitDocumentScannerChannel.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A5A4E000000000000000001F = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A5A4E000000000000000006F, A5A4E0000000000000000071, A5A4E0000000000000000072, A5A4E0000000000000000073, A5A4E0000000000000000602, ); runOnlyForDeploymentPostprocessing = 0; };
+		A5A4E0000000000000000259 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A5A4E0000000000000000079, A5A4E000000000000000007B, A5A4E000000000000000007C, A5A4E0000000000000000502, A5A4E0000000000000000603, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -299,6 +370,7 @@
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
 		};
+		A5A4E0000000000000000018 = {isa = PBXTargetDependency; target = A5A4E000000000000000001E; targetProxy = A5A4E0000000000000000017; };
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
@@ -388,7 +460,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(DOMABAS_APP_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -570,7 +642,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(DOMABAS_APP_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -593,13 +665,112 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(DOMABAS_APP_IDENTIFIER)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		A5A4E0000000000000000029 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB21CF90195004384FC;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = "$(DOMABAS_APP_IDENTIFIER).ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A5A4E000000000000000002A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = "$(DOMABAS_APP_IDENTIFIER).ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A5A4E000000000000000002B /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				PRODUCT_BUNDLE_IDENTIFIER = "$(DOMABAS_APP_IDENTIFIER).ShareExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
+		};
+		A5A4E000000000000000025C = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas.ShareExtensionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A5A4E000000000000000025D = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas.ShareExtensionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A5A4E000000000000000025E = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.domabas.domabas.ShareExtensionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
 		};
 /* End XCBuildConfiguration section */
 
@@ -634,6 +805,8 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A5A4E0000000000000000028 = {isa = XCConfigurationList; buildConfigurations = (A5A4E0000000000000000029, A5A4E000000000000000002A, A5A4E000000000000000002B, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A5A4E000000000000000025B = {isa = XCConfigurationList; buildConfigurations = (A5A4E000000000000000025C, A5A4E000000000000000025D, A5A4E000000000000000025E, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */

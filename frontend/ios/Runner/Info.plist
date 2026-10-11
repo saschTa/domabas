@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>DomabasKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)$(DOMABAS_APP_IDENTIFIER)</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Domabas connects to your chosen document server on your local network.</string>
 	<key>NSAppTransportSecurity</key>

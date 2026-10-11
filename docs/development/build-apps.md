@@ -146,9 +146,14 @@ the file, and it is not an IPA installer.** To install your own copy:
 3. In Xcode, add your Apple account under **Settings → Accounts**.
 4. Select the **Runner** project, then its **Runner** target. Under
    **Signing & Capabilities**, enable **Automatically manage signing** and
-   choose your team. If Xcode says the bundle identifier is unavailable, change
-   `dev.domabas.domabas` to your own unique value, such as
-   `com.yourname.domabas`. These settings belong to your local copy.
+   choose your team. Select the same team for **ShareExtension**. If the bundle
+   identifier is unavailable, change `DOMABAS_APP_IDENTIFIER` in
+   `frontend/ios/Flutter/Share.xcconfig` to your own unique value, such as
+   `com.yourname.domabas`. Both bundle IDs and the shared Keychain group derive
+   from that setting. Provision both targets with Keychain Sharing for the main
+   app identifier; see [mobile sharing](../../frontend/README.md#sharing-from-other-apps).
+   Keep identifiers unchanged when upgrading an existing installation.
+   These signing settings belong to your local copy.
 5. Select your connected device at the top of Xcode. Enable **Developer Mode**
    under the device's **Settings → Privacy & Security** if requested, then
    press Xcode's **Run** triangle. Xcode builds, signs and installs the app.

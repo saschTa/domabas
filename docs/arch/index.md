@@ -44,6 +44,7 @@ shows where implementation conventions are documented and checked. Use the
 | [Workload settings](frontend/workload-settings.md) | Shared resource limits and concurrent-edit handling |
 | [Email and activity](frontend/email.md) | Account settings, safe email rendering and job progress |
 | [Mobile scanning](frontend/scanner.md) | Camera capture, page correction, local drafts and PDF submission |
+| [Mobile sharing](frontend/mobile-sharing.md) | iOS Share Extension, Android received files and upload confirmation |
 | [Platforms and transport](frontend/platforms.md) | Six platform hosts, HTTP clients, certificate trust and session storage |
 | [Server configuration](frontend/server-configuration.md) | Native setup, saved addresses and replacing a server scope |
 | [Identity lifetime](frontend/identity.md) | Sign-in, library switching, secure sessions and teardown |

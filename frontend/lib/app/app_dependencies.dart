@@ -60,6 +60,7 @@ import 'realtime_socket_factory.dart';
 import 'session_client.dart';
 import 'scanner_scope.dart';
 import 'document_upload_coordinator.dart';
+import 'mobile_share_cubit.dart';
 import '../data/document/datasources/document_upload_remote_data_source.dart';
 import '../data/document/repos/remote_document_upload_repository.dart';
 import '../presentation/document/cubits/document_uploads_cubit.dart';
@@ -162,6 +163,10 @@ final class AppDependencies {
   final AppearanceRepository appearance;
   final ScannerCoordinator _scannerCoordinator = createScannerCoordinator();
   final DocumentUploadCoordinator uploads = DocumentUploadCoordinator();
+  late final MobileShareCubit? shares = MobileShareCubit.production(
+    _endpoint,
+    uploads,
+  );
 
   AuthenticatedDependencies authenticate(
     AuthSession session,
@@ -255,6 +260,7 @@ final class AppDependencies {
 
   void dispose() {
     uploads.dispose();
+    shares?.close();
     _client.close();
   }
 }

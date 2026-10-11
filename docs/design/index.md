@@ -14,7 +14,7 @@ share the same controls and layout. Original document pixels keep their own colo
 | Phone and tablet navigation | [Mobile navigation](../arch/frontend/mobile-navigation.md) |
 | Document cards, search and viewer | [Document workspace](../arch/frontend/documents.md) |
 | App mark and platform icons | [Application branding](../arch/frontend/branding.md) |
-| See the real interface and how its images were captured | [Screenshot notes](../screenshots/index.md) |
+| Capture the real interface using fictional data | [Screenshot guide](../screenshots/index.md) |
 
 The Filed Paper mark shows a sheet above an archive tray. Its editable source is
 [domabas-mark.svg](../../frontend/assets/branding/domabas-mark.svg); the square

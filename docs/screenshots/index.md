@@ -1,33 +1,29 @@
 # Application screenshots
 
-These images show the running Domabas web application.
-All accounts, email addresses and documents shown are fictional.
+These screenshots show the running Domabas web app in light appearance.
+All documents, accounts and email addresses shown are fictional.
 
 ## README product tour
 
 | Screenshot | View |
 | --- | --- |
-| [Document grid](document-grid.png) | Light appearance, four PDF previews and four email documents with tags; 1440 × 1200. The opening README image. |
-| [Job pipeline](job-pipeline.png) | A completed email ingestion job with recorded timing and all processing stages; 1440 × 1040. |
-| [Email setup](email-setup.png) | An unsaved IMAP setup example using `example.test`, with no password entered and no connection attempted; 1440 × 1040. |
-| [AI settings](ai-settings.png) | The extraction settings dialog with both AI switches enabled as an unsaved example and the default local model; 1440 × 1040. |
+| [Document grid](document-grid.png) | Eight processed PDFs with thumbnails and tags, plus search and filter controls. |
+| [Invoices](invoices.png) | Three extracted CII invoices with suppliers, invoice numbers, issue and due dates, and totals. |
+| [Library members](library-members.png) | A shared library with Owner, User and Viewer access. |
+| [Processing job](job-pipeline.png) | A completed document ingestion job showing extraction, embeddings and search indexing. |
 
-## Additional views
+All images are 1440 × 1040 browser captures. They do not show native apps.
 
-| Screenshot | View |
-| --- | --- |
-| [Document library](document-library.png) | Light appearance, desktop list with searchable email documents and tags; 1440 × 1000. |
-| [Document details](document-details.png) | Email content beside its properties; 1440 × 1000. |
+## Prepare and capture
 
-## Refresh the screenshots
+Keep the product tour short and focused on populated feature views. Use an
+isolated application instance with a disposable database schema, unique Temporal
+queues and separate storage/key directories. Upload fictional documents through
+the real API and wait for processing to finish. Use Playwright MCP to inspect and
+capture the running app. Do not mock UI state or retouch images.
 
-Use an isolated application instance with a disposable database schema, unique
-Temporal queues and separate storage/key directories. Upload fictional documents
-through the real API, wait for processing to finish, and capture the browser UI.
-Do not mock UI state or retouch the images. Close unsaved settings
-examples without saving them.
-
-Inspect every image, then stop the owned processes and clean up only their
-disposable data and workflows. Update the view descriptions above and the
-[README captions](../../readme.md#screenshots) when the views change. Label web
-and native captures accurately.
+Review every image before adding it here and to the
+[README](../../readme.md#screenshots). Label responsive web and native captures
+accurately. Keep local demo credentials and process details in the ignored
+`docs/plans/` directory. Stop only owned processes and remove only their disposable
+data when the demo is no longer needed.

@@ -6,10 +6,42 @@ Domabas is a self-hosted document library. Upload and organize your documents,
 search their contents, and share libraries with other users. Storage, document
 processing and AI can all run on your own hardware.
 
-[Features](#features) · [AI](#how-ai-is-used) · [Screenshots](#screenshots) ·
+[Quick start](#quick-start) · [Features](#features) · [AI](#how-ai-is-used) · [Screenshots](#screenshots) ·
 [Hosting](#what-you-need-to-host-it) · [Components](#how-it-fits-together) ·
 [Build an app](#build-an-app-on-your-computer) ·
 [Development guide](docs/development/index.md)
+
+## Quick start
+
+With Docker and Docker Compose already running:
+
+1. Download [compose.quickstart.yaml](https://raw.githubusercontent.com/saschTa/domabas/main/compose.quickstart.yaml)
+   and save it as **`compose.yaml`** in a new folder.
+2. Open a terminal in that folder and run:
+
+   ```sh
+   docker compose up -d
+   ```
+
+3. Open **http://localhost:8088** and create an account. The first account on a
+   new installation becomes the system administrator.
+
+The `-d` flag keeps Domabas running in the background. First startup can take
+several minutes while Docker downloads the images and Domabas downloads its
+models. Check progress with `docker compose logs -f`; Ctrl+C leaves the app
+running. No repository checkout, development tools or GPU are needed.
+
+The file uses published **v0.0.10** images, pinned by digest, for **Linux AMD64**
+containers. Native ARM64 images are not available; ARM64 machines, including
+Apple Silicon Macs, require compatible AMD64 emulation, which is not guaranteed
+to run this release. See [hosting requirements](#what-you-need-to-host-it) for
+memory and storage needs. The defaults are for testing on your own machine and
+bind ports to localhost. For a shared installation, follow the
+[self-hosting guide](docs/development/compose.md).
+
+To stop Domabas, run `docker compose down` in the same folder. Your documents,
+database and models stay in Docker volumes; `docker compose up -d` starts it
+again with that data.
 
 ## Features
 
@@ -97,7 +129,7 @@ other development tools on the host.
 
 | Requirement | Starting point |
 | --- | --- |
-| **Container runtime** | Docker with [Compose v2 or newer](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the current web build stage. |
+| **Container runtime** | Docker with [Compose v2 or newer](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the published images and the web build stage when building from source. |
 | **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for Ollama's embedding model and any chat or extraction models. Leave capacity for your operating system and other services. |
 | **Storage** | Persistent space for original files, the database, encryption keys and model caches, plus temporary processing space and backups. Size this for your library and chosen models. |
 | **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |
@@ -108,19 +140,10 @@ embeddings also use Ollama; allow for their model alongside any optional chat or
 extraction models. See the [resource guide](docs/development/resources.md) for
 service ceilings and sizing.
 
-From a checkout of this repository:
-
-```sh
-docker compose up --build --wait
-```
-
-Open **http://localhost:8088** and create an account. On a new, empty installation,
-the first account becomes the system administrator. Initial startup can take a
-while as images and models download.
-
-Use the [self-hosting guide](docs/development/compose.md) for configuration,
-HTTPS, storage and upgrades. The [TrueNAS guide](truenas/README.md) provides
-CPU, NVIDIA and AMD examples pinned to the matching
+Use the [quick start](#quick-start) to try the published images. The
+[self-hosting guide](docs/development/compose.md) covers configuration, building
+from source, HTTPS, storage and upgrades. The [TrueNAS guide](truenas/README.md)
+provides CPU, NVIDIA and AMD examples pinned to the matching
 [v0.0.10 container images](https://github.com/saschTa/domabas/releases/tag/v0.0.10).
 Set your passwords, dataset path and network addresses before deploying. Private
 GHCR packages require registry authentication. The

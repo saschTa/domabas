@@ -11,6 +11,7 @@
     "bun.lock": "fa4499d802f8f40ec9b02b25c0567da219719b191276eb51a3d3ec767d73eb14",
     "compose.cuda.yaml": "6f8fd57e8e80f7d93d4e1c269f2c36e22a9cf0af841e8aecf8d45bb63462a27c",
     "compose.mlx.yaml": "9c46cf95f8e0a1c13bca742d1614d565ca0513148d3a89010114b52a890c0815",
+    "compose.quickstart.yaml": "4bcca4aca73cea795769a0586fd17e2709b952b908bc204adb0b2f487f2d76ff",
     "compose.rocm.yaml": "0abd6920a895a3c917111f881b64173327bfd78e9490eeb79f3c42782042ef16",
     "compose.yaml": "2c4a4df0c12de53d64bd9d5a4d8f980299399708f6219b0b7ec759d28ab5a90c",
     "frontend/android/app/build.gradle.kts": "e047428c4d61b2a75501118656e4e15d0fc5dc032c33de14b05cf23b8dacf919",

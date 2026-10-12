@@ -8,8 +8,25 @@ ceilings, Go soft limits, overrides and OOM measurements.
 
 ## Start the complete application
 
-Install Docker with Compose v2 or newer and start the Docker daemon, then run
-from the checkout:
+For a local trial, follow the [README quick start](../../readme.md#quick-start):
+download [compose.quickstart.yaml](../../compose.quickstart.yaml), save it as
+`compose.yaml` in a new folder, then run:
+
+```sh
+docker compose up -d
+```
+
+This standalone file pulls public v0.0.10 images pinned by digest and creates
+named volumes for persistent data. It needs no checkout or `.env` file. Published
+Domabas images target `linux/amd64`. Native ARM64 images are not available, and
+AMD64 emulation on ARM64 hosts is not guaranteed to run this release.
+The default ports bind to localhost, and the built-in database passwords are
+for local testing. Configure passwords and addresses before sharing the setup.
+
+### Build from source
+
+With Docker Compose running, use the root `compose.yaml` from a repository
+checkout to build the application:
 
 ```sh
 docker compose up --build --wait
@@ -61,8 +78,8 @@ Published ports bind to `127.0.0.1` by default. Go is reached through the web pr
 | Temporal UI | 8233 | `TEMPORAL_UI_PORT` |
 
 ```sh
-# Start the application and Temporal UI at http://localhost:8233.
-docker compose up --build --wait
+# Start the downloaded quick-start file and Temporal UI at http://localhost:8233.
+docker compose up -d
 
 # Inspect service health and logs.
 docker compose ps
@@ -72,7 +89,8 @@ docker compose logs --tail 100 backend temporal
 docker compose down
 ```
 
-`task compose:up` and `task compose:down` expose the same full-stack lifecycle through Go Task and Bun. `task infra:up` starts PostgreSQL, Temporal and its UI, the private document processor, Ollama and initialization jobs; `task infra:down` stops infrastructure. `task db:down` stops only PostgreSQL. Ordinary commands do not remove volumes. Infrastructure shutdown makes a running API unready; stop the application first when ending a session.
+From a checkout, use `docker compose up --build --wait` to build and start the
+current source. `task compose:up` and `task compose:down` expose that full-stack lifecycle through Go Task and Bun. `task infra:up` starts PostgreSQL, Temporal and its UI, the private document processor, Ollama and initialization jobs; `task infra:down` stops infrastructure. `task db:down` stops only PostgreSQL. Ordinary commands do not remove volumes. Infrastructure shutdown makes a running API unready; stop the application first when ending a session.
 
 Run `task dev` for native Air and Flutter hot reload against Compose infrastructure. Stop the packaged backend before starting a native worker on the same queue: otherwise both processes can poll it. `docker compose stop web backend` leaves infrastructure available for development. All workers on a queue must use the same application database/schema and compatible workflow code.
 

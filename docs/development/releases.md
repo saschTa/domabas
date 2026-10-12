@@ -48,6 +48,16 @@ Versions below 1.0.0 are marked as GitHub prereleases. Moving to 1.0.0 should be
 an intentional support decision. There is no floating `latest` container tag;
 use the explicit version or digest from the release notes.
 
+The [quick-start Compose file](../../compose.quickstart.yaml) and
+[TrueNAS examples](../../truenas/README.md) currently pin the published
+[v0.0.10 images](https://github.com/saschTa/domabas/releases/tag/v0.0.10).
+These pins are updated deliberately, not by each release job. Update all four
+Domabas components together using the chosen release's tags and digests, verify
+anonymous pulls, and update the versions documented in the README and hosting
+guides. Keep the quick-start service configuration aligned with the root
+`compose.yaml`, replacing its build definitions with image references and
+`linux/amd64` platforms.
+
 ## Publication and retries
 
 Publication is serialized using GitHub's
@@ -179,9 +189,11 @@ releases; this workflow does not yet schedule them.
    repository is linked and its workflow can write each package. See
    [GitHub's registry permissions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 7. From a logged-out Docker configuration, pull all four release images and run
-   a clean Compose install. Keep the TrueNAS examples aligned with the published
-   image versions and digests. Verify hosted checks, publication, anonymous pulls
-   and installation before advertising the release.
+   a clean Compose install. Keep the quick-start and TrueNAS examples aligned
+   with the published image versions and digests. When using a fork, update their
+   image references to that repository's matching image digests. Verify hosted
+   checks, publication, anonymous pulls and installation before advertising the
+   release.
 
 ## Supported artifacts
 

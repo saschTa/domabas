@@ -5,6 +5,11 @@ later**. They include the web app, backend, PostgreSQL, Temporal, Ollama and
 document processing. Follow the steps below, then paste one complete file into
 **Apps > Discover Apps > Install via YAML**.
 
+The templates use volume subpaths supported by the required TrueNAS release.
+Separate startup health-check intervals also require Docker Engine 25+ and
+Compose 2.20.2+. Steady checks run every 30 seconds; see
+[health-check behavior and backend image requirements](../docs/development/compose.md#health-checks).
+
 This guide is for NAS operators. For a small home library, start with **4 CPU
 cores and 5 GiB available RAM**, plus memory for Ollama models, TrueNAS and other
 apps. You also need a dedicated dataset and usable Domabas image references as

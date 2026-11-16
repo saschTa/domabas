@@ -8,6 +8,10 @@ ceilings, Go soft limits, overrides and OOM measurements.
 
 ## Start the complete application
 
+Use Docker Engine 25+ and Compose 2.20.2+ for the root and quick-start files.
+These versions support the separate startup health-check interval. TrueNAS
+deployments use the [TrueNAS prerequisites](../../truenas/README.md).
+
 For a local trial, follow the [README quick start](../../readme.md#quick-start):
 download [compose.quickstart.yaml](../../compose.quickstart.yaml), save it as
 `compose.yaml` in a new folder, then run:
@@ -64,6 +68,25 @@ Backend readiness continues checking Temporal and its namespace during operation
 `DYNAMIC_CONFIG_FILE_PATH=/dev/null` selects no dynamic overrides. Administrative
 CLI commands run from the existing initializer image; there is no custom Temporal
 server image to build or publish. Existing database volumes and schemas are unchanged.
+
+### Health checks
+
+Container health checks run every 30 seconds after startup. Startup checks run
+every two to five seconds; the backend and processor allow ten minutes for their
+initialization. Three consecutive failures mark a running container unhealthy,
+roughly 60–90 seconds after a fault plus the probe durations.
+
+The backend's `/readyz` checks its dependencies, workers, dispatchers and storage
+directory metadata. Storage probes do not create, delete or sync files. They do
+not test write permissions, free capacity or durability; actual storage operations
+report those failures. The web container probes the proxied `/healthz` to check
+nginx-to-backend liveness without repeating dependency probes. It still waits for
+backend readiness at startup, and public `/readyz` remains available through nginx.
+
+Recreating containers applies YAML health-check intervals. Read-only storage
+readiness and reduced dispatcher health calls require a backend image built from
+this source; changing YAML does not change the implementation inside a pinned
+published image. Keep coordinated application image versions when upgrading.
 
 ## Ports and commands
 

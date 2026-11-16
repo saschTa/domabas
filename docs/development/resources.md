@@ -87,6 +87,11 @@ recommendations do not guarantee capacity for arbitrary workflow histories.
 
 ## Collect evidence on the affected host
 
+An empty Jobs list does not stop database queue polling or Temporal's background
+work. Container health checks use a slower steady cadence to reduce idle work;
+see [health checks](compose.md#health-checks) for timing and read-only storage
+probe limits. These settings do not guarantee a particular idle CPU percentage.
+
 Find the Compose project and check Docker's current working-set view:
 
 ```sh

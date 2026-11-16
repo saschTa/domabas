@@ -11,9 +11,9 @@
     "bun.lock": "fa4499d802f8f40ec9b02b25c0567da219719b191276eb51a3d3ec767d73eb14",
     "compose.cuda.yaml": "6f8fd57e8e80f7d93d4e1c269f2c36e22a9cf0af841e8aecf8d45bb63462a27c",
     "compose.mlx.yaml": "9c46cf95f8e0a1c13bca742d1614d565ca0513148d3a89010114b52a890c0815",
-    "compose.quickstart.yaml": "4bcca4aca73cea795769a0586fd17e2709b952b908bc204adb0b2f487f2d76ff",
+    "compose.quickstart.yaml": "9358a21572edc0e9b00afc01f087ad8ccb0f5be41c5c8afb38f8697c7f8fb850",
     "compose.rocm.yaml": "0abd6920a895a3c917111f881b64173327bfd78e9490eeb79f3c42782042ef16",
-    "compose.yaml": "2c4a4df0c12de53d64bd9d5a4d8f980299399708f6219b0b7ec759d28ab5a90c",
+    "compose.yaml": "005cfc3c1ff82c9f19fb1c6d3374f405f79be6a04297bbcfc8aae6d0786a8bff",
     "frontend/android/app/build.gradle.kts": "e047428c4d61b2a75501118656e4e15d0fc5dc032c33de14b05cf23b8dacf919",
     "frontend/android/build.gradle.kts": "6a26dba2cb8dfba1e74f540b0d17a89d96c1301d3c3bfda14348bed257fddcba",
     "frontend/android/gradle/wrapper/gradle-wrapper.properties": "b690d26223576fe4e63889fad9a00df81945cb870b9476cc5a563152a1a88a74",
@@ -94,9 +94,9 @@
     "third_party/realtime/coder-websocket-LICENSE.txt": "cc0975a5f6305145bdd7b41ce9479632fdac3870e6ac4281f28017f18c767c4e",
     "third_party/realtime/web-socket-channel-LICENSE.txt": "b71519245009a3b8f126196a5408ec031e216e8e0d985085958c6543f82a8a2a",
     "third_party/realtime/web-socket-LICENSE.txt": "1cda25a8de6880c5338de0b4a06ee89e8537c213eb1379c16a4c035bfd198b5c",
-    "truenas/compose.cpu.yaml": "39d1285a2cc7e6b82955546238cfb3d8a28ce73ba193a27db2a1c73b161af067",
-    "truenas/compose.cuda.yaml": "960d48bbcbe44f436acb5e5beddaa1bb4f86724ec8a6c4d5372b0ee253b77e9f",
-    "truenas/compose.rocm.yaml": "5bb5d26dad4a3539cd0a3f23cfb0e4f813d343142da48cbf526f5cf26e3fde5a"
+    "truenas/compose.cpu.yaml": "ffdef09541b6d0afb35accd87673239f45e6247d4be511618d02456fe9aa21fb",
+    "truenas/compose.cuda.yaml": "fded6cd4d40fe8e58dfb466fb2f4aedab725e4ca2f6c9671bc352725f8f5b9e9",
+    "truenas/compose.rocm.yaml": "8f3a3434a7dfc287428d3cbc8e64e1ff03d325a2ee54752842870990e80152ca"
   },
   "texts": {
     "0078488d49460de3e9e365cea356ad042d340b8cad15ec91f7d26ff38a9fb896": "Images below this folder is copyright 2026 Bjørn Erik Pedersen, license: https://creativecommons.org/licenses/by-sa/4.0/",

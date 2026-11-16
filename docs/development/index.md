@@ -36,7 +36,7 @@ Repository toolchain and image pins:
 | Temporal CLI / UI | 1.9.1 / 2.54.1 | [CLI release](https://github.com/temporalio/cli/releases/tag/v1.9.1), [UI release](https://github.com/temporalio/ui/releases/tag/v2.54.1) |
 | Nginx | 1.30.5 | [Nginx releases](https://nginx.org/en/download.html) |
 
-Install Task 3.x, Bun 1.4.2, and Docker with Compose v2. Java 17+ is required only to regenerate the Dart client. On macOS, installed Homebrew OpenJDK 21 is detected automatically. `JAVA_HOME` takes priority. Flutter platform toolchain requirements are reported by `task doctor`.
+Install Task 3.x, Bun 1.4.2, Docker Engine 25+ and Compose 2.20.2+. The Docker minimums support separate startup and steady health-check intervals. Java 17+ is required only to regenerate the Dart client. On macOS, installed Homebrew OpenJDK 21 is detected automatically. `JAVA_HOME` takes priority. Flutter platform toolchain requirements are reported by `task doctor`.
 
 Go's module declares the exact toolchain requirement and keeps development tools in `go.mod`. Flutter dependencies and their lockfile are committed, as are generated API packages and platform scaffolds. `.tool-versions` records Go, Flutter, and Bun for version managers; using a version manager is optional. Bun is also pinned in `.bun-version` and `package.json`. `bun.lock` records exact tooling dependencies.
 

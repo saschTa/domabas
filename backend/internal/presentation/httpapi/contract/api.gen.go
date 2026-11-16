@@ -17723,10 +17723,11 @@ var swaggerSpec = []string{
 	"DDO17BA0tZWMJNVC2nSCX7Fs16NO/mB18mrXHdAxOtzsthsXhXH2jTyXXyXM/uxevg9ZtjFXy+U49Skg",
 	"yD7VEHEbTavYwAJVXJZjZoVPmnHpf/cp1Ko5Rc5V5v7/KiYhfaWk1v4o2s7QEol14mzr+dwVxaxP9pWE",
 	"2T54ckYvMRXEy7Gnzj+HWHIBkBsqySSx5nRqc2FQpLWIFeTZ+xZnbxV1zOWfA830/LfOS/4TPr/Le+1m",
-	"aO3ggxo5siR7QOOWnJHWbWEqWveuTjHfCpT6ShsTSs8knP3tzRDZsU+2wApEgCnQ3nU0LI0XhnrZvjzm",
-	"dLHwvzcJKi0kncGQXPqQDsZdnS0SRSS6LgkKZTiQXkKg6XJM3ro0KDtD1HzmApYqdJOwTwMwyzD1Bb2w",
-	"ET8p4yZvsFIDBUGN5X/Gt5Qo1Dz0+n36sXmfMG/HCqOFzAYvBnOt8xc7O3v7fx7vjnfHey+e7z7fHXwp",
-	"x//dS6oY5PplGP4OFcui30obUfSjW2D8qee+0W+2S0r0Q0he+vLpy/8dAA==",
+	"aO3ggxo5siR7QOOWnJHWbWEqWveuTjHfCpT6ShsTSs8knP3tzRDZsU+2wApEgCnQ3nU0jM/anCpI5fs7",
+	"oCiGDQCUFtKY7mwHBCF9vuOlj/Bg3JXdIj5AUQIJ5hTTKsMO4FIEDfjCYEuyAE0xPc87uDRYtQ/zyNDo",
+	"mRiTp5DWSIkG0DF56zKrbDOhqJ/NBSxVaFBhn4bzKSPfF/TCBhGljJtUxEpZFTw9rCg0vqXcoyYe1a/o",
+	"j80riqlAVr4tZDZ4MZhrnb/Y2dnb//N4d7w73nvxfPf57uBLOf7vXvjFuNkvw/B3KIIW/VaanaIf3QLj",
+	"Tz1Dj36zjVeiH0I+1JdPX/7vAA==",
 }
 
 func decodeSpec() ([]byte, error) {

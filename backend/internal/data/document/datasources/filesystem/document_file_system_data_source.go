@@ -417,16 +417,12 @@ func (source *DocumentFileSystemDataSource) Ready(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		name := ".ready-" + uuid.NewString()
-		file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		info, err := root.Stat(".")
 		if err != nil {
 			return storageError(err)
 		}
-		writeErr := file.Sync()
-		closeErr := file.Close()
-		removeErr := root.Remove(name)
-		if err = errors.Join(writeErr, closeErr, removeErr, syncDirectory(root, ".")); err != nil {
-			return storageError(err)
+		if !info.IsDir() {
+			return storageError(errors.New("storage root is not a directory"))
 		}
 	}
 	return nil

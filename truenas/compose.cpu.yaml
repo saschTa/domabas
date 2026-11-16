@@ -97,9 +97,10 @@ services:
         volume: {subpath: postgres, nocopy: true}
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
-      interval: 2s
+      interval: 30s
+      start_interval: 2s
       timeout: 3s
-      retries: 30
+      retries: 3
       start_period: 5s
     stop_grace_period: 30s
 
@@ -145,9 +146,10 @@ services:
       temporal-schema: {condition: service_completed_successfully}
     healthcheck:
       test: [CMD, nc, -z, -w, "2", 127.0.0.1, "7233"]
-      interval: 3s
+      interval: 30s
+      start_interval: 3s
       timeout: 5s
-      retries: 40
+      retries: 3
       start_period: 20s
     stop_grace_period: 30s
 
@@ -179,9 +181,11 @@ services:
       temporal-init: {condition: service_completed_successfully}
     healthcheck:
       test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/]
-      interval: 3s
+      interval: 30s
+      start_interval: 3s
       timeout: 5s
-      retries: 30
+      retries: 3
+      start_period: 30s
 
   ollama:
     user: "950:950"
@@ -206,9 +210,11 @@ services:
     mem_limit: 8g
     healthcheck:
       test: [CMD, ollama, list]
-      interval: 3s
+      interval: 30s
+      start_interval: 3s
       timeout: 5s
-      retries: 30
+      retries: 3
+      start_period: 30s
     stop_grace_period: 30s
 
   document-processor:
@@ -242,9 +248,10 @@ services:
       ollama: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8091/readyz]
-      interval: 5s
+      interval: 30s
+      start_interval: 5s
       timeout: 5s
-      retries: 12
+      retries: 3
       start_period: 10m
     stop_grace_period: 30s
 
@@ -294,9 +301,10 @@ services:
       document-processor: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8080/readyz]
-      interval: 3s
+      interval: 30s
+      start_interval: 3s
       timeout: 5s
-      retries: 30
+      retries: 3
       start_period: 10m
     stop_grace_period: 60s
 
@@ -317,10 +325,12 @@ services:
     depends_on:
       backend: {condition: service_healthy}
     healthcheck:
-      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/readyz]
-      interval: 3s
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/healthz]
+      interval: 30s
+      start_interval: 3s
       timeout: 5s
-      retries: 30
+      retries: 3
+      start_period: 30s
 
 volumes:
   domabas-storage:

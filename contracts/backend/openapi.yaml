@@ -717,7 +717,7 @@ paths:
       operationId: readiness
       responses:
         "200":
-          description: "PostgreSQL, the realtime listener, Temporal, document and email workers, durable storage, verified inference models and both dispatchers are ready. Missing email credential keys disable email operations without making ordinary document readiness fail."
+          description: "PostgreSQL, the realtime listener, Temporal, background workers and dispatchers, storage directories and verified inference models are available. Storage checks read directory metadata without testing write capacity or durability. Missing email credential keys disable email operations without making ordinary document readiness fail."
           content:
             application/json:
               schema:

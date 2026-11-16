@@ -109,7 +109,7 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 		source.Close()
 		return nil, err
 	}
-	dispatcher := documenttemporal.NewDocumentIngestionDispatcher(documents.Ingestion(), temporalSource.Client(), config.TemporalTaskQueue, logger, temporalSource.Ping)
+	dispatcher := documenttemporal.NewDocumentIngestionDispatcher(documents.Ingestion(), temporalSource.Client(), config.TemporalTaskQueue, logger, temporalSource.CheckNamespaceRetention)
 	owner := newTemporalWorkerLifecycle(func() { dispatcher.Close(); documents.Close() })
 	queueWorker := worker.New(temporalSource.Client(), config.TemporalTaskQueue, worker.Options{
 		MaxConcurrentActivityExecutionSize: 256,
@@ -141,7 +141,7 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 		return nil, fmt.Errorf("initialize email ingestion: %w", err)
 	}
 	emailQueue := config.TemporalTaskQueue + "-email"
-	emailDispatcher := emailtemporal.NewEmailPollDispatcher(emails.Polling(), emails.Rotation(), temporalSource.Client(), emailQueue, logger, temporalSource.Ping)
+	emailDispatcher := emailtemporal.NewEmailPollDispatcher(emails.Polling(), emails.Rotation(), temporalSource.Client(), emailQueue, logger, temporalSource.CheckNamespaceRetention)
 	emailOwner := newTemporalWorkerLifecycle(func() { emailDispatcher.Close(); emails.Close() })
 	emailWorker := worker.New(temporalSource.Client(), emailQueue, worker.Options{MaxConcurrentActivityExecutionSize: 256, WorkerStopTimeout: 5 * time.Second, OnFatalError: emailOwner.onFatalError})
 	emails.RegisterWorker(emailWorker)
@@ -163,7 +163,7 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 	lifetime, cancel := context.WithCancel(context.Background())
 	app := &BackendApp{source: source, temporal: temporalSource, worker: owner, documents: documents, dispatcher: dispatcher, emailWorker: emailOwner, emailDispatcher: emailDispatcher, fatal: make(chan error, 1), cancel: cancel}
 	thumbnailQueue := config.TemporalTaskQueue + "-thumbnail"
-	app.thumbnailDispatcher = documenttemporal.NewDocumentThumbnailDispatcher(documents.Thumbnails(), temporalSource.Client(), thumbnailQueue, logger, temporalSource.Ping)
+	app.thumbnailDispatcher = documenttemporal.NewDocumentThumbnailDispatcher(documents.Thumbnails(), temporalSource.Client(), thumbnailQueue, logger, temporalSource.CheckNamespaceRetention)
 	app.thumbnailWorker = newTemporalWorkerLifecycle(documents.DrainThumbnails)
 	thumbnailWorker := worker.New(temporalSource.Client(), thumbnailQueue, worker.Options{MaxConcurrentActivityExecutionSize: 256, WorkerStopTimeout: 5 * time.Second, OnFatalError: app.thumbnailWorker.onFatalError})
 	documents.RegisterThumbnailWorker(thumbnailWorker)
@@ -176,7 +176,7 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 		return nil, fmt.Errorf("start thumbnail dispatcher: %w", err)
 	}
 	aiQueue := config.TemporalTaskQueue + "-ai"
-	app.aiDispatcher = documenttemporal.NewDocumentIngestionDispatcher(documents.AI(), temporalSource.Client(), aiQueue, logger, temporalSource.Ping)
+	app.aiDispatcher = documenttemporal.NewDocumentIngestionDispatcher(documents.AI(), temporalSource.Client(), aiQueue, logger, temporalSource.CheckNamespaceRetention)
 	app.aiWorker = newTemporalWorkerLifecycle(documents.DrainAI)
 	aiWorker := worker.New(temporalSource.Client(), aiQueue, worker.Options{MaxConcurrentActivityExecutionSize: 256, WorkerStopTimeout: 5 * time.Second, OnFatalError: app.aiWorker.onFatalError})
 	documents.RegisterAIWorker(aiWorker, invoices)
@@ -207,7 +207,7 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 		app.Close()
 		return nil, fmt.Errorf("initialize chat: %w", err)
 	}
-	app.chatDispatcher = chattemporal.NewChatDispatcher(chat.Execution(), temporalSource.Client(), chatQueue, logger, temporalSource.Ping)
+	app.chatDispatcher = chattemporal.NewChatDispatcher(chat.Execution(), temporalSource.Client(), chatQueue, logger, temporalSource.CheckNamespaceRetention)
 	app.chatWorker = newTemporalWorkerLifecycle(chat.Close)
 	chatWorker := worker.New(temporalSource.Client(), chatQueue, worker.Options{MaxConcurrentActivityExecutionSize: 256, WorkerStopTimeout: 5 * time.Second, OnFatalError: app.chatWorker.onFatalError})
 	chat.RegisterWorker(chatWorker)

@@ -13,7 +13,7 @@ processing and AI can all run on your own hardware.
 
 ## Quick start
 
-With Docker and Docker Compose already running:
+With Docker Engine 25+ and Docker Compose 2.20.2+ already running:
 
 1. Download [compose.quickstart.yaml](https://raw.githubusercontent.com/saschTa/domabas/main/compose.quickstart.yaml)
    and save it as **`compose.yaml`** in a new folder.
@@ -129,7 +129,7 @@ other development tools on the host.
 
 | Requirement | Starting point |
 | --- | --- |
-| **Container runtime** | Docker with [Compose v2 or newer](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the published images and the web build stage when building from source. |
+| **Container runtime** | Docker Engine 25+ with [Compose 2.20.2+](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the published images and the web build stage when building from source. |
 | **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for Ollama's embedding model and any chat or extraction models. Leave capacity for your operating system and other services. |
 | **Storage** | Persistent space for original files, the database, encryption keys and model caches, plus temporary processing space and backups. Size this for your library and chosen models. |
 | **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |

@@ -77,6 +77,11 @@ workers and starts dispatchers. Readiness checks workers and dispatchers as well
 as dependency connectivity. A fatal worker error reaches the backend supervisor;
 a process that cannot serve background work must not continue reporting ready.
 
+Readiness checks Temporal health and then reads the namespace's registered state
+and history retention. Dispatcher admission reads the namespace directly, without
+an additional health RPC. The namespace check is fresh on every invocation;
+the next admission check rejects insufficient retention or an unavailable namespace.
+
 Startup has a deadline. Running activities belong to the application's lifetime,
 so expiry or cancellation of the startup context cannot stop them later. During
 shutdown, dispatchers stop and workers drain their activities before the Temporal

@@ -40,11 +40,15 @@ func (source *TemporalDataSource) Ping(ctx context.Context) error {
 	if _, err := source.connection.CheckHealth(ctx, &client.CheckHealthRequest{}); err != nil {
 		return fmt.Errorf("Temporal health: %w", err)
 	}
+	return source.CheckNamespaceRetention(ctx)
+}
+
+func (source *TemporalDataSource) CheckNamespaceRetention(ctx context.Context) error {
 	namespace, err := source.connection.WorkflowService().DescribeNamespace(ctx, &workflowservice.DescribeNamespaceRequest{Namespace: source.namespace})
 	if err != nil {
 		return fmt.Errorf("Temporal namespace: %w", err)
 	}
-	if namespace.NamespaceInfo == nil || namespace.NamespaceInfo.State != enums.NAMESPACE_STATE_REGISTERED {
+	if namespace.GetNamespaceInfo() == nil || namespace.GetNamespaceInfo().State != enums.NAMESPACE_STATE_REGISTERED {
 		return fmt.Errorf("Temporal namespace %q is not registered", source.namespace)
 	}
 	retention := namespace.GetConfig().GetWorkflowExecutionRetentionTtl()

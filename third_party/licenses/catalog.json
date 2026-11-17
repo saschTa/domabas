@@ -40,7 +40,7 @@
     "frontend/windows/flutter/CMakeLists.txt": "d58ac1305a0c59c4eb621c31cbfecd24f1ef6fd2619d0c5dfe5c08d50bd9379b",
     "frontend/windows/runner/CMakeLists.txt": "718c6547a3e7da2cd953d9252e55e5ac40787f944648117e787633c78e473f45",
     "infra/document-processor/Dockerfile": "b706b0060aa24d952a5a080948199e9344b14d3290b443ce622cf27167b15c01",
-    "infra/init/Dockerfile": "73eee2af919cda6071298dd9124759c46484caecc0f1767f3e3c70ea98de1fba",
+    "infra/init/Dockerfile": "5cdf8a0858fa4273b4f035a592e58ed80e063e23cbc73186376c8503f686538f",
     "LICENSE": "c27b7b4e070bcf049bec9e7ead59d4a0fd6f75c3a2e50ceca2991cb5b1ea0e32",
     "package.json": "4bf266a97b24e429e11866e47878112a7a7608946c3164af98b2d948aeaaadb5",
     "scripts/ci/setup-flutter.ts": "ce097aba484114a20c3db2f816737c8403123528b242425312a1c2fbcf4f8fe2",
@@ -67,7 +67,7 @@
     "third_party/licenses/native/ml-kit-TERMS.txt": "c4a63622ff74b27e7b2481aba5dfd8480c15bd2f7c01bd963ee55b831e47e7d6",
     "third_party/licenses/sources/dbus/0.7.15/LICENSE": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
     "third_party/licenses/sources/dbus/0.7.15/retrieval.txt": "9fe258600df998cbcbcd4ebdd922fceccf7f387a0d721468f7de158cda513d1c",
-    "third_party/licenses/supplemental.json": "0868644b3367403023dcd48715a5f968f0c7cdc894c86af7f4687f25158a28e8",
+    "third_party/licenses/supplemental.json": "70a1faa2c0d2f0f70100dd6b2ce7bf8bee1a306c03b2d29a881e824757ab6ee0",
     "third_party/models/NOMIC-LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
     "third_party/models/OLLAMA-LICENSE": "5934ed2ce0d15154bcdb9c85203210abac0da4314af34081e36df4599f90b226",
     "third_party/models/TESSDATA-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -3443,13 +3443,13 @@
     {
       "id": "extra:Temporal CLI",
       "name": "Temporal CLI",
-      "version": "1.9.1",
+      "version": "1.10.1",
       "component": "Initialization / tooling",
       "license": "MIT",
-      "sourceUrl": "https://github.com/temporalio/cli/tree/v1.9.1",
+      "sourceUrl": "https://github.com/temporalio/cli/tree/v1.10.1",
       "notices": [
         {
-          "title": "https://raw.githubusercontent.com/temporalio/cli/v1.9.1/LICENSE",
+          "title": "https://raw.githubusercontent.com/temporalio/cli/v1.10.1/LICENSE",
           "textId": "692992f9a78f825b332d03f9b98aeb6cd5823ae884572af02e79f17327aa0612"
         }
       ]

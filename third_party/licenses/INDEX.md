@@ -210,7 +210,7 @@ distributed artifact; this inventory does not establish complete binary coverage
 | [web-socket-channel — retained notice](https://pub.dev/packages/web_socket_channel) | See dependency lock | Retained native notices | BSD-3-Clause |
 | [web-socket — retained notice](https://pub.dev/packages/web_socket) | See dependency lock | Retained native notices | BSD-3-Clause |
 | [ROCm runtime components](https://rocm.docs.amd.com/en/latest/about/license.html) | Ollama 0.34.1-rocm image pin | Optional GPU runtime | Multiple component licenses |
-| [Temporal CLI](https://github.com/temporalio/cli/tree/v1.9.1) | 1.9.1 | Initialization / tooling | MIT |
+| [Temporal CLI](https://github.com/temporalio/cli/tree/v1.10.1) | 1.10.1 | Initialization / tooling | MIT |
 | [Temporal server / admin tools](https://github.com/temporalio/temporal/tree/v1.32.0) | 1.32.0 | Workflow infrastructure | MIT |
 | [Temporal UI](https://github.com/temporalio/ui/tree/v2.54.1) | 2.54.1 | Workflow infrastructure | MIT |
 | [Tesseract](https://github.com/tesseract-ocr/tesseract/tree/db0ec62f81b0737fbbe184d8fea40af5738f8eef) | 5.5.3 | Document processor | Apache-2.0 |

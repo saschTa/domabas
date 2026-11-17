@@ -497,11 +497,11 @@
   {
     "id": "extra:nginx",
     "name": "nginx",
-    "version": "1.30.5",
+    "version": "1.30.6",
     "component": "Web server",
-    "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.5",
+    "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.6",
     "urls": [
-      "https://raw.githubusercontent.com/nginx/nginx/release-1.30.5/LICENSE"
+      "https://raw.githubusercontent.com/nginx/nginx/release-1.30.6/LICENSE"
     ],
     "files": []
   },

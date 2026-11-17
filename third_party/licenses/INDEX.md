@@ -178,7 +178,7 @@ distributed artifact; this inventory does not establish complete binary coverage
 | [Nomic Embed Text](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5) | v1.5 | Models / inference | Apache-2.0 |
 | [Ollama](https://github.com/ollama/ollama/tree/v0.34.1) | 0.34.1 | Models / inference | MIT |
 | [Tesseract tessdata_fast weights](https://github.com/tesseract-ocr/tessdata_fast/tree/4.1.0) | 4.1.0 | Models / inference | Apache-2.0 |
-| [nginx](https://github.com/nginx/nginx/tree/release-1.30.5) | 1.30.5 | Web server | BSD (see notices) |
+| [nginx](https://github.com/nginx/nginx/tree/release-1.30.6) | 1.30.6 | Web server | BSD (see notices) |
 | [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator/tree/v7.25.0) | 7.25.0 | Code generation | Apache-2.0 |
 | [OpenCV — scanner and dependencies](https://github.com/opencv/opencv/tree/4.13.0) | 4.13.0 | Native libraries | Apache-2.0; MIT; BSD-3-Clause; ISC; Zlib (see notices) |
 | [OpenJDK / Temurin](https://openjdk.org/legal/gplv2+ce.html) | 21.0.12+101.0.LTS in CI | Native build tooling | GPL-2.0 with Classpath Exception |

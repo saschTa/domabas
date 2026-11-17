@@ -25,7 +25,7 @@
     "frontend/assets/licenses/frontend-pdfium.txt": "20a1e99ff88bc20b94e690abb7fdf7773712915dcddbf34dfeab18a63b7c9dba",
     "frontend/assets/licenses/lora-ofl.txt": "6d6bc7bbb828514925dabcaf89e4771398d12c60dd1cb2bbb90eea129535d0f4",
     "frontend/assets/licenses/scanner-opencv.txt": "505492e552a5fdbe892f0cba95266fd7b28c2d4f477bf7db09bf0489bdb87fda",
-    "frontend/Dockerfile": "425fa318c2cbb809b32cb0f9232a261384010822663658eaca5d9cfadba7f9ad",
+    "frontend/Dockerfile": "6d1b90e374abc4f9565221a93b143da503caee204924dad3b224e72a63ed27d1",
     "frontend/linux/CMakeLists.txt": "ca0318d00ee631547aaf9aaa418efda88368e07efa59d30072f384feb2ac490d",
     "frontend/linux/flutter/CMakeLists.txt": "8dc84f8aa2563f86372bac7fcbe1d005500e39c85f72e4c1ac856e00a120d7f5",
     "frontend/linux/runner/CMakeLists.txt": "10d66cb00721a4a94287c7dcb8df2b09e8526f9848c12b5c457443fbae883ec3",
@@ -67,7 +67,7 @@
     "third_party/licenses/native/ml-kit-TERMS.txt": "c4a63622ff74b27e7b2481aba5dfd8480c15bd2f7c01bd963ee55b831e47e7d6",
     "third_party/licenses/sources/dbus/0.7.15/LICENSE": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
     "third_party/licenses/sources/dbus/0.7.15/retrieval.txt": "9fe258600df998cbcbcd4ebdd922fceccf7f387a0d721468f7de158cda513d1c",
-    "third_party/licenses/supplemental.json": "8926f946ffd9af47a55a4f97e70140cc140a35e83b0698a00ce8e78ddd4c5647",
+    "third_party/licenses/supplemental.json": "0868644b3367403023dcd48715a5f968f0c7cdc894c86af7f4687f25158a28e8",
     "third_party/models/NOMIC-LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
     "third_party/models/OLLAMA-LICENSE": "5934ed2ce0d15154bcdb9c85203210abac0da4314af34081e36df4599f90b226",
     "third_party/models/TESSDATA-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -2987,13 +2987,13 @@
     {
       "id": "extra:nginx",
       "name": "nginx",
-      "version": "1.30.5",
+      "version": "1.30.6",
       "component": "Web server",
       "license": "BSD (see notices)",
-      "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.5",
+      "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.6",
       "notices": [
         {
-          "title": "https://raw.githubusercontent.com/nginx/nginx/release-1.30.5/LICENSE",
+          "title": "https://raw.githubusercontent.com/nginx/nginx/release-1.30.6/LICENSE",
           "textId": "08845fe39e06b51dad7685c28140ab49577a86e947523e16b536a46caf89ad5c"
         }
       ]
@@ -10941,7 +10941,7 @@
       "sourceUrl": "https://www.npmjs.com/package/@img/sharp-darwin-arm64/v/0.35.4",
       "notices": [
         {
-          "title": "LICENSE",
+          "title": "https://cdn.jsdelivr.net/npm/@img/sharp-darwin-arm64@0.35.4/LICENSE",
           "textId": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68"
         }
       ]
@@ -11273,7 +11273,7 @@
       "sourceUrl": "https://www.npmjs.com/package/@img/sharp-linux-x64/v/0.35.4",
       "notices": [
         {
-          "title": "https://cdn.jsdelivr.net/npm/@img/sharp-linux-x64@0.35.4/LICENSE",
+          "title": "LICENSE",
           "textId": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68"
         }
       ]
@@ -11301,7 +11301,7 @@
       "sourceUrl": "https://www.npmjs.com/package/@img/sharp-linuxmusl-x64/v/0.35.4",
       "notices": [
         {
-          "title": "https://cdn.jsdelivr.net/npm/@img/sharp-linuxmusl-x64@0.35.4/LICENSE",
+          "title": "LICENSE",
           "textId": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68"
         }
       ]
@@ -11455,12 +11455,8 @@
       "sourceUrl": "https://www.npmjs.com/package/@typescript/typescript-darwin-arm64/v/7.0.2",
       "notices": [
         {
-          "title": "LICENSE",
+          "title": "https://cdn.jsdelivr.net/npm/@typescript/typescript-darwin-arm64@7.0.2/LICENSE",
           "textId": "a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47"
-        },
-        {
-          "title": "NOTICE.txt",
-          "textId": "f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"
         }
       ]
     },
@@ -11613,8 +11609,12 @@
       "sourceUrl": "https://www.npmjs.com/package/@typescript/typescript-linux-x64/v/7.0.2",
       "notices": [
         {
-          "title": "https://cdn.jsdelivr.net/npm/@typescript/typescript-linux-x64@7.0.2/LICENSE",
+          "title": "LICENSE",
           "textId": "a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47"
+        },
+        {
+          "title": "NOTICE.txt",
+          "textId": "f5c708b59114507b8b27b48181b6883d106bbca0c1634bbee45b5e344237b66b"
         }
       ]
     },

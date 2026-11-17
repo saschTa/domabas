@@ -486,11 +486,11 @@
   {
     "id": "extra:Temporal CLI",
     "name": "Temporal CLI",
-    "version": "1.9.1",
+    "version": "1.10.1",
     "component": "Initialization / tooling",
-    "sourceUrl": "https://github.com/temporalio/cli/tree/v1.9.1",
+    "sourceUrl": "https://github.com/temporalio/cli/tree/v1.10.1",
     "urls": [
-      "https://raw.githubusercontent.com/temporalio/cli/v1.9.1/LICENSE"
+      "https://raw.githubusercontent.com/temporalio/cli/v1.10.1/LICENSE"
     ],
     "files": []
   },

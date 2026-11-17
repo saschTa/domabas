@@ -165,8 +165,13 @@ version regardless of a later increment choice; moved/deleted tags or
 ambiguous versions fail. Published retries do no writes or builds.
 
 Docker Buildx builds and loads backend, web, document-processor and init images
-into the runner's Docker engine. Trivy scans each immutable local image ID, and
-its report must identify that same image. Only after all four critical-only gates
+into the runner's Docker engine. The loaded image ID must match either the
+configuration digest or the manifest/index digest recorded in Buildx metadata.
+The legacy Docker image store uses configuration IDs; the containerd store uses
+manifest/index IDs. The publisher retains the verified Docker ID for scanning
+and tag checks, so both stores verify the built image before publication.
+Trivy scans each immutable local image ID, and its report must identify that
+same image. Only after all four critical-only gates
 pass does the publisher push the scanned images to GHCR, without rebuilding.
 The publisher checks local tag identities again before each push. All target
 Linux AMD64; the web image contains the Flutter web build.

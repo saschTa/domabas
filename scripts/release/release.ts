@@ -165,6 +165,14 @@ export async function publishScannedImages(config: ReleaseConfiguration, version
   return images;
 }
 
+export function verifyReleaseImageID(metadata: unknown, imageID: string): void {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) throw new Error("Buildx did not return image metadata.");
+  const result = metadata as Record<string, unknown>;
+  const digests = [result["containerimage.config.digest"], result["containerimage.digest"]]
+    .filter((digest): digest is string => typeof digest === "string" && /^sha256:[a-f0-9]{64}$/.test(digest));
+  if (!digests.includes(imageID)) throw new Error(`Loaded image does not match the build output. Docker ID: ${imageID}; Buildx digests: ${digests.join(", ") || "missing"}.`);
+}
+
 export async function buildReleaseImages(scope: ProcessScope, config: ReleaseConfiguration, version: string, env: Environment, directory: string): Promise<ReleaseImage[]> {
   const docker = command("docker");
   const inspectID = async (tag: string): Promise<string> => {
@@ -180,9 +188,9 @@ export async function buildReleaseImages(scope: ProcessScope, config: ReleaseCon
         "--label", `org.opencontainers.image.revision=${config.sha}`, "--label", `org.opencontainers.image.version=${version}`,
         "--label", "org.opencontainers.image.licenses=MIT", "--metadata-file", metadata,
         "--file", definition.dockerfile, "--tag", tag, "."], { env });
-      const result = await Bun.file(metadata).json() as Record<string, string>;
+      const result: unknown = await Bun.file(metadata).json();
       const imageID = await inspectID(tag);
-      if (result["containerimage.config.digest"] !== imageID) throw new Error("Loaded image does not match the build output.");
+      verifyReleaseImageID(result, imageID);
       return imageID;
     },
     scan: async (imageID, name) => { await scanImage(scope, imageID, name, env); },

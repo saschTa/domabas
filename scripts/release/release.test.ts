@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease, publishScannedImages, releaseCompose, releaseConfiguration, type GitHubRelease, type ReleaseBump, type ReleaseImage } from "./release.ts";
+import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease, publishScannedImages, releaseCompose, releaseConfiguration, verifyReleaseImageID, type GitHubRelease, type ReleaseBump, type ReleaseImage } from "./release.ts";
 import { ROOT } from "../shared/runtime.ts";
 import { FLUTTER_SHA256, FLUTTER_VERSION } from "../ci/setup-flutter.ts";
 
@@ -168,6 +168,56 @@ describe("GitHub publication and recovery", () => {
   });
   test("authentication errors reveal neither response bodies nor tokens", async () => {
     await expect(fakeGitHub({ forbidden: true }).client.prepare()).rejects.toThrow("HTTP 403. Check workflow permissions");
+  });
+});
+
+describe("loaded release image verification", () => {
+  const configDigest = `sha256:${"a".repeat(64)}`, imageDigest = `sha256:${"b".repeat(64)}`;
+  const metadata = { "containerimage.config.digest": configDigest, "containerimage.digest": imageDigest };
+
+  test("accepts the legacy configuration ID and containerd manifest or index ID", () => {
+    expect(() => verifyReleaseImageID(metadata, configDigest)).not.toThrow();
+    for (const mediaType of ["application/vnd.oci.image.manifest.v1+json", "application/vnd.oci.image.index.v1+json"]) {
+      expect(() => verifyReleaseImageID({ ...metadata, "containerimage.descriptor": { mediaType, digest: imageDigest } }, imageDigest)).not.toThrow();
+    }
+  });
+
+  test("accepts a matching identity when only its metadata field is present", () => {
+    expect(() => verifyReleaseImageID({ "containerimage.config.digest": configDigest }, configDigest)).not.toThrow();
+    expect(() => verifyReleaseImageID({ "containerimage.digest": imageDigest }, imageDigest)).not.toThrow();
+  });
+
+  test("rejects a different image with both expected digests in the diagnostic", () => {
+    const unrelated = `sha256:${"c".repeat(64)}`;
+    expect(() => verifyReleaseImageID(metadata, unrelated)).toThrow(`Docker ID: ${unrelated}; Buildx digests: ${configDigest}, ${imageDigest}`);
+  });
+
+  test("missing and malformed metadata cannot verify an image", () => {
+    for (const invalid of [null, undefined, [], imageDigest, {}, { "containerimage.descriptor": { digest: imageDigest } }]) {
+      expect(() => verifyReleaseImageID(invalid, imageDigest)).toThrow();
+    }
+    for (const invalid of ["", "sha256:123", "latest", `sha256:${"z".repeat(64)}`, `sha512:${"a".repeat(128)}`]) {
+      expect(() => verifyReleaseImageID({ "containerimage.config.digest": invalid, "containerimage.digest": invalid }, invalid)).toThrow("does not match");
+      expect(() => verifyReleaseImageID(metadata, invalid)).toThrow("does not match");
+    }
+    expect(() => verifyReleaseImageID({ "containerimage.config.digest": 123, "containerimage.digest": { digest: imageDigest } }, imageDigest)).toThrow("missing");
+  });
+
+  test("keeps the verified Docker ID through scanning and pushing on either store", async () => {
+    for (const dockerID of [configDigest, imageDigest]) {
+      const scanned: string[] = [], pushed: string[] = [];
+      await publishScannedImages(config, "v0.0.1", {
+        build: async () => { verifyReleaseImageID(metadata, dockerID); return dockerID; },
+        scan: async imageID => { scanned.push(imageID); },
+        push: async (tag, imageID) => {
+          expect(scanned).toHaveLength(RELEASE_IMAGES.length);
+          pushed.push(imageID);
+          return `${tag.slice(0, tag.lastIndexOf(":"))}@${imageDigest}`;
+        },
+      });
+      expect(scanned).toEqual(RELEASE_IMAGES.map(() => dockerID));
+      expect(pushed).toEqual(scanned);
+    }
   });
 });
 

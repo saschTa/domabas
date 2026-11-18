@@ -147,10 +147,15 @@ provides CPU, NVIDIA and AMD examples pinned to the matching
 [v0.0.10 container images](https://github.com/saschTa/domabas/releases/tag/v0.0.10).
 Set your passwords, dataset path and network addresses before deploying. Private
 GHCR packages require registry authentication. The
-[release guide](docs/development/releases.md) describes versioned GHCR containers
-and the checks that run before publication.
+[release guide](docs/development/releases.md) describes versioned GHCR containers,
+Android preview APKs, unsigned macOS DMGs and the checks before publication.
 
 ## Build an app on your computer
+
+New releases also provide Android APK and macOS DMG downloads. They use
+development signing on Android and have no Apple notarization on macOS; see
+[native preview downloads](docs/development/releases.md#native-preview-downloads)
+for installation and update limits.
 
 Build your own Android, Windows, Mac or iPhone/iPad app with one command after
 installing the required tools. Start with the

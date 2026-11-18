@@ -199,7 +199,7 @@ These tests use the existing local validation commands and require no additional
 ## GitHub Actions
 
 [The workflow](../../.github/workflows/ci.yml) uses GitHub-hosted `ubuntu-latest`
-for pull requests, pushes to `main` and manual release runs. Feature-branch and tag
+for checks and Android/container builds, plus `macos-15` for release DMGs. Feature-branch and tag
 pushes do not create duplicate pipelines. New commits cancel older runs of the
 same PR. Main runs are retained; only publication is serialized.
 
@@ -212,6 +212,7 @@ same PR. Main runs are retained; only publication is serialized.
 | `task generate:check`: Go and Dart API generation consistency | Contract/generator changes | Required | Reused from main |
 | `task test:integration` and `task generate:db:check` | Backend changes | Required | Reused from main |
 | `task security:dependencies`: critical-only OSV gate | — | Required | Reused from main |
+| Build Android preview APK and unsigned macOS DMG | — | — | After reserving a version using successful main CI |
 | Build and Trivy-scan four container images, then push and release | — | — | After verifying successful main CI for the same commit |
 | Temporal, focused Chrome, API/browser E2E, live models and Compose smoke | Local | Local | Local |
 
@@ -245,8 +246,8 @@ check jobs and source dependency scan. The publisher requires a successful
 `push` run of this workflow on `main` for its exact captured commit before
 reserving a version or building. If that run is missing, unfinished or failed,
 wait for it to succeed and retry the release; the publisher does not rerun tests.
-Release notes link to the reused main run. Image builds and Trivy scans still
-run during publication. Merges and pushes never trigger publication.
+Release notes link to the reused main run. Native builds, image builds and Trivy
+image scans still run during publication. Merges and pushes never trigger publication.
 
 The integration job starts only a pinned pgvector PostgreSQL service. It prepares
 shared extensions with `task ci:database`, then uses the existing disposable
@@ -261,7 +262,11 @@ installer and SDK cache; pub packages and Go modules/build outputs are cached.
 Java 21 is installed for API generation. Third-party actions use full commit
 SHAs and tooling dependencies use frozen Bun installation. PR jobs have read-only
 repository access, checkout stores no credentials, and no PR job gets release
-permissions. No native platform toolchains or app builds are part of this workflow.
+permissions. Native release jobs need the hosted Android SDK or Xcode, run on
+separate hosts and do not rerun tests. Their outputs must pass manifest and
+checksum verification before upload to the draft. See
+[native previews](releases.md#native-preview-downloads) for signing and device
+validation limits. Failed native builds block publication.
 
 `task ci` retains its local units mode. `task ci -- --suite=full` provisions
 an isolated Linux stack and adds analysis, generation, database/Temporal tests,

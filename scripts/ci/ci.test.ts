@@ -90,7 +90,7 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
   expect(workflow.on.workflow_dispatch.inputs.release_bump).toMatchObject({ type: "choice", required: true, default: "patch", options: ["patch", "minor", "major"] });
   expect(workflow.permissions).toEqual({ contents: "read" });
   for (const job of Object.values(workflow.jobs)) {
-    expect(job["runs-on"]).toBe("ubuntu-latest");
+    expect(["ubuntu-latest", "${{ matrix.runner }}"]).toContain(job["runs-on"]);
     expect(job["timeout-minutes"]).toBeGreaterThan(0);
     for (const step of job.steps) if (step.uses) {
       expect(step.uses).toMatch(/@[a-f0-9]{40}$/);
@@ -112,7 +112,14 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
   const compose = Bun.YAML.parse(await Bun.file(join(ROOT, "compose.yaml")).text()) as { services: { postgres: { image: string } } };
   expect(integration.services!.postgres!.image).toBe(compose.services.postgres.image);
   const release = workflow.jobs.release!;
-  expect(release.needs).toBeUndefined();
+  const prepare = workflow.jobs.release_prepare!, native = workflow.jobs.release_native!;
+  expect(prepare.needs).toBeUndefined();
+  expect(prepare.permissions).toEqual({ actions: "read", contents: "write" });
+  expect(native.needs).toBe("release_prepare");
+  expect(native.permissions).toBeUndefined();
+  expect(native.if).toBe("needs.release_prepare.outputs.publish == 'true'");
+  expect(release.needs).toEqual(["release_prepare", "release_native"]);
+  expect(release.if).toBe(native.if);
   expect(release.permissions).toEqual({ actions: "read", contents: "write", packages: "write" });
   expect(release.steps.find(step => step.run === "task release")?.env?.RELEASE_BUMP).toBe("${{ inputs.release_bump }}");
   expect(release.steps.find(step => step.uses?.startsWith("actions/checkout@"))?.with?.ref).toBe("${{ github.sha }}");
@@ -123,7 +130,7 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
     ["push", "refs/heads/feature", false], ["workflow_dispatch", "refs/heads/main", true],
     ["workflow_dispatch", "refs/heads/feature", false], ["workflow_dispatch", "refs/tags/v0.0.1", false],
   ] as const) {
-    const select = new Function("github", "return (" + release.if + ");");
+    const select = new Function("github", "return (" + prepare.if + ");");
     expect(select({ event_name, ref })).toBe(expected);
   }
   expect(workflow.jobs.dependencies!.steps.some(step => step.run === "task security:dependencies")).toBe(true);
@@ -137,9 +144,23 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
   expect(workflow.concurrency.group).toContain("github.run_id");
   expect(workflow.concurrency["cancel-in-progress"]).toContain("github.event_name == 'pull_request'");
   for (const job of Object.values(workflow.jobs)) for (const step of job.steps) {
-    expect(step.run ?? "").not.toMatch(/build:(android|ios|linux|macos|windows)|build (apk|appbundle|ios|linux|macos|windows)/);
-    if (step.env?.GITHUB_TOKEN) expect(job).toBe(release);
+    if (step.run?.startsWith("task release:native")) expect(job).toBe(native);
+    if (step.env?.GITHUB_TOKEN) expect([release, prepare]).toContain(job);
   }
+});
+
+test("release builds use host runners, one version and retryable current-run artifacts", async () => {
+  const workflow = Bun.YAML.parse(await Bun.file(join(ROOT, ".github/workflows/ci.yml")).text()) as any;
+  const { release_prepare: prepare, release_native: native, release } = workflow.jobs;
+  expect(prepare.concurrency).toEqual(release.concurrency);
+  expect(native.strategy).toEqual({ "fail-fast": false, matrix: { include: [{ target: "android", runner: "ubuntu-latest" }, { target: "macos", runner: "macos-15" }] } });
+  for (const job of [native, release]) {
+    expect(job.steps.find((step: any) => step.run?.startsWith("task release") && !step.run?.startsWith("task release:prepare")).env.RELEASE_VERSION).toBe("${{ needs.release_prepare.outputs.version }}");
+  }
+  const upload = native.steps.find((step: any) => step.uses?.startsWith("actions/upload-artifact@"));
+  expect(upload.with).toMatchObject({ name: "native-${{ matrix.target }}", overwrite: true, "if-no-files-found": "error", "include-hidden-files": true });
+  const downloads = release.steps.filter((step: any) => step.uses?.startsWith("actions/download-artifact@"));
+  expect(downloads.map((step: any) => step.with)).toEqual([{ name: "native-android", path: ".cache/native-release/android" }, { name: "native-macos", path: ".cache/native-release/macos" }]);
 });
 
 test("main publication retains image reports and a refreshable database even on scan failures", async () => {

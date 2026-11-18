@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease, publishScannedImages, releaseCompose, releaseConfiguration, verifyReleaseImageID, type GitHubRelease, type ReleaseBump, type ReleaseImage } from "./release.ts";
+import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease as publishWithAssets, publishScannedImages, releaseCompose, releaseConfiguration, verifyReleaseImageID, type GitHubRelease, type ReleaseBump, type ReleaseConfiguration, type ReleaseImage } from "./release.ts";
 import { ROOT } from "../shared/runtime.ts";
 import { FLUTTER_SHA256, FLUTTER_VERSION } from "../ci/setup-flutter.ts";
+import { type NativeReleaseAsset, nativeArtifactName, NATIVE_TARGETS } from "./native-artifacts.ts";
+import { prepareRelease } from "./prepare-release.ts";
 
 const env = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/main", GITHUB_SHA: "a".repeat(40), GITHUB_REPOSITORY: "Example-Owner/Domabas", GITHUB_SERVER_URL: "https://github.com", GITHUB_API_URL: "https://api.github.com", RELEASE_BUMP: "patch" };
 const config = releaseConfiguration(env);
 const source = await Bun.file(`${ROOT}/compose.yaml`).text();
 const images = (version: string): ReleaseImage[] => RELEASE_IMAGES.map(image => ({ name: image.name, tag: `ghcr.io/example-owner/domabas-${image.name}:${version}`, reference: `ghcr.io/example-owner/domabas-${image.name}@sha256:${"b".repeat(64)}`, platform: "linux/amd64" }));
+const nativeAssets = async (version: string): Promise<NativeReleaseAsset[]> => NATIVE_TARGETS.map(target => ({ name: nativeArtifactName(target, version), content: new Blob([target]), contentType: "application/octet-stream", sha256: new Bun.CryptoHasher("sha256").update(target).digest("hex") }));
+const publishRelease = (configuration: ReleaseConfiguration, client: GitHubReleaseClient, build: (version: string) => Promise<ReleaseImage[]>, compose: string, assets = nativeAssets) => publishWithAssets(configuration, client, build, compose, assets);
 
 describe("release versions and triggers", () => {
   test("starts at 0.0.1 and increments semantic versions numerically", () => {
@@ -61,14 +65,15 @@ describe("release deployment", () => {
 
 const mainRun = { id: 321, event: "push", head_branch: "main", head_sha: config.sha, status: "completed", conclusion: "success" };
 
-function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[]; releases?: GitHubRelease[]; bump?: ReleaseBump; forbidden?: boolean; failDraft?: boolean; ciRuns?: unknown[]; ciStatus?: number } = {}) {
+function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[]; releases?: GitHubRelease[]; bump?: ReleaseBump; forbidden?: boolean; failDraft?: boolean; ciRuns?: unknown[]; ciStatus?: number; uploadStatus?: number; badDigest?: boolean } = {}) {
   const calls: { method: string; path: string; body?: any }[] = [];
   const tags = [...options.tags ?? []], releases = [...options.releases ?? []];
+  const assets: { id: number; name: string; size: number; digest: string; state: string }[] = [];
   let nextDraftFails = options.failDraft;
   const releaseConfig = { ...config, bump: options.bump ?? config.bump };
   const client = new GitHubReleaseClient(releaseConfig, "test-token", async (url, init) => {
     const path = new URL(url).pathname.replace(`/repos/${config.repository}`, "");
-    const method = init.method ?? "GET", body = init.body ? JSON.parse(String(init.body)) : undefined;
+    const method = init.method ?? "GET", body = init.body instanceof Blob ? init.body : init.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({ method, path: path + new URL(url).search, body });
     if (options.forbidden) return new Response("sensitive server response", { status: 403 });
     if (method === "GET" && path === "/actions/workflows/ci.yml/runs") {
@@ -78,6 +83,19 @@ function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[
     const paginated = (items: unknown[]) => { const page = Number(new URL(url).searchParams.get("page")); return Response.json(items.slice((page - 1) * 100, page * 100)); };
     if (method === "GET" && path === "/tags") return paginated(tags);
     if (method === "GET" && path === "/releases") return paginated(releases);
+    if (method === "GET" && path === "/releases/1/assets") return paginated(assets);
+    if (method === "DELETE" && path.startsWith("/releases/assets/")) {
+      assets.splice(assets.findIndex(asset => path.endsWith(`/${asset.id}`)), 1);
+      return new Response(null, { status: 204 });
+    }
+    if (method === "POST" && path === "/releases/1/assets") {
+      expect(new URL(url).host).toBe("uploads.github.com");
+      expect(init.redirect).toBe("error");
+      if (options.uploadStatus) return new Response("private response", { status: options.uploadStatus });
+      const asset = { id: assets.length + 1, name: new URL(url).searchParams.get("name")!, size: body.size, state: "uploaded", digest: `sha256:${options.badDigest ? "0".repeat(64) : new Bun.CryptoHasher("sha256").update(await body.arrayBuffer()).digest("hex")}` };
+      assets.push(asset);
+      return Response.json(asset);
+    }
     if (method === "GET" && path.startsWith("/git/ref/tags/")) {
       const tag = tags.find(tag => path.endsWith(`/${tag.name}`));
       return tag ? Response.json({ object: { type: "commit", sha: tag.commit.sha } }) : new Response(null, { status: 404 });
@@ -95,13 +113,48 @@ function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[
     if (method === "PATCH") { Object.assign(releases.find(release => path === `/releases/${release.id}`)!, body); return Response.json({}); }
     throw new Error(`Unexpected ${method} ${path}`);
   });
-  return { client, calls, tags, releases, releaseConfig };
+  return { client, calls, tags, releases, releaseConfig, assets };
 }
 
 const reservedTag = { name: "v0.0.1", commit: { sha: config.sha } };
 const draft: GitHubRelease = { id: 1, draft: true, tag_name: "v0.0.1", target_commitish: config.sha, html_url: "https://github.com/example-owner/domabas/releases/tag/v0.0.1" };
 
 describe("GitHub publication and recovery", () => {
+  test("preparation verifies main CI and shares the reserved version with native builds", async () => {
+    const fake = fakeGitHub();
+    expect(await prepareRelease(fake.client)).toEqual({ version: "v0.0.1", publish: true });
+    expect(fake.calls[0]!.path).toContain("/actions/workflows/ci.yml/runs");
+    expect(await prepareRelease(fake.client)).toEqual({ version: "v0.0.1", publish: true });
+    fake.releases[0]!.draft = false;
+    expect(await prepareRelease(fake.client)).toEqual({ version: "v0.0.1", publish: false });
+    const pending = fakeGitHub({ ciRuns: [] });
+    await expect(prepareRelease(pending.client)).rejects.toThrow("Main CI has not passed");
+    expect(pending.calls.every(call => call.method === "GET")).toBe(true);
+  });
+  test("missing native assets or unverified uploads stop before any image build", async () => {
+    for (const options of [{}, { uploadStatus: 500 }, { badDigest: true }]) {
+      const fake = fakeGitHub(options);
+      let built = false;
+      await expect(publishRelease(config, fake.client, async version => { built = true; return images(version); }, source,
+        Object.keys(options).length ? nativeAssets : async () => { throw new Error("missing native artifact"); })).rejects.toThrow();
+      expect(built).toBe(false);
+      expect(fake.releases[0]!.draft).toBe(true);
+    }
+  });
+  test("draft retries reuse matching uploads and replace incomplete uploads", async () => {
+    const fake = fakeGitHub({ tags: [reservedTag], releases: [{ ...draft }] });
+    const assets = await nativeAssets(draft.tag_name);
+    await fake.client.uploadAssets(draft, assets);
+    const uploaded = () => fake.calls.filter(call => call.path.startsWith("/releases/1/assets?") && call.method === "POST");
+    expect(uploaded()).toHaveLength(2);
+    await fake.client.uploadAssets(draft, assets);
+    expect(uploaded()).toHaveLength(2);
+    fake.assets[0]!.state = "starter";
+    await fake.client.uploadAssets(draft, assets);
+    expect(uploaded()).toHaveLength(3);
+    expect(fake.calls.filter(call => call.method === "DELETE")).toHaveLength(1);
+    await expect(fake.client.uploadAssets({ ...draft, draft: false }, assets)).rejects.toThrow("published release");
+  });
   test("reuses successful push/main CI for the exact commit before reserving or building", async () => {
     const fake = fakeGitHub();
     await publishRelease(config, fake.client, async version => images(version), source);
@@ -142,13 +195,16 @@ describe("GitHub publication and recovery", () => {
     await publishRelease(config, fake.client, async version => {
       expect(fake.releases[0]!.draft).toBe(true);
       expect(fake.tags[0]).toEqual(reservedTag);
+      expect(fake.assets).toHaveLength(2);
       return images(version);
     }, source);
     expect(fake.releases[0]!.draft).toBe(false);
     const body = fake.calls.find(call => call.method === "PATCH")!.body;
     expect(body.body).toContain("ghcr.io/example-owner/domabas-web:v0.0.1");
     expect(body.body).toContain("@sha256:");
-    expect(body.body).not.toContain("android.apk");
+    expect(body.body).toContain("android-preview.apk");
+    expect(body.body).toContain("macos-universal-unsigned.dmg");
+    expect(body.body).toContain("uninstalling");
     expect(body.make_latest).toBe("false");
     expect(fake.calls.find(call => call.method === "POST" && call.path === "/releases")!.body.prerelease).toBe(true);
   });

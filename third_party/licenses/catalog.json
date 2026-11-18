@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "inputs": {
     ".bun-version": "b99b4c7cdf236f59bc9f65d963deaecae3b16a7dad87939cacb9057f7664daee",
-    ".github/workflows/ci.yml": "ebf8371fb4ebaba21e6bf4bfdbbea18fc817ea4ca9a692112b3227460b52ce17",
+    ".github/workflows/ci.yml": "2cb0488496effc201b3e230521b80fe6e7cde7e38ef95cf26095ae3a54aea6ae",
     ".tool-versions": "8c739ce12b29ece0f6dd22cad04e0a0e767da9a855e49a6210058f8a538ae217",
     "backend/Dockerfile": "fc80cf75aa26dd2e36af31432d9ecdfab32ae4af0ccf9b78e3265d0eee7ff6e6",
     "backend/go.mod": "f75d19f7f198b003d72768bd0a6acfd5ca7cbf99a1a9e11f802d6947f8d7f6b5",

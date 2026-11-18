@@ -140,20 +140,30 @@ six-minute deadline, avoiding repeated compiler and browser suite startup. Bun C
 deadlines bound CI checks, Compose smoke and release work even on older runners
 that ignore YAML job timeouts;
 PR concurrency groups cancel obsolete commits without cancelling main releases.
-GitHub Actions runs `task check` and isolated PostgreSQL integration/database
-regeneration on PRs, main pushes and manual release runs. It uses GitHub-hosted
-Ubuntu runners. Full Temporal, browser, API E2E, model and Compose checks remain
-explicit local tasks.
+GitHub Actions selects complete backend, frontend and API-generation suites from
+PR changes using `task ci:select`. Shared or unknown inputs select all suites.
+Tooling, icon and license checks always run during CI; selected application, catalog and
+isolated PostgreSQL checks run independently on GitHub-hosted Ubuntu runners.
+`task ci:gate` verifies every selected result under the stable Fast checks name,
+including failures and unexpected skips. Main pushes retain all configured
+suites. Manual releases on main reuse those successful checks for the exact
+release commit. `task check` keeps its complete local sequence. See the
+[selection rules](../development/testing.md#github-actions). Full Temporal,
+browser, API E2E, model and Compose checks remain explicit local tasks.
 The local full harness retains Docker gateway discovery and unique projects.
 
-Main pushes and manual release runs on main also run checksum-pinned OSV-Scanner
-against Go, Dart and Bun inputs.
+Main pushes also run checksum-pinned OSV-Scanner against Go, Dart and Bun inputs.
+Manual releases reuse that source scan from main CI.
 The TypeScript adapter renders all findings and blocks only critical ratings;
 scanner failures also fail the job. Source scanning does not cover image OS or
 native library vulnerabilities.
 
 Releases require a manual `workflow_dispatch` on `main`; merges and pushes only
 run checks. The workflow and TypeScript entry point both enforce that boundary.
+Before any version reservation or image build, the publisher queries this
+workflow's successful push/main runs for the exact release SHA. Missing or
+unsuccessful CI blocks publication with a retry instruction. Manual main releases
+skip the test jobs and source scan; release notes link to the reused main run.
 The serialized release job uses GitHub's `queue: max` to retain pending release
 runs.
 The publisher lists every page of tags and releases, reserves a semantic version

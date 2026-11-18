@@ -15,6 +15,7 @@ export interface ReleaseConfiguration { repository: string; sha: string; bump: R
 export interface ReleaseImage { name: string; tag: string; reference: string; platform: "linux/amd64" }
 export interface GitHubRelease { id: number; draft: boolean; tag_name: string; target_commitish: string; html_url: string }
 interface GitHubTag { name: string; commit: { sha: string } }
+interface GitHubCIRun { id: number; event: string; head_branch: string; head_sha: string; status: string; conclusion: string }
 type ReleaseRequest = (url: string, options: RequestInit) => Promise<Response>;
 export type ReleaseBump = "patch" | "minor" | "major";
 
@@ -68,6 +69,19 @@ export class GitHubReleaseClient {
     }
   }
 
+  async verifyMainCI(): Promise<string> {
+    const query = new URLSearchParams({ branch: "main", event: "push", head_sha: this.config.sha, status: "success", per_page: "1" });
+    const response = await this.api(`/actions/workflows/ci.yml/runs?${query}`);
+    if (response.status === 404) throw new Error("Cannot find the main CI workflow; refusing to publish.");
+    const data = await response.json() as { workflow_runs?: GitHubCIRun[] };
+    const run = data.workflow_runs?.[0];
+    if (!run || !Number.isSafeInteger(run.id) || run.id <= 0 || run.event !== "push" || run.head_branch !== "main" ||
+      run.head_sha !== this.config.sha || run.status !== "completed" || run.conclusion !== "success") {
+      throw new Error(`Main CI has not passed for ${this.config.sha}. Wait for its main push run to succeed, then retry this release.`);
+    }
+    return `https://github.com/${this.config.repository}/actions/runs/${run.id}`;
+  }
+
   async verifyTag(version: string): Promise<void> {
     const response = await this.api(`/git/ref/tags/${version}`);
     const tag = response.status === 404 ? undefined : await response.json() as { object: { type: string; sha: string } };
@@ -119,6 +133,7 @@ export function releaseCompose(source: string, images: readonly ReleaseImage[]):
 }
 
 export async function publishRelease(config: ReleaseConfiguration, client: GitHubReleaseClient, buildImages: (version: string) => Promise<ReleaseImage[]>, source: string): Promise<string> {
+  const mainCI = await client.verifyMainCI();
   const release = await client.prepare();
   if (!release.draft) return release.html_url;
   const images = await buildImages(release.tag_name);
@@ -128,7 +143,7 @@ export async function publishRelease(config: ReleaseConfiguration, client: GitHu
   }
   const compose = releaseCompose(source, images);
   const notes = [
-    `Built from [${config.sha.slice(0, 12)}](https://github.com/${config.repository}/commit/${config.sha}). Required checks: task check, PostgreSQL integration, database generation consistency, OSV dependency scanning and Trivy image scanning. Both vulnerability gates block critical findings.`,
+    `Built from [${config.sha.slice(0, 12)}](https://github.com/${config.repository}/commit/${config.sha}). Source tests, PostgreSQL integration, generation consistency and OSV dependency scanning passed in [main CI](${mainCI}) and were reused for this release. Built images passed Trivy scanning. Both vulnerability gates block critical findings.`,
     "Containers target linux/amd64. The web image contains Flutter web; native apps are not distributed. Versions below 1.0.0 are previews. Temporal, browser E2E, live-model and complete Compose smoke tests are separate local validation, not guarantees of this release.",
     "Version tags are immutable after publication. Failed builds remain drafts; retry the same workflow run to reuse its version. No floating latest image tag is published.",
     ["| Image | Version | Immutable image |", "| --- | --- | --- |", ...images.map(image => `| ${image.name} | \`${image.tag}\` | \`${image.reference}\` |`)].join("\n"),

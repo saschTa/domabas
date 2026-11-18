@@ -2,7 +2,10 @@
 
 Releases start manually from **Actions → CI and releases → Run workflow**.
 Select `main` and a version increment. The run publishes four images and one
-GitHub release after the [required checks](testing.md#github-actions) pass.
+GitHub release after the [required checks](testing.md#github-actions) pass in a
+`push` run on `main` for that exact commit. The manual release reuses that run;
+it builds, scans and publishes images without repeating the test suites or OSV
+source scan.
 Pull requests and pushes to `main`, including merges, run checks without publishing.
 Manual runs on other branches or tags cannot publish. Image names come from the
 GitHub repository:
@@ -39,7 +42,11 @@ gh workflow run ci.yml --ref main -f release_bump=patch
 ```
 
 The publisher uses the exact commit captured by the manual run, even if `main`
-advances while checks run. It rejects automatic events and non-main refs.
+advances while publication runs. It verifies a successful `push` run of `ci.yml`
+on `main` with the same commit SHA before creating a tag, draft or image build.
+If main CI is missing, running or failed, wait for it to succeed and retry the
+manual release. No test rerun is started by the publisher. Release notes link to
+the reused main run. It rejects automatic events and non-main refs.
 PR labels do not select versions. See GitHub's
 [manual workflow documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
 for access requirements and dispatch options.
@@ -63,7 +70,7 @@ guides. Keep the quick-start service configuration aligned with the root
 Publication is serialized using GitHub's
 [concurrency queue](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
 Up to 100 pending release jobs are retained. They run in queue arrival order,
-which can differ from commit order when checks take different amounts of time.
+which can differ from commit order when releases are requested at different times.
 If that limit is exceeded, rerun cancelled manual release runs. PR cancellation
 does not cancel releases.
 
@@ -106,8 +113,9 @@ Only **critical** findings block publication: a grouped CVSS score of at least
 9.0 or an explicit critical advisory rating. High, medium, low and unscored
 findings appear in the log and job summary without blocking. Download, checksum,
 API and malformed-report failures fail the scan rather than masquerading as a
-clean result. PR checks do not run this scan; main pushes and manual release runs
-on main do. Run `task security:dependencies` locally to check new advisories between
+clean result. PR checks do not run this scan; main pushes do. Manual releases
+reuse the source scan from the successful main run. Run `task security:dependencies`
+locally to check new advisories between
 releases without starting publication.
 
 This is a dependency inventory scan, not proof of exploitability. It does not
@@ -137,8 +145,8 @@ which accounts for distribution backports. The images are not rebuilt between
 scanning and pushing. A later registry/network failure can leave some already
 scanned images pushed while the GitHub release remains a draft.
 
-This runs only in the manually triggered publication job on main, after its
-source and database checks pass. PRs do not build or scan images. The job summary
+This runs only in the manually triggered publication job on main, after verifying
+the successful main CI run for its commit. PRs do not build or scan images. The job summary
 shows severity counts and up to 100 findings per image, with critical findings first. Complete
 JSON reports are retained as `image-vulnerabilities-<attempt>` workflow artifacts
 for 14 days, including on failure. Scanning stops at the first failure; reports
@@ -174,8 +182,8 @@ releases; this workflow does not yet schedule them.
 2. Enable GitHub Actions and permit the pinned actions in
    [the workflow](../../.github/workflows/ci.yml). Use GitHub-hosted
    `ubuntu-latest`, not a self-hosted runner. The first push runs checks.
-3. Permit the release job's `GITHUB_TOKEN` to write repository contents and
-   packages. No personal access token or custom registry
+3. Permit the release job's `GITHUB_TOKEN` to read Actions runs and write repository
+   contents and packages. No personal access token or custom registry
    secret is needed. Rules protecting `v*` tags must allow this workflow to create
    them. PR jobs keep read-only permissions and do not persist checkout credentials.
 4. Require **Fast checks** and **PostgreSQL integration** in the `main` branch
@@ -183,7 +191,7 @@ releases; this workflow does not yet schedule them.
    changes. Configure these rules after the first run makes check names available.
 5. When ready to publish, open **Actions → CI and releases → Run workflow**,
    select `main` and the desired version increment. The publisher creates the
-   release tag after that run's checks pass.
+   release tag after verifying that main CI already passed for its captured commit.
 6. Set each of the four GHCR packages to **Public** after first publication.
    GitHub packages can start private even for a public repository. Verify the
    repository is linked and its workflow can write each package. See

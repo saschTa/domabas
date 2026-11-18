@@ -141,7 +141,7 @@ class NativeDesktopFrame extends StatelessWidget {
                 reduceMotion: MediaQuery.disableAnimationsOf(context),
               ),
               feedback: controller.recovering ? controller.error : null,
-              layoutRevision: snapshot.revision,
+              layoutRevision: controller.layoutRevision,
               contentNavigatorKey: navigatorKey,
               contentModalOpen: modalOpen,
               commands: GlacierNativeWindowCommands(

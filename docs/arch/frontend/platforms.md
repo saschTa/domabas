@@ -214,6 +214,19 @@ invitation and explicitly says links are ignored because the motion callback
 cannot establish offered file types. Native desktop compilation and physical drag
 interaction require their respective Linux/Windows hosts.
 
+macOS registers file-URL drops in the AppKit runner and sends entered, updated,
+exited and completed events through the same owned Dart dispatcher. Pasteboard
+object reads use file URLs only and retain the existing user-selected read-only
+sandbox entitlement. Copy-only negotiation ignores web links and text. The runner
+rejects batches above 20 items before extracting paths; common acquisition checks
+reject directories, symlinks, special files and oversized originals. No dropped
+directory is traversed. The overlay clears on exit, rejection or completion;
+session and library admission gates remain authoritative.
+
+External drops are supported on web, macOS, Windows and Linux. Android and iOS
+use their file pickers and the documented mobile sharing flows; they do not
+initialize a desktop drop target or a desktop titlebar.
+
 ## Glacier desktop window integration
 
 Desktop startup owns one `DesktopWindowController` above authentication and
@@ -223,7 +236,11 @@ GTK3 runner handlers. Web, Android and iOS do not initialize this channel.
 
 The host starts with its operating-system decoration. It reports supported
 commands and authoritative activation/window mode, then accepts the current
-Glacier layout before switching to client decoration. Initialization or command
+Glacier layout before switching to client decoration. A briefly missing startup
+handler is retried up to ten times at 100ms intervals. A native geometry change
+during layout or decoration activation requests fresh Flutter measurements at
+50ms intervals, up to twenty retries, even when no further resize event arrives.
+Only an accepted current layout can hide the system titlebar. Initialization or command
 failure requests restoration of system decoration. Missing handlers retain the
 ordinary native window; unsupported commands do not acquire simulated callbacks.
 During fullscreen recovery, Exit, F11 and Close remain available until native
@@ -232,8 +249,8 @@ restoration can be retried; requesting an exit does not itself complete recovery
 Window mode changes come from native snapshots and events, not optimistic Dart
 updates. Engine reconnection resets layout sequence and decoration readiness.
 
-`GlacierNativeFrame` renders the dedicated one-line titlebar at44 logical pixels,
-or52 with enlarged text. Its immutable layout includes typed caption bounds,
+`GlacierNativeFrame` renders the dedicated one-line titlebar at 44 logical pixels,
+or 52 with enlarged text. Its immutable layout includes typed caption bounds,
 drag regions and interactive exclusions. AppKit and GTK use the originating
 native mouse event for window movement. Win32 uses non-client hit testing,
 including the maximize/restore region for snap layouts; resize borders and
@@ -244,7 +261,9 @@ preserve both the configured side and a Close-only button group.
 The application Navigator sits below the native titlebar. Its native content
 scope has no remaining top inset, so documents, content dialogs and compact
 navigation do not apply the titlebar spacing twice. Caption controls stay outside
-the content Navigator and its modal barrier. The catalog retains its independent
+the content Navigator, its modal barrier and the file-drop invitation. On macOS,
+native caption visibility is reapplied after focus, resize and fullscreen events;
+the operating system's menu bar remains available. The catalog retains its independent
 nested-Navigator arrangement for isolated component demonstrations.
 
 Platform acceptance requires real native builds and interaction checks on each

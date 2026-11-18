@@ -434,10 +434,12 @@ supported formats and session ownership.
 
 The workspace exposes Upload files under `documents:upload`, independently of
 read or metadata-create permission. Create metadata keeps the existing fileless
-record flow. Selection accepts originals from all five target platforms; an
-external file drop anywhere over the visible web/Linux/Windows application
+record flow. Selection accepts originals from all six target platforms; an
+external file drop anywhere over the visible web/macOS/Linux/Windows application
 starts upload automatically. The passive drop invitation renders above the
 Navigator without opening a route, changing focus or replacing unsaved forms.
+On native desktop it stays below the Flutter titlebar so window controls remain
+available throughout a drag.
 Uploads share the workspace Activity indicator and panel with background jobs
 and reindex requests. View uploads opens that same panel, including the latest
 40 completed outcomes, pending work and clear-finished action. Transfers show

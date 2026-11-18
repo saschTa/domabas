@@ -8,6 +8,67 @@ import 'package:flutter_test/flutter_test.dart';
 import '../unit/desktop_window_controller_test.dart' show WindowPortFake;
 
 void main() {
+  for (final platform in GlacierNativePlatform.values) {
+    testWidgets(
+      'titlebar activates after host startup and geometry settle on $platform',
+      (tester) async {
+        final port = WindowPortFake(platform: platform)
+          ..missingInitializations = 2
+          ..rejectedDecorations = 1
+          ..pendingLayout = true;
+        final controller = DesktopWindowController(port);
+        final navigator = GlobalKey<NavigatorState>();
+        final observer = DesktopWindowRouteObserver();
+        await tester.pumpWidget(
+          NativeDesktopHost(
+            controller: controller,
+            child: MaterialApp(
+              theme: GlacierTheme.light(),
+              navigatorKey: navigator,
+              navigatorObservers: [observer],
+              builder: (context, child) => NativeDesktopFrame(
+                navigatorKey: navigator,
+                observer: observer,
+                child: child!,
+              ),
+              home: const Scaffold(body: Text('Library')),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+        expect(
+          port.calls.where((value) => value == 'initialize'),
+          hasLength(3),
+        );
+        expect(port.calls, isNot(contains('decoration:true')));
+        final revision = controller.layoutRevision;
+        port.pendingLayout = false;
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pump();
+        expect(
+          controller.snapshot!.state.decoration,
+          GlacierNativeDecoration.host,
+        );
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pumpAndSettle();
+        expect(controller.layoutRevision, greaterThan(revision));
+        expect(port.calls, contains('decoration:true'));
+        expect(
+          controller.snapshot!.state.decoration,
+          GlacierNativeDecoration.client,
+        );
+        expect(find.byTooltip('Close window'), findsOneWidget);
+        await tester.tap(find.byTooltip('Close window'));
+        await tester.pump();
+        expect(port.calls.last, 'close');
+        await tester.pumpWidget(const SizedBox());
+        await tester.runAsync(controller.close);
+        observer.dispose();
+      },
+    );
+  }
   for (final scale in [1.0, 2.0]) {
     testWidgets(
       'native app navigator has exactly one title inset at scale $scale',

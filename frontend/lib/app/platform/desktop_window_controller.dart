@@ -22,6 +22,9 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   String? error;
   bool _disposed = false, _failed = false, _enabling = false;
   int _sequence = 0;
+  int _layoutRevision = 0, _pendingLayouts = 0;
+  Timer? _layoutRetry;
+  int get layoutRevision => _layoutRevision;
   Future<void> _pending = Future.value();
   bool get available => !_failed && _snapshot?.ready == true;
   bool get frameVisible =>
@@ -40,16 +43,25 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
       _accept,
       onError: (Object _) => _recover(),
     );
-    try {
-      _accept(await _port.initialize().timeout(const Duration(seconds: 3)));
-    } catch (_) {
-      await _recover();
+    for (var attempt = 0; attempt < 10 && !_disposed; attempt++) {
+      try {
+        _accept(await _port.initialize().timeout(const Duration(seconds: 3)));
+        return;
+      } on MissingPluginException {
+        if (attempt < 9) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+      } catch (_) {
+        break;
+      }
     }
+    await _recover();
   }
 
   void _accept(DesktopWindowSnapshot value) {
     if (_disposed || value.revision < (_snapshot?.revision ?? -1)) return;
     _snapshot = value;
+    _layoutRevision++;
     _publish();
     if (!value.ready && !_failed) unawaited(_recover());
   }
@@ -57,6 +69,7 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   Future<void> _recover() async {
     if (_disposed || _failed) return;
     _failed = true;
+    _layoutRetry?.cancel();
     error = 'Restoring system window controls…';
     _publish();
     await _restoreHost();
@@ -82,6 +95,7 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
 
   void layoutChanged(GlacierNativeWindowLayout layout) {
     if (!available || _disposed || layout.viewport.isEmpty) return;
+    _layoutRetry?.cancel();
     final sequence = ++_sequence;
     _pending = _pending.then((_) async {
       if (_disposed || !available || sequence != _sequence) return;
@@ -99,8 +113,21 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
                 .timeout(const Duration(seconds: 3)),
           );
         }
+        _pendingLayouts = 0;
       } on PlatformException catch (error) {
-        if (error.code != 'layout_pending') await _recover();
+        if (_disposed || sequence != _sequence || !available) return;
+        final geometryChanged =
+            error.code == 'layout_pending' ||
+            _enabling && error.code == 'not_ready';
+        if (geometryChanged && ++_pendingLayouts <= 20) {
+          _layoutRetry = Timer(const Duration(milliseconds: 50), () {
+            if (_disposed || !available || sequence != _sequence) return;
+            _layoutRevision++;
+            _publish();
+          });
+        } else {
+          await _recover();
+        }
       } catch (_) {
         await _recover();
       } finally {
@@ -152,6 +179,7 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   Future<void> close() async {
     if (_disposed) return;
     _disposed = true;
+    _layoutRetry?.cancel();
     await _subscription?.cancel();
     await _port.dispose();
     return super.close();

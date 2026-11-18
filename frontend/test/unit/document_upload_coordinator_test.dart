@@ -1,11 +1,14 @@
 import 'package:domabas/app/desktop_upload_bridge.dart';
+import 'package:domabas/app/desktop_upload_bridge_native.dart';
 import 'package:domabas/app/document_upload_coordinator.dart';
 import 'package:domabas/data/document/datasources/document_upload_acquisition_native.dart';
 import 'package:domabas/domain/document/interfaces/document_upload_repository.dart';
 import 'package:domabas/domain/document/models/document.dart';
 import 'package:domabas/domain/document/models/document_upload.dart';
 import 'package:domabas/presentation/document/cubits/document_uploads_cubit.dart';
-import 'package:flutter/widgets.dart';
+import 'package:domabas/presentation/document/widgets/document_upload_host.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final class _Bridge implements DesktopUploadBridge {
@@ -48,6 +51,67 @@ final class _Repository implements DocumentUploadRepository {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets(
+    'native channel shows and clears the upload invitation',
+    (tester) async {
+      final bridge = NativeDesktopUploadBridge(
+        canAcquire: () => true,
+        onBusyChanged: () {},
+      );
+      final coordinator = DocumentUploadCoordinator(
+        acquisition: NativeDocumentUploadAcquisition(),
+        desktopBridge: bridge,
+      );
+      final cubit = DocumentUploadsCubit(
+        repository: _Repository(),
+        scheduler: coordinator,
+        libraryName: 'Drop library',
+        canRead: true,
+        allowed: true,
+      );
+      coordinator.attach(cubit, busy: false);
+      coordinator.lifecycleChanged(AppLifecycleState.inactive);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DocumentUploadHost(
+            cubit: cubit,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+      Future<void> send(String method, [Object? arguments]) async {
+        await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+          'desktop_drop',
+          const StandardMethodCodec().encodeMethodCall(
+            MethodCall(method, arguments),
+          ),
+          (_) {},
+        );
+        await tester.pump();
+      }
+
+      await send('entered');
+      expect(find.text('Drop files to upload'), findsOneWidget);
+      await send('updated');
+      expect(find.text('Drop library'), findsOneWidget);
+      await send('exited');
+      expect(find.byKey(const Key('fileDropInvitation')), findsNothing);
+      await send('entered');
+      await send('performOperation', <String>[]);
+      expect(find.byKey(const Key('fileDropInvitation')), findsNothing);
+      coordinator.attach(cubit, busy: true);
+      await send('entered');
+      expect(find.byKey(const Key('fileDropInvitation')), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      coordinator.dispose();
+      await tester.runAsync(cubit.close);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+      TargetPlatform.linux,
+    }),
+  );
   test('started portal retains its registration while hidden; direct hidden drops cannot use its continuation', () async {
     final bridge = _Bridge();
     final coordinator = DocumentUploadCoordinator(

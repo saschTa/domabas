@@ -150,3 +150,14 @@ The generation wrapper uses the pinned OpenAPI Generator **7.25.0**, verifies
 its download and finds a local Java runtime. Commit the contract, generated
 Go/Dart boundary code and any resulting lockfile changes together. Generated
 sources are tracked, so a normal checkout can build without regeneration.
+## Component catalog
+
+The [Glacier Widgetbook](widgetbook/README.md) hosts reusable Flutter components,
+desktop and mobile screens, and native desktop frame previews without starting
+the backend. Run
+`task widgetbook:setup` then `task widgetbook` from the repository root.
+[Component guidance](../docs/arch/frontend/glacier.md) describes ownership,
+tokens, interactions and responsive contracts. The application composes these same
+presenters around its real feature controllers and API workflows; catalog sample
+data is confined to Widgetbook. Native window behavior uses the runtime adapter
+and its platform host requirements described in the architecture guides.

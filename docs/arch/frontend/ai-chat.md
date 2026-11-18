@@ -13,7 +13,9 @@ when the session or library scope ends. `AccountWorkspace` owns `ChatCubit` and
 `ChatSettingsCubit`, gates navigation by claims and manages their visible and
 foreground lifetimes. Production uses the actual API.
 
-The chat workspace uses the shared theme and surfaces. Wide windows show a
+The chat workspace composes Glacier toolbar, history surfaces, selectable message
+presenters and controlled desktop/mobile composers around the existing ChatScreen
+State and ChatCubit. Presenter callbacks never create requests independently. Wide windows show a
 conversation sidebar; narrow windows and enlarged text use a History dialog.
 Conversation and message collections use separate bounded server pages and
 explicit continuation. Message refresh merges stable IDs while retaining earlier
@@ -67,9 +69,13 @@ keyboard and shell insets. Ctrl/Cmd+Enter sends and Enter inserts a newline. The
 transcript preserves the scroll anchor while earlier messages are inserted,
 only follows new content when already near its bottom, and offers Jump to latest.
 The transcript and conversation history fill their available height. There is no
-repeated destination heading or outer page scroll; history and new-chat controls
-stay fixed, and the composer remains available. Conversation history and composer
-overflow scroll independently. Chat observes the page's primary transcript
+repeated destination heading. History and new-chat controls stay fixed in ordinary
+windows. When the available content height is below 320px, a bounded outer scroll
+keeps those controls, transcript and composer reachable without reducing text size
+or action targets. The visible workspace stays the same height. Conversation history and composer
+overflow scroll independently and include the measured Activity clearance at their
+end. Send, Stop and Check sent message remain reachable above the floating dock.
+Chat observes the page's primary transcript
 controller without owning its lifetime. Following settles bounded
 lazy-list layout changes and stops when the user scrolls or the controller changes.
 Loading earlier messages retains the visible message's position and temporarily

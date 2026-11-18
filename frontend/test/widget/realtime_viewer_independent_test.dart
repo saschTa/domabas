@@ -82,9 +82,7 @@ void main() {
       );
       await tester.tap(find.text('Open mail'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Document details'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Extracted text'));
+      await tester.tap(find.text('Text'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Edit extracted text'));
       await tester.tap(find.text('Edit extracted text'));
@@ -110,8 +108,8 @@ void main() {
       );
       expect(
         tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Save extracted text'),
+            .widget<GlacierButton>(
+              find.widgetWithText(GlacierButton, 'Save extracted text'),
             )
             .onPressed,
         isNull,
@@ -138,7 +136,7 @@ void main() {
         findsWidgets,
       );
       expect(
-        find.widgetWithText(FilledButton, 'Save extracted text'),
+        find.widgetWithText(GlacierButton, 'Save extracted text'),
         findsNothing,
       );
       expect(find.byKey(const Key('email-body')), findsNothing);

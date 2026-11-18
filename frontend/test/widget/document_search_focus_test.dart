@@ -36,6 +36,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Search documents'));
+      await tester.pumpAndSettle();
     }
 
     final term = find.byKey(const Key('documentSearchTerm'));
@@ -58,11 +60,11 @@ void main() {
       (tester) async {
         await mount(tester);
         await tester.enterText(term, 'invoice');
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.pumpAndSettle();
-        expect(cubit.state.criteria?.query, 'invoice');
         final focus = editor(tester).focusNode;
         expect(focus.hasFocus, isTrue);
+        await tester.tap(find.byKey(const Key('applyDocumentSearch')));
+        await tester.pumpAndSettle();
+        expect(cubit.state.criteria?.query, 'invoice');
         tester.testTextInput.hide();
         await tester.drag(collection, const Offset(0, -550));
         await tester.pumpAndSettle();
@@ -103,24 +105,21 @@ void main() {
       await tester.tap(find.byKey(const Key('applyDocumentSearch')));
       await tester.pumpAndSettle();
       expect(cubit.state.criteria?.query, 'invoice');
-      expect(editor(tester).focusNode.hasFocus, isFalse);
+      expect(term, findsNothing);
       expect(tester.testTextInput.isVisible, isFalse);
     });
 
-    testWidgets('$platform touch outside search dismisses editing', (
+    testWidgets('$platform cancelling search discards the unapplied draft', (
       tester,
     ) async {
       await mount(tester);
       await tester.enterText(term, 'invoice');
       await tester.pump();
-      await tester.tapAt(
-        tester.getTopLeft(find.byType(DocumentCollectionCard).first) -
-            const Offset(4, 4),
-      );
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(editor(tester).focusNode.hasFocus, isFalse);
+      expect(term, findsNothing);
       expect(tester.testTextInput.isVisible, isFalse);
-      expect(editor(tester).controller.text, 'invoice');
+      expect(cubit.state.rawTerm, isEmpty);
     });
 
     testWidgets('$platform touch Search preserves unfinished composition', (

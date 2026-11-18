@@ -1,0 +1,941 @@
+{
+  "revision": "glacier-native-v2.2",
+  "status": "accepted-frozen",
+  "source": "glacier-desktop-overlay-v2.1",
+  "cases": [
+    {
+      "id": "native-macos-documents-light",
+      "platform": "macos",
+      "state": "documents-light",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "documents",
+        "appearance": "light"
+      },
+      "url": "/?platform=macos&view=documents&appearance=light"
+    },
+    {
+      "id": "native-macos-documents-dark",
+      "platform": "macos",
+      "state": "documents-dark",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "documents",
+        "appearance": "dark"
+      },
+      "url": "/?platform=macos&view=documents&appearance=dark"
+    },
+    {
+      "id": "native-macos-inactive",
+      "platform": "macos",
+      "state": "inactive",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "active": "false",
+        "appearance": "light"
+      },
+      "url": "/?platform=macos&active=false&appearance=light"
+    },
+    {
+      "id": "native-macos-inactive-dark",
+      "platform": "macos",
+      "state": "inactive-dark",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "active": "false",
+        "appearance": "dark"
+      },
+      "url": "/?platform=macos&active=false&appearance=dark"
+    },
+    {
+      "id": "native-macos-maximized",
+      "platform": "macos",
+      "state": "maximized",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "mode": "maximized"
+      },
+      "url": "/?platform=macos&mode=maximized"
+    },
+    {
+      "id": "native-macos-fullscreen",
+      "platform": "macos",
+      "state": "fullscreen",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "mode": "fullscreen"
+      },
+      "url": "/?platform=macos&mode=fullscreen"
+    },
+    {
+      "id": "native-macos-fullscreen-revealed",
+      "platform": "macos",
+      "state": "fullscreen-revealed",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "mode": "fullscreen",
+        "revealed": "true"
+      },
+      "url": "/?platform=macos&mode=fullscreen&revealed=true"
+    },
+    {
+      "id": "native-macos-collapsed",
+      "platform": "macos",
+      "state": "collapsed",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "sidebar": "collapsed"
+      },
+      "url": "/?platform=macos&sidebar=collapsed"
+    },
+    {
+      "id": "native-macos-compact-800",
+      "platform": "macos",
+      "state": "compact-800",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "macos"
+      },
+      "url": "/?platform=macos"
+    },
+    {
+      "id": "native-macos-compact-500",
+      "platform": "macos",
+      "state": "compact-500",
+      "width": 500,
+      "height": 800,
+      "query": {
+        "platform": "macos"
+      },
+      "url": "/?platform=macos"
+    },
+    {
+      "id": "native-macos-minimum-330",
+      "platform": "macos",
+      "state": "minimum-330",
+      "width": 330,
+      "height": 740,
+      "query": {
+        "platform": "macos"
+      },
+      "url": "/?platform=macos"
+    },
+    {
+      "id": "native-macos-text-200",
+      "platform": "macos",
+      "state": "text-200",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "macos",
+        "textScale": "2"
+      },
+      "url": "/?platform=macos&textScale=2"
+    },
+    {
+      "id": "native-macos-reader",
+      "platform": "macos",
+      "state": "reader",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "screen": "reader"
+      },
+      "url": "/?platform=macos&screen=reader"
+    },
+    {
+      "id": "native-macos-settings",
+      "platform": "macos",
+      "state": "settings",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "settings"
+      },
+      "url": "/?platform=macos&view=settings"
+    },
+    {
+      "id": "native-macos-search",
+      "platform": "macos",
+      "state": "search",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "screen": "search"
+      },
+      "url": "/?platform=macos&screen=search"
+    },
+    {
+      "id": "native-macos-invoices",
+      "platform": "macos",
+      "state": "invoices",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "invoices"
+      },
+      "url": "/?platform=macos&view=invoices"
+    },
+    {
+      "id": "native-macos-chat",
+      "platform": "macos",
+      "state": "chat",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "chat"
+      },
+      "url": "/?platform=macos&view=chat"
+    },
+    {
+      "id": "native-macos-jobs",
+      "platform": "macos",
+      "state": "jobs",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "jobs"
+      },
+      "url": "/?platform=macos&view=jobs"
+    },
+    {
+      "id": "native-macos-admin",
+      "platform": "macos",
+      "state": "admin",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "view": "admin"
+      },
+      "url": "/?platform=macos&view=admin"
+    },
+    {
+      "id": "native-macos-opaque",
+      "platform": "macos",
+      "state": "opaque",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "macos",
+        "opaque": "true",
+        "appearance": "dark"
+      },
+      "url": "/?platform=macos&opaque=true&appearance=dark"
+    },
+    {
+      "id": "native-macos-disabled-caption",
+      "platform": "macos",
+      "state": "disabled-caption",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "macos",
+        "disabled": "true"
+      },
+      "url": "/?platform=macos&disabled=true"
+    },
+    {
+      "id": "native-macos-high-dpi",
+      "platform": "macos",
+      "state": "high-dpi",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "macos",
+        "dpi": "2"
+      },
+      "url": "/?platform=macos&dpi=2"
+    },
+    {
+      "id": "native-macos-reduced-motion",
+      "platform": "macos",
+      "state": "reduced-motion",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "macos",
+        "motion": "reduced",
+        "sidebar": "collapsed"
+      },
+      "url": "/?platform=macos&motion=reduced&sidebar=collapsed"
+    },
+    {
+      "id": "native-windows-documents-light",
+      "platform": "windows",
+      "state": "documents-light",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "documents",
+        "appearance": "light"
+      },
+      "url": "/?platform=windows&view=documents&appearance=light"
+    },
+    {
+      "id": "native-windows-documents-dark",
+      "platform": "windows",
+      "state": "documents-dark",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "documents",
+        "appearance": "dark"
+      },
+      "url": "/?platform=windows&view=documents&appearance=dark"
+    },
+    {
+      "id": "native-windows-inactive",
+      "platform": "windows",
+      "state": "inactive",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "active": "false",
+        "appearance": "light"
+      },
+      "url": "/?platform=windows&active=false&appearance=light"
+    },
+    {
+      "id": "native-windows-inactive-dark",
+      "platform": "windows",
+      "state": "inactive-dark",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "active": "false",
+        "appearance": "dark"
+      },
+      "url": "/?platform=windows&active=false&appearance=dark"
+    },
+    {
+      "id": "native-windows-maximized",
+      "platform": "windows",
+      "state": "maximized",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "mode": "maximized"
+      },
+      "url": "/?platform=windows&mode=maximized"
+    },
+    {
+      "id": "native-windows-fullscreen",
+      "platform": "windows",
+      "state": "fullscreen",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "mode": "fullscreen"
+      },
+      "url": "/?platform=windows&mode=fullscreen"
+    },
+    {
+      "id": "native-windows-fullscreen-revealed",
+      "platform": "windows",
+      "state": "fullscreen-revealed",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "mode": "fullscreen",
+        "revealed": "true"
+      },
+      "url": "/?platform=windows&mode=fullscreen&revealed=true"
+    },
+    {
+      "id": "native-windows-collapsed",
+      "platform": "windows",
+      "state": "collapsed",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "sidebar": "collapsed"
+      },
+      "url": "/?platform=windows&sidebar=collapsed"
+    },
+    {
+      "id": "native-windows-compact-800",
+      "platform": "windows",
+      "state": "compact-800",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "windows"
+      },
+      "url": "/?platform=windows"
+    },
+    {
+      "id": "native-windows-compact-500",
+      "platform": "windows",
+      "state": "compact-500",
+      "width": 500,
+      "height": 800,
+      "query": {
+        "platform": "windows"
+      },
+      "url": "/?platform=windows"
+    },
+    {
+      "id": "native-windows-minimum-330",
+      "platform": "windows",
+      "state": "minimum-330",
+      "width": 330,
+      "height": 740,
+      "query": {
+        "platform": "windows"
+      },
+      "url": "/?platform=windows"
+    },
+    {
+      "id": "native-windows-text-200",
+      "platform": "windows",
+      "state": "text-200",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "windows",
+        "textScale": "2"
+      },
+      "url": "/?platform=windows&textScale=2"
+    },
+    {
+      "id": "native-windows-reader",
+      "platform": "windows",
+      "state": "reader",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "screen": "reader"
+      },
+      "url": "/?platform=windows&screen=reader"
+    },
+    {
+      "id": "native-windows-settings",
+      "platform": "windows",
+      "state": "settings",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "settings"
+      },
+      "url": "/?platform=windows&view=settings"
+    },
+    {
+      "id": "native-windows-search",
+      "platform": "windows",
+      "state": "search",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "screen": "search"
+      },
+      "url": "/?platform=windows&screen=search"
+    },
+    {
+      "id": "native-windows-invoices",
+      "platform": "windows",
+      "state": "invoices",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "invoices"
+      },
+      "url": "/?platform=windows&view=invoices"
+    },
+    {
+      "id": "native-windows-chat",
+      "platform": "windows",
+      "state": "chat",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "chat"
+      },
+      "url": "/?platform=windows&view=chat"
+    },
+    {
+      "id": "native-windows-jobs",
+      "platform": "windows",
+      "state": "jobs",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "jobs"
+      },
+      "url": "/?platform=windows&view=jobs"
+    },
+    {
+      "id": "native-windows-admin",
+      "platform": "windows",
+      "state": "admin",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "view": "admin"
+      },
+      "url": "/?platform=windows&view=admin"
+    },
+    {
+      "id": "native-windows-opaque",
+      "platform": "windows",
+      "state": "opaque",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "windows",
+        "opaque": "true",
+        "appearance": "dark"
+      },
+      "url": "/?platform=windows&opaque=true&appearance=dark"
+    },
+    {
+      "id": "native-windows-disabled-caption",
+      "platform": "windows",
+      "state": "disabled-caption",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "windows",
+        "disabled": "true"
+      },
+      "url": "/?platform=windows&disabled=true"
+    },
+    {
+      "id": "native-windows-high-dpi",
+      "platform": "windows",
+      "state": "high-dpi",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "windows",
+        "dpi": "2"
+      },
+      "url": "/?platform=windows&dpi=2"
+    },
+    {
+      "id": "native-windows-reduced-motion",
+      "platform": "windows",
+      "state": "reduced-motion",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "windows",
+        "motion": "reduced",
+        "sidebar": "collapsed"
+      },
+      "url": "/?platform=windows&motion=reduced&sidebar=collapsed"
+    },
+    {
+      "id": "native-linux-documents-light",
+      "platform": "linux",
+      "state": "documents-light",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "documents",
+        "appearance": "light"
+      },
+      "url": "/?platform=linux&view=documents&appearance=light"
+    },
+    {
+      "id": "native-linux-documents-dark",
+      "platform": "linux",
+      "state": "documents-dark",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "documents",
+        "appearance": "dark"
+      },
+      "url": "/?platform=linux&view=documents&appearance=dark"
+    },
+    {
+      "id": "native-linux-inactive",
+      "platform": "linux",
+      "state": "inactive",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "active": "false",
+        "appearance": "light"
+      },
+      "url": "/?platform=linux&active=false&appearance=light"
+    },
+    {
+      "id": "native-linux-inactive-dark",
+      "platform": "linux",
+      "state": "inactive-dark",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "active": "false",
+        "appearance": "dark"
+      },
+      "url": "/?platform=linux&active=false&appearance=dark"
+    },
+    {
+      "id": "native-linux-maximized",
+      "platform": "linux",
+      "state": "maximized",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "mode": "maximized"
+      },
+      "url": "/?platform=linux&mode=maximized"
+    },
+    {
+      "id": "native-linux-fullscreen",
+      "platform": "linux",
+      "state": "fullscreen",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "mode": "fullscreen"
+      },
+      "url": "/?platform=linux&mode=fullscreen"
+    },
+    {
+      "id": "native-linux-fullscreen-revealed",
+      "platform": "linux",
+      "state": "fullscreen-revealed",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "mode": "fullscreen",
+        "revealed": "true"
+      },
+      "url": "/?platform=linux&mode=fullscreen&revealed=true"
+    },
+    {
+      "id": "native-linux-collapsed",
+      "platform": "linux",
+      "state": "collapsed",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "sidebar": "collapsed"
+      },
+      "url": "/?platform=linux&sidebar=collapsed"
+    },
+    {
+      "id": "native-linux-compact-800",
+      "platform": "linux",
+      "state": "compact-800",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "linux"
+      },
+      "url": "/?platform=linux"
+    },
+    {
+      "id": "native-linux-compact-500",
+      "platform": "linux",
+      "state": "compact-500",
+      "width": 500,
+      "height": 800,
+      "query": {
+        "platform": "linux"
+      },
+      "url": "/?platform=linux"
+    },
+    {
+      "id": "native-linux-minimum-330",
+      "platform": "linux",
+      "state": "minimum-330",
+      "width": 330,
+      "height": 740,
+      "query": {
+        "platform": "linux"
+      },
+      "url": "/?platform=linux"
+    },
+    {
+      "id": "native-linux-text-200",
+      "platform": "linux",
+      "state": "text-200",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "linux",
+        "textScale": "2"
+      },
+      "url": "/?platform=linux&textScale=2"
+    },
+    {
+      "id": "native-linux-reader",
+      "platform": "linux",
+      "state": "reader",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "screen": "reader"
+      },
+      "url": "/?platform=linux&screen=reader"
+    },
+    {
+      "id": "native-linux-settings",
+      "platform": "linux",
+      "state": "settings",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "settings"
+      },
+      "url": "/?platform=linux&view=settings"
+    },
+    {
+      "id": "native-linux-search",
+      "platform": "linux",
+      "state": "search",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "screen": "search"
+      },
+      "url": "/?platform=linux&screen=search"
+    },
+    {
+      "id": "native-linux-invoices",
+      "platform": "linux",
+      "state": "invoices",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "invoices"
+      },
+      "url": "/?platform=linux&view=invoices"
+    },
+    {
+      "id": "native-linux-chat",
+      "platform": "linux",
+      "state": "chat",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "chat"
+      },
+      "url": "/?platform=linux&view=chat"
+    },
+    {
+      "id": "native-linux-jobs",
+      "platform": "linux",
+      "state": "jobs",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "jobs"
+      },
+      "url": "/?platform=linux&view=jobs"
+    },
+    {
+      "id": "native-linux-admin",
+      "platform": "linux",
+      "state": "admin",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "view": "admin"
+      },
+      "url": "/?platform=linux&view=admin"
+    },
+    {
+      "id": "native-linux-opaque",
+      "platform": "linux",
+      "state": "opaque",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "opaque": "true",
+        "appearance": "dark"
+      },
+      "url": "/?platform=linux&opaque=true&appearance=dark"
+    },
+    {
+      "id": "native-linux-disabled-caption",
+      "platform": "linux",
+      "state": "disabled-caption",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "linux",
+        "disabled": "true"
+      },
+      "url": "/?platform=linux&disabled=true"
+    },
+    {
+      "id": "native-linux-high-dpi",
+      "platform": "linux",
+      "state": "high-dpi",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "linux",
+        "dpi": "2"
+      },
+      "url": "/?platform=linux&dpi=2"
+    },
+    {
+      "id": "native-linux-reduced-motion",
+      "platform": "linux",
+      "state": "reduced-motion",
+      "width": 800,
+      "height": 900,
+      "query": {
+        "platform": "linux",
+        "motion": "reduced",
+        "sidebar": "collapsed"
+      },
+      "url": "/?platform=linux&motion=reduced&sidebar=collapsed"
+    },
+    {
+      "id": "native-linux-kde",
+      "platform": "linux",
+      "state": "kde",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "layout": "kde"
+      },
+      "url": "/?platform=linux&layout=kde"
+    },
+    {
+      "id": "native-linux-left-controls",
+      "platform": "linux",
+      "state": "left-controls",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "layout": "left"
+      },
+      "url": "/?platform=linux&layout=left"
+    },
+    {
+      "id": "native-linux-host-decoration",
+      "platform": "linux",
+      "state": "host-decoration",
+      "width": 1440,
+      "height": 1000,
+      "query": {
+        "platform": "linux",
+        "decoration": "host"
+      },
+      "url": "/?platform=linux&decoration=host"
+    }
+  ],
+  "components": [
+    {
+      "id": "window-frame",
+      "description": "Dedicated Glacier titlebar and bounded workspace"
+    },
+    {
+      "id": "caption-controls",
+      "description": "Simulated platform controls and accessible command names"
+    },
+    {
+      "id": "drag-layout",
+      "description": "Immutable geometry with interactive exclusions"
+    },
+    {
+      "id": "compact-navigation",
+      "description": "Native compact navigation drawer"
+    },
+    {
+      "id": "window-command-state",
+      "description": "Callback intent and host-published mode"
+    },
+    {
+      "id": "preview-controls",
+      "description": "Catalog-only scenario metadata"
+    }
+  ],
+  "interactionContexts": [
+    {
+      "id": "native-compact-navigation-open",
+      "component": "compact-navigation",
+      "url": "/?platform=windows&drawer=true",
+      "width": 330,
+      "height": 740
+    },
+    {
+      "id": "native-caption-maximize-focus",
+      "component": "caption-controls",
+      "url": "/?platform=windows",
+      "action": "Keyboard activate Maximize; focus becomes Restore",
+      "width": 800,
+      "height": 900
+    },
+    {
+      "id": "native-modal-close-request",
+      "component": "window-command-state",
+      "url": "/?platform=windows&screen=reader",
+      "action": "Request Close window; preserve open task and show feedback",
+      "width": 1440,
+      "height": 1000
+    }
+  ],
+  "titlebar": {
+    "normalHeight": 64,
+    "largeTextHeight": 88,
+    "compactRevealedHeight": 112,
+    "largeCompactRevealedHeight": 144
+  },
+  "limits": "Presenter simulation only; native runners unchanged."
+}

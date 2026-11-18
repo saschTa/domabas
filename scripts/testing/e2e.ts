@@ -12,6 +12,7 @@ import { emailFixtureEnvironment, startEmailFixture } from "./fixtures/email-fix
 import { startLLMFixture } from "./fixtures/llm-fixture.ts";
 import { startPaperlessFixture } from "./fixtures/paperless-fixture.ts";
 import { ROOT, ProcessScope, binary, command, environment, required, requireFreePort, runCLI, waitHTTP, withCleanup } from "../shared/runtime.ts";
+import { inspectionArguments, prepareInspection, waitForInspection } from "./e2e-inspection.ts";
 import { cleanupWorkflows, ownedExecutions } from "./workflow-cleanup.ts";
 
 async function streamBrowserLogs(port: number, signal: AbortSignal, secrets: string[]): Promise<void> {
@@ -91,16 +92,17 @@ export async function withTemporarySchema(
 
 if (import.meta.main) await runCLI(async scope => {
   const { values } = parseArgs({ args: Bun.argv.slice(2), options: {
-    "external-db": { type: "boolean", default: false }, "external-services": { type: "boolean", default: false }, help: { type: "boolean", short: "h" },
+    inspect: { type: "boolean", default: false }, "external-db": { type: "boolean", default: false }, "external-services": { type: "boolean", default: false }, help: { type: "boolean", short: "h" },
   } });
-  if (values.help) { console.log("Usage: bun scripts/testing/e2e.ts [--external-services] (--external-db remains an alias)"); return; }
+  if (values.help) { console.log("Usage: bun scripts/testing/e2e.ts [--external-services] [--inspect] (--inspect requires external services; --external-db remains an alias)"); return; }
   const go = command("go"), flutter = command("flutter");
   let env = environment();
   const host = hostValue(env.E2E_HOST);
   const apiPort = portValue(env.E2E_API_PORT, 18080), webPort = portValue(env.E2E_WEB_PORT, 7357), driverPort = portValue(env.E2E_DRIVER_PORT, 4444);
   for (const port of [apiPort, webPort]) await requireFreePort(host, port);
-  await requireFreePort("127.0.0.1", driverPort);
+  if (!values.inspect) await requireFreePort("127.0.0.1", driverPort);
   const external = values["external-db"] || values["external-services"];
+  if (values.inspect && !external) throw new Error("Inspection requires --external-services pointing to the prepared disposable stack.");
   if (!external) await infraUp(scope, env);
   const databaseURL = env.TEST_DATABASE_URL || required(env, "DATABASE_URL");
   const psql = await psqlCommand(scope);
@@ -123,9 +125,9 @@ if (import.meta.main) await runCLI(async scope => {
     if (result.code) throw new Error("Cannot read the disposable workflow cleanup manifest.");
     return result.stdout.trim();
   };
-  const installedBrowser = await install(scope.signal);
-  const chrome = env.CHROME_EXECUTABLE || installedBrowser.chrome;
-  const driver = installedBrowser.driver;
+  const installedBrowser = values.inspect ? undefined : await install(scope.signal);
+  const chrome = env.CHROME_EXECUTABLE || installedBrowser?.chrome;
+  const driver = installedBrowser?.driver;
   const schema = `e2e_${crypto.randomUUID().replaceAll("-", "")}`;
   env.CHROME_EXECUTABLE = chrome;
   env.DATABASE_URL = schemaURL(databaseURL, schema);
@@ -167,10 +169,30 @@ if (import.meta.main) await runCLI(async scope => {
       const serverLog = await open(join(logs, "e2e-api.log"), "w");
       let driverLog: FileHandle | undefined;
       await withCleanup(async () => {
-        driverLog = await open(join(logs, "chromedriver.log"), "w");
         const server = scope.start([executable], { cwd: join(ROOT, "backend"), env, stdout: serverLog.fd, stderr: serverLog.fd, stopGraceMs: 60000 });
         await waitHTTP(`${apiURL}/readyz`, server, 90000, scope.signal);
-        const browserDriver = scope.start([driver, `--port=${driverPort}`], { env, stdout: driverLog.fd, stderr: driverLog.fd });
+        if (values.inspect) {
+          const webLog = await open(join(logs, "e2e-inspection-web.log"), "w");
+          try {
+            const app = scope.start(inspectionArguments(flutter, host, webPort, apiURL), {
+              cwd: join(ROOT, "frontend"), env, stdout: webLog.fd, stderr: webLog.fd,
+            });
+            const webURL = `http://${host}:${webPort}`;
+            await waitHTTP(webURL, app, 180000, scope.signal);
+            const inspection = await prepareInspection(storageRoot, apiURL, webURL, scope.signal, {
+              email: { host: fixture.host, port: fixture.port, username: fixture.username, password: fixture.password, mailbox: fixture.mailbox },
+              llm: { url: llm.url, key: llm.key }, paperless: { url: paperless.url, token: paperless.token },
+            });
+            console.log(`Disposable production application ready at ${webURL}. Private credentials: ${inspection.manifest}`);
+            console.log(`Create ${inspection.stopFile} to finish normally, or press Ctrl+C. Owned processes, workflows, schema and files are cleaned up afterward.`);
+            await waitForInspection(inspection.stopFile, scope.signal, () => app.exitCode ?? server.exitCode);
+          } finally {
+            try { await scope.close(); } finally { await webLog.close(); }
+          }
+          return;
+        }
+        driverLog = await open(join(logs, "chromedriver.log"), "w");
+        const browserDriver = scope.start([driver!, `--port=${driverPort}`], { env, stdout: driverLog.fd, stderr: driverLog.fd });
         await waitHTTP(`http://127.0.0.1:${driverPort}/status`, browserDriver, 90000, scope.signal);
         const diagnosticsAbort = new AbortController();
         const diagnostics = streamBrowserLogs(driverPort, AbortSignal.any([scope.signal, diagnosticsAbort.signal]), [fixture.password, llm.key, paperless.token]);

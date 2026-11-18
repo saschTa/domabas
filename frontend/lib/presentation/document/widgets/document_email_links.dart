@@ -23,61 +23,66 @@ final class DocumentEmailLinksPanel extends StatelessWidget {
         if (state.stale)
           AppNotice(
             message: 'Links changed. Reload links.',
-            action: TextButton(
+            action: GlacierButton(
+              label: 'Reload links',
+              kind: GlacierButtonKind.quiet,
               onPressed: state.loading ? null : cubit.reload,
-              child: const Text('Reload links'),
             ),
           ),
         AppProgressSlot(active: state.loading),
         if (state.error case final error?)
           AppNotice(
             message: error,
-            action: TextButton(
+            action: GlacierButton(
+              label: 'Retry email links',
+              kind: GlacierButtonKind.quiet,
               onPressed: state.loading ? null : cubit.reload,
-              child: const Text('Retry email links'),
             ),
           ),
         if (state.parents.isNotEmpty) ...[
           const AppStripedDivider(height: 32, thickness: 8),
           Text('Source emails', style: Theme.of(context).textTheme.titleMedium),
           for (final parent in state.parents)
-            TextButton.icon(
+            GlacierButton(
               key: Key('email-parent-${parent.id}'),
+              label: parent.title,
+              icon: Icons.mail_outline,
+              kind: GlacierButtonKind.quiet,
               onPressed: state.stale ? null : () => onOpen(parent.id),
-              icon: const Icon(Icons.mail_outline),
-              label: Text(parent.title),
             ),
         ],
         if (state.parentCursor != null)
-          TextButton(
+          GlacierButton(
+            label: 'More source emails',
+            kind: GlacierButtonKind.quiet,
             onPressed: state.loading || state.stale
                 ? null
                 : () => cubit.load(moreParents: true),
-            child: const Text('More source emails'),
           ),
         if (state.attachments.isNotEmpty) ...[
           const AppStripedDivider(height: 32, thickness: 8),
           Text('Attachments', style: Theme.of(context).textTheme.titleMedium),
           for (final attachment in state.attachments)
-            AppRecordRow(
+            GlacierSettingsRecord(
               key: Key('email-attachment-${attachment.part}'),
               title: attachment.filename,
-              leading: const Icon(Icons.attach_file),
-              subtitle: Text(attachment.status),
+              icon: Icons.attach_file,
+              detail: attachment.status,
               onTap: attachment.document == null || state.stale
                   ? null
                   : () => onOpen(attachment.document!.id),
-              trailing: attachment.document == null
+              status: attachment.document == null
                   ? null
                   : const Icon(Icons.chevron_right),
             ),
         ],
         if (state.attachmentCursor != null)
-          TextButton(
+          GlacierButton(
+            label: 'More attachments',
+            kind: GlacierButtonKind.quiet,
             onPressed: state.loading || state.stale
                 ? null
                 : () => cubit.load(moreAttachments: true),
-            child: const Text('More attachments'),
           ),
       ],
     ),

@@ -61,13 +61,14 @@ final class _PaperlessImportScreenState extends State<PaperlessImportScreen>
     builder: (context, state) {
       final active = state.runs.any((r) => r.active);
       return AppPage(
+        glacier: true,
         insetBody: false,
-        eyebrow: 'USER SETTINGS',
+
         title: 'Paperless import',
         description: 'Import into ${widget.libraryName} in the background.',
         onRefresh: state.busy ? null : _cubit.load,
         child: ListView(
-          padding: AppLayout.cardListPadding(context),
+          padding: GlacierSettingsPage.scrollPadding(context),
           key: const Key('paperlessScroll'),
           children: [
             if (state.error != null) ...[
@@ -78,93 +79,94 @@ final class _PaperlessImportScreenState extends State<PaperlessImportScreen>
               const AppStripedProgressIndicator(),
             if (state.options != null)
               AppSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Import from Paperless-ngx',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      key: const Key('paperlessServer'),
-                      controller: _server,
-                      enabled: !state.saving && !state.pendingRequest,
-                      keyboardType: TextInputType.url,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      maxLength: 2048,
-                      decoration: const InputDecoration(
-                        labelText: 'Paperless server URL',
-                        hintText: 'https://paperless.example.com',
-                        helperText:
-                            'Enter the address your Domabas server can reach.',
+                glacier: true,
+                child: GlacierSection(
+                  title: 'Import from Paperless-ngx',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 16),
+                      GlacierFieldGrid(
+                        children: [
+                          TextField(
+                            key: const Key('paperlessServer'),
+                            controller: _server,
+                            enabled: !state.saving && !state.pendingRequest,
+                            keyboardType: TextInputType.url,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            maxLength: 2048,
+                            decoration: const InputDecoration(
+                              labelText: 'Paperless server URL',
+                              hintText: 'https://paperless.example.com',
+                              helperText: 'Enter the address your Domabas server can reach.',
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                          TextField(
+                            key: const Key('paperlessToken'),
+                            controller: _token,
+                            enabled: !state.saving && !state.pendingRequest,
+                            obscureText: true,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            maxLength: 256,
+                            decoration: const InputDecoration(
+                              labelText: 'Paperless API token',
+                              helperText:
+                                  'Find your token in Paperless → My Profile.',
+                            ),
+                          ),
+                        ],
                       ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      key: const Key('paperlessToken'),
-                      controller: _token,
-                      enabled: !state.saving && !state.pendingRequest,
-                      obscureText: true,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      maxLength: 256,
-                      decoration: const InputDecoration(
-                        labelText: 'Paperless API token',
-                        helperText:
-                            'Find your token in Paperless → My Profile.',
+                      const SizedBox(height: 8),
+                      Text(
+                        'Destination: ${widget.libraryName}. Starting an import allows it to continue after leaving this screen or signing out. Your token is encrypted while the job runs and erased when it finishes.',
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Destination: ${widget.libraryName}. Starting an import allows it to continue after leaving this screen or signing out. Your token is encrypted while the job runs and erased when it finishes.',
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Each import processes files one at a time. Requests are paced, with automatic backoff when Paperless is unavailable. You can cancel below; accepted documents stay in your library.',
-                    ),
-                    if (_server.text.trim().startsWith('http:')) ...[
                       const SizedBox(height: 8),
                       const Text(
-                        'This server uses HTTP. The source connection is unencrypted; use it only on a trusted network.',
+                        'Each import processes files one at a time. Requests are paced, with automatic backoff when Paperless is unavailable. You can cancel below; accepted documents stay in your library.',
                       ),
-                    ],
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FilledButton.icon(
-                        key: const Key('paperlessStart'),
-                        onPressed:
-                            state.busy || (active && !state.pendingRequest)
-                            ? null
-                            : () async {
-                                final accepted = await _cubit.start(
-                                  PaperlessConnection(
-                                    serverUrl: _server.text.trim(),
-                                    token: _token.text.trim(),
-                                  ),
-                                );
-                                if (mounted && accepted) _token.clear();
-                              },
-                        icon: const Icon(Icons.download_outlined),
-                        label: Text(
-                          state.pendingRequest
+                      if (_server.text.trim().startsWith('http:')) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'This server uses HTTP. The source connection is unencrypted; use it only on a trusted network.',
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GlacierButton(
+                          key: const Key('paperlessStart'),
+                          onPressed:
+                              state.busy || (active && !state.pendingRequest)
+                              ? null
+                              : () async {
+                                  final accepted = await _cubit.start(
+                                    PaperlessConnection(
+                                      serverUrl: _server.text.trim(),
+                                      token: _token.text.trim(),
+                                    ),
+                                  );
+                                  if (mounted && accepted) _token.clear();
+                                },
+                          label: state.pendingRequest
                               ? 'Retry same request'
                               : state.saving
                               ? 'Queueing…'
                               : 'Start import',
+                          icon: Icons.download_outlined,
+                          kind: GlacierButtonKind.primary,
                         ),
                       ),
-                    ),
-                    if (active) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        'You already have an active import in this library.',
-                      ),
+                      if (active) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'You already have an active import in this library.',
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             const SizedBox(height: 16),
@@ -177,6 +179,7 @@ final class _PaperlessImportScreenState extends State<PaperlessImportScreen>
             if (state.runs.isEmpty && !state.loading)
               const Text('No imports yet.'),
             AppPagedList(
+              glacier: true,
               key: const PageStorageKey('paperless-imports'),
               itemCount: state.runs.length,
               hasMore: state.cursor != null,
@@ -188,6 +191,7 @@ final class _PaperlessImportScreenState extends State<PaperlessImportScreen>
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: AppSurface(
+                    glacier: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -225,16 +229,15 @@ final class _PaperlessImportScreenState extends State<PaperlessImportScreen>
                           const SizedBox(height: 12),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: OutlinedButton(
+                            child: GlacierButton(
                               key: Key('paperlessCancel-${run.id}'),
                               onPressed: state.busy || run.cancelRequested
                                   ? null
                                   : () => _cubit.cancelRun(run.id),
-                              child: Text(
-                                run.cancelRequested
-                                    ? 'Cancellation requested'
-                                    : 'Cancel import',
-                              ),
+                              label: run.cancelRequested
+                                  ? 'Cancellation requested'
+                                  : 'Cancel import',
+                              kind: GlacierButtonKind.secondary,
                             ),
                           ),
                         ],

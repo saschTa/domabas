@@ -83,16 +83,16 @@ void main() {
       );
       await tester.pumpAndSettle();
       final first = tester.getRect(find.byKey(const Key('document-wide-0')));
-      final columns = ((width - 64 + 16) / 256).floor();
+      final columns = ((width - 32 + 16) / 281).floor();
       final last = tester.getRect(
         find.byKey(Key('document-wide-${columns - 1}')),
       );
       final next = tester.getRect(find.byKey(Key('document-wide-$columns')));
-      expect(first.left, 32);
-      expect(last.right, closeTo(width - 32, .01));
+      expect(first.left, 16);
+      expect(last.right, closeTo(width - 16, .01));
       expect(last.top, first.top);
       expect(next.top, greaterThan(first.bottom));
-      expect(first.width, inInclusiveRange(240, 280));
+      expect(first.width, inInclusiveRange(265, 320));
       expect(cubit.canLoadMore, isTrue);
       expect(tester.takeException(), isNull);
     });
@@ -170,7 +170,7 @@ void main() {
         await tester.pumpAndSettle();
         final collection = find.byKey(const Key('documentCollectionScroll'));
         final navigation = find.byKey(const Key('workspaceBottomNavigation'));
-        expect(tester.getRect(collection).bottom, height - 8 - safeBottom);
+        expect(tester.getRect(collection).bottom, height - safeBottom);
         expect(tester.getRect(navigation).bottom, height);
         final scroll = find
             .descendant(of: collection, matching: find.byType(Scrollable))
@@ -296,7 +296,7 @@ void main() {
       await tester.pumpAndSettle();
       for (final record in _records) {
         final size = tester.getSize(find.byKey(Key('document-${record.id}')));
-        expect(size.height, inInclusiveRange(96, 104));
+        expect(size.height, inInclusiveRange(92, 132));
       }
       tester.view.physicalSize = const Size(320, 1000);
       tester.platformDispatcher.textScaleFactorTestValue = 2;
@@ -383,13 +383,13 @@ void main() {
       await tester.pump();
       final card = find.byKey(Key('document-${_records.last.id}'));
       final size = tester.getSize(card);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(GlacierPreviewPlaceholder), findsOneWidget);
       repository.pending.completeError(
         const DocumentFailure(DocumentFailureKind.unavailable),
       );
       await tester.pumpAndSettle();
       expect(tester.getSize(card), size);
-      expect(find.text('Retry preview'), findsOneWidget);
+      expect(find.byType(GlacierPreviewRetry), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(
         MaterialApp(
@@ -409,7 +409,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final retry = find.byTooltip('Preview unavailable. Retry preview');
+      final retry = find.byType(GlacierPreviewRetry);
       expect(tester.getSize(retry).shortestSide, greaterThanOrEqualTo(48));
       expect(tester.takeException(), isNull);
     },
@@ -483,25 +483,22 @@ void main() {
         expect(details, findsOneWidget);
         expect(find.text('Metadata only'), findsOneWidget);
         expect(find.textContaining('Added'), findsOneWidget);
-        Material surface() => tester.widget<Material>(
-          find.ancestor(of: card, matching: find.byType(Material)).first,
+        GlacierSurface surface() => tester.widget<GlacierSurface>(
+          find
+              .descendant(of: card, matching: find.byType(GlacierSurface))
+              .first,
         );
-        final scheme = (dark ? AppTheme.dark() : AppTheme.light()).colorScheme;
-        expect(surface().color, scheme.surfaceContainerLow);
         expect(
-          (surface().shape! as RoundedRectangleBorder).side,
-          BorderSide.none,
+          surface().borderColor,
+          GlacierTokens.of(tester.element(card)).accent,
         );
-        tester.widget<InkWell>(card).focusNode!.requestFocus();
+        tester.widget<GlacierDocumentCard>(card).focusNode!.requestFocus();
         await tester.pumpAndSettle();
         await mouse.moveTo(Offset.zero);
         await tester.pumpAndSettle();
         expect(details, findsOneWidget);
-        expect(surface().color, scheme.primaryContainer);
-        expect(
-          (surface().shape! as RoundedRectangleBorder).side,
-          BorderSide.none,
-        );
+        expect(surface().borderColor, isNull);
+        expect(surface().radius, 15);
         reduced.value = true;
         await tester.pump();
         expect(tester.getTopLeft(card), origin);

@@ -32,10 +32,10 @@ final class _LicensesScreenState extends State<LicensesScreen> {
     builder: (context, state) {
       final entries = state.matches;
       return AppPage(
+        glacier: true,
         key: const Key('licensesScreen'),
         title: 'Licenses',
         showHeading: !widget.shellToolbar,
-        eyebrow: widget.eyebrow,
         description:
             'Domabas and the libraries, tools and other components behind it. '
             'These license notices are included with the app and can be read offline.',
@@ -54,7 +54,7 @@ final class _LicensesScreenState extends State<LicensesScreen> {
             Expanded(
               child: ListView(
                 key: const Key('licensesScroll'),
-                padding: AppLayout.cardListPadding(context),
+                padding: GlacierSettingsPage.scrollPadding(context),
                 children: [
                   if (!widget.shellToolbar) ...[
                     LicensesWorkspaceToolbar(cubit: widget.cubit),
@@ -63,11 +63,12 @@ final class _LicensesScreenState extends State<LicensesScreen> {
                   if (state.error case final error?) ...[
                     AppNotice(
                       message: error,
-                      action: TextButton.icon(
+                      action: GlacierButton(
                         key: const Key('retryLicenses'),
                         onPressed: widget.cubit.load,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Try again'),
+                        label: 'Try again',
+                        icon: Icons.refresh,
+                        kind: GlacierButtonKind.quiet,
                       ),
                     ),
                   ] else if (!state.loaded) ...[
@@ -88,30 +89,31 @@ final class _LicensesScreenState extends State<LicensesScreen> {
                     ),
                     const SizedBox(height: 12),
                     entries.isEmpty
-                        ? AppEmptyState(
-                            icon: Icons.search_off_outlined,
-                            title: 'No matching licenses',
-                            message: 'Try a component name or a license such as MIT.',
-                            action: state.query.isEmpty
-                                ? null
-                                : TextButton(
-                                    onPressed: _clearSearch,
-                                    child: const Text('Clear search'),
-                                  ),
+                        ? GlacierSettingsSection(
+                            child: AppEmptyState(
+                              icon: Icons.search_off_outlined,
+                              title: 'No matching licenses',
+                              message: 'Try a component name or a license such as MIT.',
+                              action: state.query.isEmpty
+                                  ? null
+                                  : GlacierButton(
+                                      onPressed: _clearSearch,
+                                      label: 'Clear search',
+                                      kind: GlacierButtonKind.quiet,
+                                    ),
+                            ),
                           )
                         : AppPagedList(
+                            glacier: true,
                             key: ObjectKey(state),
                             itemCount: entries.length,
                             loadMoreKey: const Key('nextLicensesPage'),
                             loadMoreLabel: 'Next',
                             itemBuilder: (context, index) => Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: AppSurface(
-                                padding: EdgeInsets.zero,
-                                child: _LicenseRecord(
-                                  entry: entries[index],
-                                  onOpen: () => _openLicense(entries[index]),
-                                ),
+                              child: _LicenseRecord(
+                                entry: entries[index],
+                                onOpen: () => _openLicense(entries[index]),
                               ),
                             ),
                           ),
@@ -125,9 +127,10 @@ final class _LicensesScreenState extends State<LicensesScreen> {
     },
   );
 
-  Future<void> _openLicense(ThirdPartyLicense entry) => showDialog<void>(
+  Future<void> _openLicense(ThirdPartyLicense entry) => showGlacierDialog<void>(
     context: context,
     builder: (context) => AppDialog(
+      glacier: true,
       key: const Key('licenseDetails'),
       title: entry.name,
       description: [
@@ -135,10 +138,11 @@ final class _LicensesScreenState extends State<LicensesScreen> {
         entry.version,
       ].where((value) => value.isNotEmpty).join(' · '),
       actions: [
-        TextButton(
+        GlacierButton(
           key: const Key('closeLicenseDetails'),
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          label: 'Close',
+          kind: GlacierButtonKind.quiet,
         ),
       ],
       child: Column(
@@ -183,21 +187,23 @@ final class _LicenseRecord extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) => AppRecordRow(
+  Widget build(BuildContext context) => GlacierSettingsRecord(
+    card: true,
     key: ValueKey('license-${entry.id}'),
     title: entry.name,
-    subtitle: Text(
-      [
-        entry.component,
-        entry.version,
-      ].where((value) => value.isNotEmpty).join(' · '),
-    ),
-    metadata: AppStatusBadge(label: entry.license),
-    trailing: TextButton.icon(
-      onPressed: onOpen,
-      icon: const Icon(Icons.article_outlined, size: 18),
-      label: const Text('Read license'),
-    ),
+    detail: [
+      entry.component,
+      entry.version,
+    ].where((value) => value.isNotEmpty).join(' · '),
+    status: AppStatusBadge(label: entry.license),
+    actions: [
+      GlacierButton(
+        onPressed: onOpen,
+        label: 'Read license',
+        icon: Icons.article_outlined,
+        kind: GlacierButtonKind.quiet,
+      ),
+    ],
     onTap: onOpen,
   );
 }

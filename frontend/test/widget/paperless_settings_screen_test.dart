@@ -124,7 +124,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<FilledButton>(
+            .widget<GlacierButton>(
               find.byKey(const Key('savePaperlessSettings')),
             )
             .onPressed,

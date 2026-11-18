@@ -33,7 +33,7 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
     }
     final navigator = Navigator.of(context, rootNavigator: true);
     late final DialogRoute<EmailProvider> route;
-    route = DialogRoute(
+    route = createGlacierDialogRoute(
       context: context,
       barrierDismissible: false,
       builder: (_) => EmailProviderEditor(
@@ -62,28 +62,31 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
     }
     final navigator = Navigator.of(context, rootNavigator: true);
     late final DialogRoute<bool> route;
-    route = DialogRoute(
+    route = createGlacierDialogRoute(
       context: context,
       builder: (_) => AppDialog(
+        glacier: true,
         title: 'Delete email account?',
         description: 'Future imports stop. Emails and attachments already accepted remain in this library.',
         actions: [
-          TextButton(
+          GlacierButton(
             onPressed: () {
               if (route.isActive) {
                 navigator.removeRoute(route, false);
               }
             },
-            child: const Text('Cancel'),
+            label: 'Cancel',
+            kind: GlacierButtonKind.quiet,
           ),
-          FilledButton(
+          GlacierButton(
             key: const Key('email-confirm-delete'),
             onPressed: () {
               if (route.isActive) {
                 navigator.removeRoute(route, true);
               }
             },
-            child: const Text('Delete account'),
+            label: 'Delete account',
+            kind: GlacierButtonKind.primary,
           ),
         ],
         child: const SizedBox.shrink(),
@@ -103,8 +106,9 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
   ) => BlocBuilder<EmailProvidersCubit, EmailProvidersState>(
     bloc: widget.cubit,
     builder: (context, state) => AppPage(
+      glacier: true,
       insetBody: false,
-      eyebrow: 'USER SETTINGS',
+
       title: 'Email accounts',
       description:
           'Your private account connections import into the current library.',
@@ -112,7 +116,7 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
           ? null
           : () => widget.cubit.load(),
       child: ListView(
-        padding: AppLayout.cardListPadding(context),
+        padding: GlacierSettingsPage.scrollPadding(context),
         children: [
           AppProgressSlot(active: state.loading || state.saving),
           if (state.error case final error?) AppNotice(message: error),
@@ -127,30 +131,33 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
             runSpacing: 8,
             children: [
               if (state.selectedId != null)
-                TextButton.icon(
+                GlacierButton(
                   onPressed:
                       state.saving || state.pendingRun || state.reconcileDelete
                       ? null
                       : widget.cubit.back,
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('All email accounts'),
+                  label: 'All email accounts',
+                  icon: Icons.arrow_back,
+                  kind: GlacierButtonKind.quiet,
                 ),
               if (state.selectedId == null)
-                FilledButton.icon(
+                GlacierButton(
                   key: const Key('email-add'),
                   onPressed:
                       state.saving ||
                           state.capabilities?.credentialsAvailable != true
                       ? null
                       : _edit,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add email account'),
+                  label: 'Add email account',
+                  icon: Icons.add,
+                  kind: GlacierButtonKind.primary,
                 ),
             ],
           ),
           const SizedBox(height: 16),
           if (state.selectedId == null) ...[
             AppPagedList(
+              glacier: true,
               key: const PageStorageKey('email-providers'),
               itemCount: state.providers.length,
               hasMore: state.providerCursor != null,
@@ -159,26 +166,32 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
               loadMoreLabel: 'Load more accounts',
               itemBuilder: (context, index) {
                 final provider = state.providers[index];
-                return AppRecordRow(
-                  key: Key('email-provider-${provider.id}'),
-                  leading: const Icon(Icons.mail_outline),
-                  title: provider.label,
-                  subtitle: Text(
-                    '${provider.host}:${provider.port} · ${provider.enabled ? 'Enabled' : 'Disabled'}',
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GlacierSettingsRecord(
+                    card: true,
+                    key: Key('email-provider-${provider.id}'),
+                    title: provider.label,
+                    detail:
+                        '${provider.host}:${provider.port} · ${provider.enabled ? 'Enabled' : 'Disabled'}',
+                    icon: Icons.mail_outline,
+                    onTap: () => widget.cubit.select(provider.id),
+                    status: const Icon(Icons.chevron_right),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => widget.cubit.select(provider.id),
                 );
               },
             ),
             if (state.providers.isEmpty && !state.loading)
-              const AppEmptyState(
-                icon: Icons.mail_outline,
-                title: 'No email accounts',
-                message: 'Add an IMAP account to import messages and supported attachments.',
+              const GlacierSettingsSection(
+                child: AppEmptyState(
+                  icon: Icons.mail_outline,
+                  title: 'No email accounts',
+                  message: 'Add an IMAP account to import messages and supported attachments.',
+                ),
               ),
           ] else if (state.provider case final provider?) ...[
             AppSurface(
+              glacier: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -208,7 +221,7 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      OutlinedButton(
+                      GlacierButton(
                         key: const Key('email-edit'),
                         onPressed:
                             state.saving ||
@@ -216,9 +229,10 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
                                 state.reconcileDelete
                             ? null
                             : () => _edit(provider),
-                        child: const Text('Edit account'),
+                        label: 'Edit account',
+                        kind: GlacierButtonKind.secondary,
                       ),
-                      FilledButton(
+                      GlacierButton(
                         key: const Key('email-import'),
                         onPressed:
                             state.saving ||
@@ -228,9 +242,10 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
                                 !widget.cubit.canImport
                             ? null
                             : () => widget.cubit.importNow(),
-                        child: const Text('Import now'),
+                        label: 'Import now',
+                        kind: GlacierButtonKind.primary,
                       ),
-                      TextButton(
+                      GlacierButton(
                         key: const Key('email-delete'),
                         onPressed:
                             state.saving ||
@@ -238,21 +253,24 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
                                 state.reconcileDelete
                             ? null
                             : _delete,
-                        child: const Text('Delete account'),
+                        label: 'Delete account',
+                        kind: GlacierButtonKind.quiet,
                       ),
                       if (state.pendingRun)
-                        OutlinedButton(
+                        GlacierButton(
                           onPressed: state.saving
                               ? null
                               : () => widget.cubit.importNow(retry: true),
-                          child: const Text('Check import request'),
+                          label: 'Check import request',
+                          kind: GlacierButtonKind.secondary,
                         ),
                       if (state.reconcileDelete)
-                        OutlinedButton(
+                        GlacierButton(
                           onPressed: state.saving
                               ? null
                               : widget.cubit.reconcileDelete,
-                          child: const Text('Check deletion'),
+                          label: 'Check deletion',
+                          kind: GlacierButtonKind.secondary,
                         ),
                     ],
                   ),
@@ -269,6 +287,7 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
                 message: 'Older imports stay in place while active outcomes update. Pull down to see new imports.',
               ),
             AppPagedList(
+              glacier: true,
               key: PageStorageKey('email-runs-${provider.id}'),
               itemCount: state.runs.length,
               hasMore: state.runCursor != null,
@@ -277,12 +296,15 @@ final class _EmailProvidersScreenState extends State<EmailProvidersScreen> {
               loadMoreLabel: 'Load older imports',
               itemBuilder: (context, index) {
                 final run = state.runs[index];
-                return AppRecordRow(
-                  key: Key('email-run-${run.id}'),
-                  leading: Icon(run.active ? Icons.sync : Icons.history),
-                  title: '${run.status} · ${run.reason}',
-                  subtitle: Text(
-                    '${formatLocalDateTime(run.createdAt)}\n${run.messagesAccepted} emails accepted · ${run.messagesReused} reused · ${run.attachmentsAccepted} attachments accepted\n${run.messagesFailed} emails failed · ${run.messagesWithContentFailures} with content failures · ${run.attachmentsFailed} attachments failed${run.hasMore ? '\nMore mail remains for a later run.' : ''}',
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GlacierSettingsRecord(
+                    card: true,
+                    key: Key('email-run-${run.id}'),
+                    title: '${run.status} · ${run.reason}',
+                    detail:
+                        '${formatLocalDateTime(run.createdAt)}\n${run.messagesAccepted} emails accepted · ${run.messagesReused} reused · ${run.attachmentsAccepted} attachments accepted\n${run.messagesFailed} emails failed · ${run.messagesWithContentFailures} with content failures · ${run.attachmentsFailed} attachments failed${run.hasMore ? '\nMore mail remains for a later run.' : ''}',
+                    icon: run.active ? Icons.sync : Icons.history,
                   ),
                 );
               },

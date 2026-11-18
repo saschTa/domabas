@@ -10,7 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/fake_invoice_repository.dart';
 
 Future<void> _tap(WidgetTester tester, String key) async {
-  final target = find.byKey(Key(key));
+  final target = key == 'cancelInvoiceFilters'
+      ? find.widgetWithText(GlacierButton, 'Cancel')
+      : find.byKey(
+          Key(key == 'applyInvoiceFilters' ? 'applyInvoiceSearch' : key),
+        );
   await tester.ensureVisible(target);
   await tester.pumpAndSettle();
   await tester.tap(target);

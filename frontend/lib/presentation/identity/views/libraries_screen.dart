@@ -29,10 +29,10 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
     builder: (context, _) {
       final model = widget.cubit;
       return AppPage(
+        glacier: true,
         insetBody: false,
-        eyebrow: 'User settings',
         title: 'Your libraries',
-        description: 'Manage your library access and accept invitations. Use the library picker above to switch libraries.',
+        description: 'Manage your library access and accept invitations. Use the library picker to switch libraries.',
         onRefresh: model.acting || model.loading ? null : () => model.load(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,7 +47,7 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
             ),
             Expanded(
               child: ListView.builder(
-                padding: AppLayout.cardListPadding(context),
+                padding: GlacierSettingsPage.scrollPadding(context),
                 itemCount:
                     model.accounts.length + 2 + (model.canLoadMore ? 1 : 0),
                 itemBuilder: (context, index) {
@@ -55,6 +55,7 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 24),
                       child: AppSurface(
+                        glacier: true,
                         child: Form(
                           key: _form,
                           child: Column(
@@ -92,13 +93,14 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
                               const SizedBox(height: 16),
                               Align(
                                 alignment: Alignment.centerLeft,
-                                child: FilledButton.icon(
+                                child: GlacierButton(
                                   key: const Key('acceptInvitation'),
                                   onPressed: model.acting || model.loading
                                       ? null
                                       : _accept,
-                                  icon: const Icon(Icons.add_link),
-                                  label: const Text('Accept invitation'),
+                                  label: 'Accept invitation',
+                                  icon: Icons.add_link,
+                                  kind: GlacierButtonKind.primary,
                                 ),
                               ),
                               if (model.message case final String message) ...[
@@ -128,6 +130,7 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
                         ),
                         if (!model.loading && model.accounts.isEmpty)
                           const AppSurface(
+                            glacier: true,
                             child: AppEmptyState(
                               icon: Icons.folder_shared_outlined,
                               title: 'No libraries to display',
@@ -139,13 +142,18 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
                   }
                   final accountIndex = index - 2;
                   if (accountIndex == model.accounts.length) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextButton(
-                        onPressed: model.loading || model.acting
-                            ? null
-                            : () => model.load(more: true),
-                        child: const Text('Load more libraries'),
+                    return GlacierWorkspaceGeometry.measureEndActions(
+                      context,
+                      followingExtent: 24,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: GlacierButton(
+                          onPressed: model.loading || model.acting
+                              ? null
+                              : () => model.load(more: true),
+                          label: 'Load more libraries',
+                          kind: GlacierButtonKind.quiet,
+                        ),
                       ),
                     );
                   }
@@ -153,31 +161,26 @@ final class _IdentityLibrariesScreenState extends State<LibrariesScreen> {
                   final current = account.id == model.identity.accountId;
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: AppSurface(
-                      padding: EdgeInsets.zero,
-                      child: AppRecordRow(
-                        key: Key('library-${account.id}'),
-                        leading: CircleAvatar(
-                          child: Icon(
-                            account.isOwner
-                                ? Icons.folder_outlined
-                                : Icons.folder_shared_outlined,
-                          ),
-                        ),
-                        title: account.name,
-                        subtitle: Text(
+                    child: GlacierSettingsRecord(
+                      card: true,
+                      key: Key('library-${account.id}'),
+                      title: account.name,
+                      detail:
                           '${account.role.name[0].toUpperCase()}${account.role.name.substring(1)} access',
-                        ),
-                        metadata: account.isOwner
-                            ? const AppStatusBadge(label: 'Owner')
-                            : null,
-                        trailing: current
+                      icon: account.isOwner
+                          ? Icons.folder_outlined
+                          : Icons.folder_shared_outlined,
+                      status: account.isOwner
+                          ? const AppStatusBadge(label: 'Owner')
+                          : null,
+                      actions: [
+                        ?(current
                             ? const AppStatusBadge(
                                 label: 'Current library',
                                 tone: AppTone.success,
                               )
-                            : null,
-                      ),
+                            : null),
+                      ],
                     ),
                   );
                 },

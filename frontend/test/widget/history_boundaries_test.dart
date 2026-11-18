@@ -70,16 +70,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('email-job-email')), findsNothing);
     expect(find.byKey(const Key('job-document')), findsNothing);
-    expect(find.byType(AppRecordRow), findsNWidgets(20));
+    expect(find.byType(GlacierJobRow), findsNWidgets(20));
     final next = find.byKey(const Key('loadMorePipelineJobs'));
     await tester.ensureVisible(next);
     await tester.tap(next);
     await tester.pumpAndSettle();
     expect(paperless.state.runs.length, 25);
     expect(paperless.state.cursor, isNull);
-    expect(find.byType(AppRecordRow), findsNWidgets(7));
+    expect(find.byType(GlacierJobRow), findsNWidgets(7));
     final keys = tester
-        .widgetList<AppRecordRow>(find.byType(AppRecordRow))
+        .widgetList<GlacierJobRow>(find.byType(GlacierJobRow))
         .map((row) => row.key)
         .toList();
     expect(keys.take(2), [
@@ -89,7 +89,7 @@ void main() {
     await tester.ensureVisible(find.text('Previous').first);
     await tester.tap(find.text('Previous').first);
     await tester.pumpAndSettle();
-    expect(find.byType(AppRecordRow), findsNWidgets(20));
+    expect(find.byType(GlacierJobRow), findsNWidgets(20));
     expect(imports.lists, 2);
     expect(tester.takeException(), isNull);
     documents.setActive(false);

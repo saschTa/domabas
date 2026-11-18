@@ -43,7 +43,10 @@ Future<void> exerciseEmailIngestion(
             .hitTestable()
             .evaluate()
             .isNotEmpty &&
-        tester.widget<FilledButton>(find.byKey(const Key('email-add'))).enabled,
+        tester
+                .widget<GlacierButton>(find.byKey(const Key('email-add')))
+                .onPressed !=
+            null,
     'email capabilities enable account creation',
   );
   await tester.tap(find.byKey(const Key('email-add')));
@@ -79,7 +82,9 @@ Future<void> exerciseEmailIngestion(
     findsOneWidget,
   );
   expect(
-    tester.widget<SwitchListTile>(find.byKey(const Key('email-enabled'))).value,
+    tester
+        .widget<GlacierSwitchRow>(find.byKey(const Key('email-enabled')))
+        .value,
     isTrue,
   );
   await tester.ensureVisible(find.byKey(const Key('email-save')));
@@ -201,16 +206,14 @@ Future<void> exerciseEmailIngestion(
     () => find.byKey(Key('email-job-${run!.id}')).evaluate().isNotEmpty,
     'automatic email job visible',
   );
-  final emailJobDetails = find.descendant(
-    of: find.byKey(Key('email-job-${run.id}')),
-    matching: find.text('Details'),
-  );
+  final emailJobDetails = find.byKey(Key('email-job-${run.id}'));
   await revealWorkspacePageContent(
     tester,
     emailJobDetails,
     list: find.byKey(const PageStorageKey('processingPage')),
     center: false,
   );
+  expect(tester.widget<GlacierJobRow>(emailJobDetails).onOpen, isNotNull);
   await tester.tap(emailJobDetails);
   await tester.pumpAndSettle();
   expect(find.text('Job details'), findsOneWidget);
@@ -351,7 +354,7 @@ Future<void> exerciseEmailIngestion(
         find.byType(AppStripedProgressIndicator).evaluate().isEmpty &&
         find.byKey(const Key('email-delete')).evaluate().isNotEmpty &&
         tester
-                .widget<TextButton>(find.byKey(const Key('email-delete')))
+                .widget<GlacierButton>(find.byKey(const Key('email-delete')))
                 .onPressed !=
             null,
     'provider is ready for deletion',
@@ -422,6 +425,10 @@ Future<void> _emailSettings(WidgetTester tester) async {
     await tester.pumpAndSettle();
     expect(trigger.hitTestable(), findsOneWidget);
     await tester.tap(trigger);
+    await tester.pumpAndSettle();
+  }
+  if (destination.evaluate().isEmpty) {
+    await tester.tap(find.byKey(const Key('navigation-user-settings')));
     await tester.pumpAndSettle();
   }
   await _openWorkspaceDestination(tester, 'emailNavigation');

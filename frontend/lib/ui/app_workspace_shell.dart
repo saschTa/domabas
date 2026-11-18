@@ -6,6 +6,7 @@ import 'app_navigation_motion.dart';
 import 'app_presenters.dart';
 import 'app_theme.dart';
 import 'app_workspace_action.dart';
+import 'glacier.dart';
 
 typedef AppWorkspaceToolbarBuilder = Widget Function(
   BuildContext context,
@@ -37,6 +38,7 @@ final class AppNavigationGroup {
     required List<AppNavigationItem> items,
     String? compactLabel,
     this.collapsible = true,
+    this.overview,
   }) : compactLabel = compactLabel ?? label,
        items = List.unmodifiable(items);
 
@@ -46,6 +48,7 @@ final class AppNavigationGroup {
   final IconData icon;
   final List<AppNavigationItem> items;
   final bool collapsible;
+  final AppNavigationItem? overview;
 }
 
 final class AppWorkspaceShell extends StatefulWidget {
@@ -64,6 +67,12 @@ final class AppWorkspaceShell extends StatefulWidget {
     this.mobileGroups,
     this.mobilePrimaryGroupIds,
     this.toolbarBuilder,
+    this.glacier = false,
+    this.libraryLabel,
+    this.onLibrary,
+    this.onSearch,
+    this.searchLabel = 'Search documents',
+    this.onActivity,
   });
 
   final List<AppNavigationGroup> groups;
@@ -79,6 +88,10 @@ final class AppWorkspaceShell extends StatefulWidget {
   final List<AppNavigationGroup>? mobileGroups;
   final List<String>? mobilePrimaryGroupIds;
   final AppWorkspaceToolbarBuilder? toolbarBuilder;
+  final bool glacier;
+  final String? libraryLabel;
+  final String searchLabel;
+  final VoidCallback? onLibrary, onSearch, onActivity;
 
   @override
   State<AppWorkspaceShell> createState() => _AppWorkspaceShellState();
@@ -104,6 +117,12 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
   final Map<String, FocusNode> _triggers = {};
   final ScrollController _bottomScroll = ScrollController();
   final GlobalKey _activityKey = GlobalKey();
+  final GlobalKey _glacierContentKey = GlobalKey(
+    debugLabel: 'Glacier feature content',
+  );
+  final GlobalKey _glacierToolbarKey = GlobalKey(
+    debugLabel: 'Glacier feature toolbar',
+  );
   final ValueNotifier<int> _menuUpdates = ValueNotifier(0);
   double _activityHeight = 0;
   bool _measuringActivity = false;
@@ -135,7 +154,13 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
         id: 'more',
         label: 'More',
         icon: Icons.menu_rounded,
-        items: [for (final group in remaining) ...group.items],
+        items: [
+          for (final group in remaining)
+            if (group.overview case final overview?)
+              overview
+            else
+              ...group.items,
+        ],
       ),
     ];
   }
@@ -224,6 +249,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
           before == null ||
           after == null ||
           before.collapsible != after.collapsible ||
+          before.overview?.id != after.overview?.id ||
           before.items.length != after.items.length ||
           !before.items.every(
             (item) => after.items.any((other) => other.id == item.id),
@@ -306,13 +332,30 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
     if (restoreFocus) _restoreFocus(current.groupId, _generation);
   }
 
+  String get _selectedNavigationId =>
+      _groups
+          .where(
+            (group) => group.items.any((item) => item.id == widget.selectedId),
+          )
+          .firstOrNull
+          ?.overview
+          ?.id ??
+      widget.selectedId;
+
   bool _active(AppNavigationGroup group) =>
-      group.items.any((item) => item.id == widget.selectedId);
+      group.overview?.id == widget.selectedId ||
+      group.items.any(
+        (item) =>
+            item.id == widget.selectedId || item.id == _selectedNavigationId,
+      );
 
   void _select(String id) {
     if (mounted &&
-        _currentGroups(widget)
-            .any((group) => group.items.any((item) => item.id == id))) {
+        _currentGroups(widget).any(
+          (group) =>
+              group.overview?.id == id ||
+              group.items.any((item) => item.id == id),
+        )) {
       widget.onSelected(id);
     }
   }
@@ -695,7 +738,9 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final mobile = constraints.maxWidth < AppLayout.mobileBreakpoint;
+      final mobile =
+          constraints.maxWidth <
+          (widget.glacier ? 800 : AppLayout.mobileBreakpoint);
       final desktop = constraints.maxWidth >= AppLayout.desktopBreakpoint;
       final layout = mobile
           ? 0
@@ -705,6 +750,7 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       if (_layout != null && _layout != layout) _invalidateMenu();
       _layout = layout;
       final media = MediaQuery.of(context);
+      if (widget.glacier) return _glacierWorkspace(context, mobile);
       final showBottom = mobile && media.viewInsets.bottom == 0;
       final usableHeight =
           (constraints.maxHeight - media.padding.top - media.viewInsets.bottom)
@@ -779,6 +825,282 @@ final class _AppWorkspaceShellState extends State<AppWorkspaceShell>
       );
     },
   );
+
+  final _mobileActivityKey = GlobalKey();
+  double _mobileActivityHeight = 0;
+  void _measureMobileActivity() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _mobileActivityKey.currentContext?.findRenderObject();
+      final height = box is RenderBox && box.hasSize ? box.size.height : 0.0;
+      if ((height - _mobileActivityHeight).abs() > .5) {
+        setState(() => _mobileActivityHeight = height);
+      }
+    });
+  }
+
+  Widget _mobileActivityOverlay(Widget child) {
+    _measureMobileActivity();
+    return GlacierWorkspaceGeometry(
+      trailingExtent: _mobileActivityHeight == 0
+          ? 16
+          : _mobileActivityHeight + 32,
+      overlayMinimumTop: 0,
+      onToolbarBottomChanged: (_) {},
+      onActivityPanelExtentChanged: (_) {},
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          if (widget.activityIndicator != null)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: NotificationListener<SizeChangedLayoutNotification>(
+                onNotification: (_) {
+                  _measureMobileActivity();
+                  return false;
+                },
+                child: SizeChangedLayoutNotifier(
+                  child: SizedBox(
+                    key: _mobileActivityKey,
+                    child: widget.activityIndicator,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _glacierWorkspace(BuildContext context, bool mobile) {
+    final library = widget.libraryLabel ?? 'Current library';
+    final groups = mobile ? _mobileGroups(widget) : _groups;
+    final selectedGroup = groups.where((group) => _active(group)).firstOrNull;
+    final title =
+        _groups
+            .expand((group) => [?group.overview, ...group.items])
+            .where((item) => item.id == widget.selectedId)
+            .firstOrNull
+            ?.label ??
+        'Documents';
+    final libraryAction = AppWorkspaceAction(
+      id: 'librarySwitcher',
+      label: 'Switch library',
+      icon: Icons.library_books_outlined,
+      detail: library,
+      onPressed: widget.onLibrary == null
+          ? null
+          : () async => widget.onLibrary!(),
+    );
+    final primary = widget.actions
+        .where((action) => action.id == 'uploadFiles')
+        .firstOrNull;
+    final overflow = widget.actions
+        .where((action) => action != primary)
+        .toList();
+    final actions = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (primary != null)
+          GlacierButton(
+            key: Key(primary.id),
+            label: 'Upload',
+            icon: primary.icon,
+            kind: GlacierButtonKind.primary,
+            onPressed: primary.onPressed,
+          ),
+        if (overflow.isNotEmpty)
+          AppWorkspaceActionMenu(
+            key: const Key('workspaceMore'),
+            owner: widget.selectedId,
+            actions: overflow,
+            glacier: true,
+          ),
+      ],
+    );
+    final featureToolbar = widget.toolbarBuilder?.call(
+      context,
+      const SizedBox.shrink(),
+      actions,
+    );
+    final toolbar = featureToolbar == null
+        ? null
+        : KeyedSubtree(key: _glacierToolbarKey, child: featureToolbar);
+    final content = KeyedSubtree(key: _glacierContentKey, child: widget.child);
+    final more = groups.where((group) => group.id == 'more').firstOrNull;
+    final menuActions = <AppWorkspaceAction>[
+      if (mobile && more != null)
+        for (final item in more.items)
+          AppWorkspaceAction(
+            id: item.id,
+            key: item.key,
+            label: item.label,
+            icon: item.icon,
+            onPressed: () async => _select(item.id),
+          ),
+      libraryAction,
+      if (mobile) ...widget.actions,
+    ];
+    return AppWorkspaceActionMenu(
+      owner: widget.selectedId,
+      label: mobile ? 'More' : 'Account and utilities',
+      accountLabel: widget.accountLabel,
+      actions: menuActions,
+      utilities: _utilities,
+      glacier: true,
+      triggerBuilder: (context, openMenu, menuFocus) {
+        if (mobile) {
+          return Theme(
+            data: glacierMobileTheme(Theme.of(context)),
+            child: CallbackShortcuts(
+              bindings: {
+                if (widget.onSearch != null) ...{
+                  const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+                      widget.onSearch!,
+                  const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                      widget.onSearch!,
+                },
+              },
+              child: GlacierMobileShell(
+                title: title,
+                subtitle: library,
+                onLibrary: widget.onLibrary,
+                scrollable: false,
+                boundedHeader: true,
+                insetBody: false,
+                selectedId: selectedGroup?.id ?? 'more',
+                onSelected: (id) {
+                  if (id == 'more') {
+                    openMenu();
+                    return;
+                  }
+                  final group = groups
+                      .where((group) => group.id == id)
+                      .firstOrNull;
+                  if (group != null && group.items.isNotEmpty) {
+                    _select(group.items.first.id);
+                  }
+                },
+                destinations: [
+                  for (final group in groups)
+                    GlacierMobileDestination(
+                      id: group.id,
+                      key: group.id == 'more'
+                          ? const Key('navigation-more')
+                          : group.items.length == 1
+                          ? group.items.first.key
+                          : Key('navigation-${group.id}'),
+                      label: group.compactLabel,
+                      icon: group.icon,
+                      focusNode: group.id == 'more' ? menuFocus : null,
+                      onAction: group.id == 'scanner'
+                          ? () => widget.onSelected('scanner')
+                          : null,
+                    ),
+                ],
+                actions: [
+                  if (widget.onSearch != null)
+                    GlacierIconButton(
+                      label: widget.searchLabel,
+                      icon: Icons.search,
+                      onPressed: widget.onSearch,
+                    ),
+                ],
+                child: _mobileActivityOverlay(
+                  LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (toolbar != null)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: (constraints.maxHeight * .45).clamp(
+                                0,
+                                240,
+                              ),
+                            ),
+                            child: SingleChildScrollView(
+                              primary: false,
+                              child: toolbar,
+                            ),
+                          ),
+                        Expanded(child: content),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        final appearance = widget.utilityActions
+            .where((action) => action.id == 'appearance-action')
+            .firstOrNull;
+        return GlacierWorkspace(
+          destinations: [
+            for (final group in _groups)
+              if (group.overview case final overview?)
+                GlacierDestination(
+                  id: overview.id,
+                  key: overview.key,
+                  label: overview.label,
+                  icon: overview.icon,
+                  children: [
+                    for (final item in group.items)
+                      GlacierDestination(
+                        id: item.id,
+                        key: item.key,
+                        label: item.label,
+                        icon: item.icon,
+                      ),
+                  ],
+                )
+              else if (!group.collapsible && group.items.length == 1)
+                GlacierDestination(
+                  id: group.items.first.id,
+                  key: group.items.first.key,
+                  label: group.items.first.label,
+                  icon: group.items.first.icon,
+                )
+              else
+                GlacierDestination(
+                  id: group.id,
+                  key: Key('navigation-${group.id}'),
+                  label: group.label,
+                  icon: group.icon,
+                  children: [
+                    for (final item in group.items)
+                      GlacierDestination(
+                        id: item.id,
+                        key: item.key,
+                        label: item.label,
+                        icon: item.icon,
+                      ),
+                  ],
+                ),
+          ],
+          selected: widget.selectedId,
+          onSelected: _select,
+          libraryLabel: library,
+          accountLabel: widget.accountLabel,
+          onSearch: widget.onSearch,
+          onLibrary: widget.onLibrary,
+          onActivity: widget.onActivity,
+          onAppearance: appearance?.onPressed,
+          onAccount: openMenu,
+          accountFocusNode: menuFocus,
+          brand: Image.asset('assets/branding/domabas-mark.png'),
+          toolbar: toolbar,
+          activityDock: widget.activityIndicator,
+          child: content,
+        );
+      },
+    );
+  }
 
   List<AppWorkspaceAction> get _utilities => [
     ...widget.utilityActions,

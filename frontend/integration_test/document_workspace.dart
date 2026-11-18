@@ -1,3 +1,5 @@
+import 'package:domabas/ui/domabas_ui.dart';
+
 import 'workspace_actions.dart'
     show
         refreshWorkspacePage,
@@ -212,8 +214,6 @@ Future<void> exerciseDocumentWorkspace(
   }
   await tester.tap(find.byTooltip('Close PDF search'));
   await tester.pumpAndSettle();
-  await tester.tap(find.byTooltip('Document details'));
-  await tester.pumpAndSettle();
   await tester.tap(find.text('Edit properties'));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('edit-title')), editedTitle);
@@ -237,14 +237,16 @@ Future<void> exerciseDocumentWorkspace(
   );
   expect((await documents.getDocument(pdfId))!.title, editedTitle);
   expect((await documents.getDocument(pdfId))!.tags, ['finance', 'reviewed']);
-  await tester.tap(find.text('Extracted text'));
+  await tester.tap(find.byTooltip('Close details'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.widgetWithText(TextButton, 'Text'));
   await tester.pumpAndSettle();
   await _until(
     tester,
     () => find
-        .widgetWithText(OutlinedButton, 'Edit extracted text')
+        .widgetWithText(GlacierButton, 'Edit extracted text')
         .evaluate()
-        .any((element) => (element.widget as OutlinedButton).onPressed != null),
+        .any((element) => (element.widget as GlacierButton).onPressed != null),
     'extracted text loaded',
   );
   await tester.tap(find.text('Edit extracted text'));
@@ -256,7 +258,7 @@ Future<void> exerciseDocumentWorkspace(
   const correction = '  İ Verified Orchard correction\nSecond line äö\n';
   await tester.enterText(textField, correction);
   await tester.pumpAndSettle();
-  await tester.tap(find.byTooltip('Close details'));
+  await tester.tap(find.byKey(const Key('closeDocument')));
   await tester.pumpAndSettle();
   expect(find.text('Discard unsaved changes?'), findsOneWidget);
   await tester.tap(find.text('Keep editing'));
@@ -269,11 +271,7 @@ Future<void> exerciseDocumentWorkspace(
     'extracted text save completed',
   );
   expect((await documents.getDocumentOCR(pdfId))!.text, correction);
-  final ocrQuery = find.byWidgetPredicate(
-    (widget) =>
-        widget is TextField &&
-        widget.decoration?.labelText == 'Find in extracted text',
-  );
+  final ocrQuery = find.byKey(const Key('ocrSearch'));
   await tester.enterText(ocrQuery, 'Orchard');
   await tester.pumpAndSettle();
   expect(find.text('1 of 1 matches'), findsOneWidget);
@@ -285,8 +283,6 @@ Future<void> exerciseDocumentWorkspace(
         .textInside(correction),
     'Orchard',
   );
-  await tester.tap(find.byTooltip('Close details'));
-  await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('closeDocument')));
   await tester.pumpAndSettle();
   await remount();
@@ -326,14 +322,12 @@ Future<void> exerciseDocumentWorkspace(
   await tester.pumpAndSettle();
   await _until(
     tester,
-    () => find.byTooltip('Document actions').evaluate().isNotEmpty,
+    () => find.byKey(const Key('deleteDocument')).evaluate().isNotEmpty,
     'document actions loaded',
   );
-  await tester.tap(find.byTooltip('Document actions'));
+  await tester.tap(find.byKey(const Key('deleteDocument')));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Delete document'));
-  await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(FilledButton, 'Delete document'));
+  await tester.tap(find.widgetWithText(GlacierButton, 'Delete document'));
   await _until(
     tester,
     () => find.byKey(const Key('documentDetails')).evaluate().isEmpty,
@@ -466,7 +460,8 @@ Future<void> _exerciseThumbnailJobs(
   await selectWorkspaceJobFilters(tester, ['pipeline-filter-thumbnail']);
   final row = find.byKey(Key('job-${job.id}'));
   await reveal(row);
-  await tester.tap(find.descendant(of: row, matching: find.text('Details')));
+  expect(tester.widget<GlacierJobRow>(row).onOpen, isNotNull);
+  await tester.tap(row);
   await tester.pumpAndSettle();
   expect(find.text('Job details'), findsOneWidget);
   await tester.ensureVisible(find.byType(DocumentThumbnailPipelineDiagram));

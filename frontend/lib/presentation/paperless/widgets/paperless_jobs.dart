@@ -37,6 +37,7 @@ final class PaperlessJobDetails extends StatelessWidget {
     children: [
       if (error != null) AppNotice(message: error!),
       AppSurface(
+        glacier: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -85,9 +86,10 @@ final class PaperlessJobDetails extends StatelessWidget {
             const Text(
               'Imported originals continue as separate document ingestion jobs. Duplicate originals keep their existing processing history.',
             ),
-            TextButton(
+            GlacierButton(
+              kind: GlacierButtonKind.quiet,
+              label: 'Open Paperless import',
               onPressed: onOpenImport,
-              child: const Text('Open Paperless import'),
             ),
           ],
         ),
@@ -109,6 +111,7 @@ final class PaperlessJobDetails extends StatelessWidget {
       ),
       const SizedBox(height: 20),
       AppSurface(
+        glacier: true,
         child: PaperlessOutcomes(
           key: ValueKey(run.id),
           repository: repository,

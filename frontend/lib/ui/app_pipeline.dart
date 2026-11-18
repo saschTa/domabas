@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'app_job_progress.dart';
+import 'glacier/glacier_theme.dart';
+import 'glacier/glacier_controls.dart';
 
 final class AppPipelineStep {
   const AppPipelineStep({
@@ -26,9 +28,11 @@ final class AppPipelineDiagram extends StatelessWidget {
     super.key,
     required this.steps,
     this.stageKeyPrefix = 'pipeline-stage',
+    this.glacier = false,
   });
   final List<AppPipelineStep> steps;
   final String stageKeyPrefix;
+  final bool glacier;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -47,8 +51,17 @@ final class AppPipelineDiagram extends StatelessWidget {
                 ? theme.colorScheme.errorContainer
                 : step.current
                 ? theme.colorScheme.primaryContainer
+                : glacier
+                ? GlacierTokens.of(context).surface
                 : theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(glacier ? 13 : 20),
+            border: glacier
+                ? Border.all(
+                    color: step.current
+                        ? GlacierTokens.of(context).accent
+                        : GlacierTokens.of(context).border,
+                  )
+                : null,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,10 +87,17 @@ final class AppPipelineDiagram extends StatelessWidget {
               ],
               if (step.onAction != null && step.actionLabel != null) ...[
                 const SizedBox(height: 8),
-                TextButton(
-                  onPressed: step.onAction,
-                  child: Text(step.actionLabel!),
-                ),
+                if (glacier)
+                  GlacierButton(
+                    label: step.actionLabel!,
+                    onPressed: step.onAction,
+                    kind: GlacierButtonKind.quiet,
+                  )
+                else
+                  TextButton(
+                    onPressed: step.onAction,
+                    child: Text(step.actionLabel!),
+                  ),
               ],
             ],
           ),

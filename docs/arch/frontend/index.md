@@ -132,6 +132,11 @@ Temporal SDK belongs in the frontend domain or presentation.
 
 ## Extending and verifying
 
+The [Glacier component and screen library](glacier.md) supplies production
+desktop and mobile presenters around the existing feature owners. The isolated
+Widgetbook catalog exercises the same components without replacing application
+routes or API workflow checks.
+
 Add pure domain values/ports, change and regenerate the contract if needed, then
 implement data adapters and constructor-injected Cubits/views. Keep permission
 IDs as strings and derive visible capabilities from the authoritative session;

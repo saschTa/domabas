@@ -200,10 +200,7 @@ void main() {
       await closeJobFilters(tester);
       expect(processing.jobPipelines.last, 'thumbnail');
       expect(find.byKey(const Key('job-ingestion')), findsNothing);
-      final details = find.descendant(
-        of: find.byKey(const Key('job-thumbnail')),
-        matching: find.text('Details'),
-      );
+      final details = find.byKey(const Key('job-thumbnail'));
       await tester.ensureVisible(details);
       await tester.tap(details);
       await tester.pumpAndSettle();
@@ -392,10 +389,7 @@ void main() {
       await setWorkspacePipelineSetup(tester, expanded: false);
       await revealJobContent(
         tester,
-        find.descendant(
-          of: find.byKey(const Key('email-job-new-mail')),
-          matching: find.text('Details'),
-        ),
+        find.byKey(const Key('email-job-new-mail')),
       );
       expect(find.byKey(const Key('email-job-new-mail')), findsOneWidget);
       expect(
@@ -414,7 +408,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(email.expanded, isTrue);
       final rows = tester
-          .widgetList<AppRecordRow>(find.byType(AppRecordRow))
+          .widgetList<GlacierJobRow>(find.byType(GlacierJobRow))
           .map((row) => row.key)
           .toList();
       expect(rows, [
@@ -434,10 +428,7 @@ void main() {
       await selectJobFilter(tester, 'job-filter-succeeded');
       expect(find.byKey(const Key('paperless-job-paperless')), findsNothing);
       await selectJobFilter(tester, 'job-filter-partial');
-      final paperlessDetail = find.descendant(
-        of: find.byKey(const Key('paperless-job-paperless')),
-        matching: find.text('Details'),
-      );
+      final paperlessDetail = find.byKey(const Key('paperless-job-paperless'));
       await revealJobContent(tester, paperlessDetail);
       await tester.tap(paperlessDetail);
       await tester.pumpAndSettle();
@@ -473,10 +464,7 @@ void main() {
       await tester.pumpAndSettle();
       await closeJobFilters(tester);
       expect(find.byKey(const Key('job-document')), findsNothing);
-      final detail = find.descendant(
-        of: find.byKey(const Key('email-job-new-mail')),
-        matching: find.text('Details'),
-      );
+      final detail = find.byKey(const Key('email-job-new-mail'));
       await tester.ensureVisible(detail);
       await tester.tap(detail);
       await tester.pumpAndSettle();

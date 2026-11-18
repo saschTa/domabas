@@ -33,21 +33,22 @@ final class _DocumentEditorDialogState extends State<DocumentEditorDialog> {
         builder: (context, _) => PopScope(
           canPop: !widget.cubit.isSaving,
           child: AppDialog(
+            glacier: true,
             title: 'Create metadata',
             width: 640,
             actions: [
-              TextButton(
+              GlacierButton(
+                label: 'Cancel',
+                kind: GlacierButtonKind.quiet,
                 onPressed: widget.cubit.isSaving
                     ? null
                     : () => Navigator.pop(context),
-                child: const Text('Cancel'),
               ),
-              FilledButton(
+              GlacierButton(
                 key: const Key('saveDocument'),
+                label: widget.cubit.isSaving ? 'Saving…' : 'Save document',
+                kind: GlacierButtonKind.primary,
                 onPressed: widget.cubit.isSaving ? null : _save,
-                child: Text(
-                  widget.cubit.isSaving ? 'Saving…' : 'Save document',
-                ),
               ),
             ],
             child: SizedBox(

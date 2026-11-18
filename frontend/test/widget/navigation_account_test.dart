@@ -8,7 +8,6 @@ import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/domain/document/models/document.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
 import 'package:domabas/presentation/document/cubits/documents_cubit.dart';
-import 'package:domabas/ui/app_navigation_button.dart';
 import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,6 +62,131 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  for (final (width, height, scale) in [
+    (1440.0, 900.0, 1.0),
+    (800.0, 900.0, 1.0),
+    (800.0, 600.0, 2.0),
+    (390.0, 900.0, 1.0),
+  ]) {
+    testWidgets('settings navigation at $width by $height and ${scale}x', (
+      tester,
+    ) async {
+      viewport(tester, Size(width, height));
+      var reads = 0;
+      final identity = FakeIdentityRepository()
+        ..onAccounts = () async {
+          reads++;
+          return AccountPage(items: [], total: 0);
+        };
+      await mount(
+        tester,
+        session: testSession(),
+        identity: identity,
+        scale: scale,
+      );
+      if (width >= 800) {
+        if (find.byTooltip('Collapse sidebar').evaluate().isNotEmpty) {
+          await tester.tap(find.byTooltip('Collapse sidebar'));
+          await tester.pumpAndSettle();
+        }
+      } else {
+        await tester.tap(find.byKey(const Key('navigation-more')));
+        await tester.pumpAndSettle();
+      }
+      final parent = find.byKey(const Key('navigation-user-settings'));
+      await tester.ensureVisible(parent);
+      await tester.tap(parent);
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
+      expect(
+        find.byType(GlacierSettingsOverview),
+        width < 800 ? findsOneWidget : findsNothing,
+      );
+      if (width >= 800) {
+        expect(
+          tester
+              .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
+              .selectedId,
+          'documents',
+        );
+      }
+      expect(reads, 0);
+      await tester.ensureVisible(find.byKey(const Key('changePassword')));
+      await tester.tap(find.byKey(const Key('changePassword')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('currentPassword')), findsOneWidget);
+      final header = tester.widget<GlacierSettingsHeader>(
+        find.byType(GlacierSettingsHeader),
+      );
+      expect(header.title, 'Password');
+      expect(header.parentLabel, 'User settings');
+      if (width >= 800) {
+        final shell = tester.widget<GlacierWorkspace>(
+          find.byType(GlacierWorkspace),
+        );
+        expect(shell.selected, 'password');
+        expect(
+          shell.destinations
+              .where((item) => item.id == 'user-settings')
+              .single
+              .children,
+          isNotEmpty,
+        );
+        final password = find.byKey(const Key('currentPassword'));
+        await tester.ensureVisible(password);
+        await tester.enterText(password, 'retained password draft');
+        final controller = tester.widget<TextFormField>(password).controller;
+        await tester.ensureVisible(parent);
+        await tester.tap(parent);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('changePassword')), findsNothing);
+        expect(
+          tester
+              .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
+              .selectedId,
+          'password',
+        );
+        expect(
+          tester.widget<TextFormField>(password).controller,
+          same(controller),
+        );
+        expect(controller!.text, 'retained password draft');
+        await tester.tap(parent);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('changePassword')), findsOneWidget);
+        expect(controller.text, 'retained password draft');
+        expect(reads, 0);
+      }
+      header.onBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(GlacierSettingsOverview), findsOneWidget);
+      if (width >= 800) {
+        final card = find.byKey(const Key('settings-overview-libraries'));
+        final label = find
+            .descendant(of: card, matching: find.byType(Text))
+            .first;
+        await tester.ensureVisible(label);
+        await tester.pumpAndSettle();
+        expect(label.hitTestable(), findsOneWidget);
+        expect(find.byKey(const Key('manageLibraries')), findsOneWidget);
+        await tester.tap(label);
+        await tester.pumpAndSettle();
+      } else {
+        await navigateWorkspace(tester, 'manageLibraries');
+      }
+      expect(reads, 1);
+      expect(
+        find.ancestor(
+          of: find.byKey(const Key('acceptInvitationCode')),
+          matching: find.byType(GlacierSurface),
+        ),
+        findsWidgets,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   }
 
   for (final (name, role, systemRole) in [
@@ -132,6 +256,16 @@ void main() {
       await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(find.text('a@example.com'), findsOneWidget);
+      expect(find.byKey(const Key('navigation-user-settings')), findsOneWidget);
+      expect(
+        find.byKey(const Key('navigation-admin-settings')),
+        systemRole == SystemRole.admin ? findsOneWidget : findsNothing,
+      );
+      await tester.tap(find.byKey(const Key('navigation-user-settings')));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.byType(GlacierSettingsOverview), findsOneWidget);
+      expect((members, invitations, accounts, users), (0, 0, 0, 0));
       expect(
         find.byKey(const Key('manageMembers')),
         role == AccountRole.admin ? findsOneWidget : findsNothing,
@@ -144,14 +278,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('acceptInvitationCode')), findsOneWidget);
       expect(accounts, 1);
+      expect(find.byType(GlacierSettingsHeader), findsOneWidget);
       select('libraries');
       await tester.pumpAndSettle();
       expect(accounts, 1);
       expect(
         tester
-            .widget<AppNavigationButton>(
-              find.byKey(const Key('navigation-more')),
-            )
+            .widget<Semantics>(find.byKey(const Key('navigation-more')))
+            .properties
             .selected,
         isTrue,
       );

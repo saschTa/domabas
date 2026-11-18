@@ -58,7 +58,7 @@ final class _AppRefreshableState extends State<AppRefreshable> {
         const SingleActivator(LogicalKeyboardKey.f5): _show,
       },
       child: Focus(
-        autofocus: true,
+        autofocus: ModalRoute.of(context)?.isCurrent ?? true,
         skipTraversal: true,
         child: Semantics(
           customSemanticsActions: {

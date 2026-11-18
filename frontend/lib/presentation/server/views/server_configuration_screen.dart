@@ -38,17 +38,19 @@ final class _ServerConfigurationScreenState
       BlocBuilder<ServerConfigurationCubit, ServerConfigurationState>(
         bloc: widget.cubit,
         builder: (context, state) => AppPage(
+          glacier: true,
           insetBody: false,
           showHeading: true,
           title: state.address == null ? 'Connect to your server' : 'Server',
           description: 'Enter the address of your Domabas installation.',
           child: SingleChildScrollView(
-            padding: AppLayout.cardListPadding(context),
+            padding: GlacierSettingsPage.scrollPadding(context),
             child: Align(
               alignment: Alignment.topLeft,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: AppSurface(
+                  glacier: true,
                   child: Form(
                     key: _form,
                     child: Column(
@@ -98,18 +100,20 @@ final class _ServerConfigurationScreenState
                           Semantics(liveRegion: true, child: Text(message)),
                           const SizedBox(height: 16),
                         ],
-                        FilledButton.icon(
+                        GlacierButton(
                           key: const Key('connectServer'),
                           onPressed: state.busy || state.loading
                               ? null
                               : _connect,
-                          icon: const Icon(Icons.dns_outlined),
-                          label: Text(state.busy ? 'Connecting…' : 'Connect'),
+                          label: state.busy ? 'Connecting…' : 'Connect',
+                          icon: Icons.dns_outlined,
+                          kind: GlacierButtonKind.primary,
                         ),
                         if (state.address == null && state.error != null)
-                          TextButton(
+                          GlacierButton(
                             onPressed: state.busy ? null : widget.cubit.restore,
-                            child: const Text('Reload saved server'),
+                            label: 'Reload saved server',
+                            kind: GlacierButtonKind.quiet,
                           ),
                       ],
                     ),

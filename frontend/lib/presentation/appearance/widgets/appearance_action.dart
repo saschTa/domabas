@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/appearance/models/appearance_preference.dart';
 import '../../../ui/app_appearance_menu.dart';
 import '../../../ui/app_workspace_action.dart';
+import '../../../ui/glacier.dart';
 import '../cubits/appearance_cubit.dart';
 
 final class AppearanceAction extends StatefulWidget {
@@ -27,7 +28,7 @@ final class _AppearanceActionState extends State<AppearanceAction> {
     _open = true;
     final cubit = widget.cubit;
     try {
-      await showDialog<void>(
+      await showGlacierDialog<void>(
         context: context,
         builder: (dialogContext) =>
             BlocBuilder<AppearanceCubit, AppearanceState>(

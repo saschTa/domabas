@@ -23,6 +23,8 @@ import '../support/fake_document_repository.dart';
 import '../support/fake_identity_repository.dart';
 import '../support/workspace_navigation.dart';
 
+import 'package:domabas/ui/glacier.dart';
+
 Future<void> signIn(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.enterText(
@@ -70,6 +72,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('a@example.com'), findsOneWidget);
       expect(find.byKey(const Key('newDocument')), findsNothing);
+      await tester.tap(find.byKey(const Key('navigation-user-settings')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('manageMembers')), findsNothing);
       expect(find.byKey(const Key('changePassword')), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -184,10 +188,10 @@ void main() {
     expect(find.byTooltip('Edit owner@example.com'), findsNothing);
     await tester.tap(find.byKey(const Key('inviteMember')));
     await tester.pumpAndSettle();
-    final inheritedRead = tester.widget<CheckboxListTile>(
+    final inheritedRead = tester.widget<GlacierChoice>(
       find.byKey(const Key('claim-documents:read')),
     );
-    expect(inheritedRead.value, isTrue);
+    expect(inheritedRead.selected, isTrue);
     expect(inheritedRead.onChanged, isNull);
     expect(find.text('Library access'), findsOneWidget);
     await tester.enterText(
@@ -212,10 +216,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('User').last);
     await tester.pumpAndSettle();
-    final inheritedCreate = tester.widget<CheckboxListTile>(
+    final inheritedCreate = tester.widget<GlacierChoice>(
       find.byKey(const Key('claim-documents:create')),
     );
-    expect(inheritedCreate.value, isTrue);
+    expect(inheritedCreate.selected, isTrue);
     expect(inheritedCreate.onChanged, isNull);
     await tester.ensureVisible(find.byKey(const Key('memberEnabled')));
     await tester.tap(find.byKey(const Key('memberEnabled')));
@@ -283,19 +287,20 @@ void main() {
         ),
       );
       await signIn(tester);
-      await tester.tap(find.byKey(const Key('librarySwitcher')));
+      await revealWorkspaceAction(tester, 'librarySwitcher');
+      await tester.tap(find.byKey(const Key('librarySwitcher')).last);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('switch-shared')));
       await tester.pumpAndSettle();
       expect(find.text('Your libraries'), findsNothing);
-      expect(find.text('Shared library'), findsOneWidget);
+      expect(find.byTooltip(RegExp('Library: Shared library')), findsOneWidget);
       expect(find.byKey(const Key('newDocument')), findsNothing);
       expect(closed, 1);
       expect(documentScopes.first.cancelled, isTrue);
       expect(documentScopes.last.cancelled, isFalse);
       callbacks.first();
       await tester.pumpAndSettle();
-      expect(find.text('Shared library'), findsOneWidget);
+      expect(find.byTooltip(RegExp('Library: Shared library')), findsOneWidget);
       expect(find.byKey(const Key('authEmail')), findsNothing);
       expect(documentScopes.last.cancelled, isFalse);
       expect(tester.takeException(), isNull);
@@ -347,7 +352,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<TextButton>(find.byKey(const Key('system-role-user-a')))
+            .widget<GlacierButton>(find.byKey(const Key('system-role-user-a')))
             .onPressed,
         isNull,
       );
@@ -419,7 +424,7 @@ void main() {
       oldDocuments.detail.complete(oldDocuments.document);
       callbacks.first();
       await tester.pumpAndSettle();
-      expect(find.text('Account b'), findsOneWidget);
+      expect(find.byTooltip(RegExp('Library: Account b')), findsOneWidget);
       expect(find.text('Private A document'), findsNothing);
       expect(find.byKey(const Key('documentDetails')), findsNothing);
       expect(tester.takeException(), isNull);

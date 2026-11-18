@@ -46,6 +46,7 @@ final class _InvoicesScreenState extends State<InvoicesScreen> {
   ) => BlocBuilder<InvoicesCubit, InvoicesState>(
     bloc: cubit,
     builder: (context, state) => AppPage(
+      glacier: true,
       insetBody: false,
       title: 'Invoices',
       description: 'Invoice details from documents in your library.',
@@ -124,6 +125,7 @@ final class _InvoicesScreenState extends State<InvoicesScreen> {
                             KeyedSubtree(
                               key: const ValueKey('invoiceCollection'),
                               child: AppPagedList(
+                                glacier: true,
                                 key: ValueKey(
                                   'invoices-${state.snapshotVersion}',
                                 ),
@@ -136,18 +138,21 @@ final class _InvoicesScreenState extends State<InvoicesScreen> {
                                 footer: count,
                                 itemBuilder: (context, index) => Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
-                                  child: AppSurface(
-                                    padding: EdgeInsets.zero,
-                                    child: _InvoiceRow(
-                                      invoice: state.items[index],
-                                      onOpen: () =>
-                                          _open(context, state.items[index]),
-                                    ),
+                                  child: _InvoiceRow(
+                                    invoice: state.items[index],
+                                    onOpen: () =>
+                                        _open(context, state.items[index]),
                                   ),
                                 ),
                               ),
                             ),
                           if (state.items.isEmpty && state.loaded) count,
+                          SizedBox(
+                            height: GlacierWorkspaceGeometry.trailingOf(
+                              context,
+                              existingBottom: padding.bottom,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -178,12 +183,13 @@ final class _InvoicesScreenState extends State<InvoicesScreen> {
                                 if (state.error case final error?)
                                   AppNotice(
                                     message: error,
-                                    action: TextButton(
+                                    action: GlacierButton(
+                                      label: 'Try again',
+                                      kind: GlacierButtonKind.quiet,
                                       onPressed:
                                           state.loading || state.intentBlocked
                                           ? null
                                           : cubit.refresh,
-                                      child: const Text('Try again'),
                                     ),
                                   ),
                               ],
@@ -210,48 +216,34 @@ final class _InvoiceRow extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) => AppRecordRow(
-    key: ValueKey('invoice-${invoice.id}'),
-    title: invoice.seller.name.isEmpty
-        ? 'Supplier not recorded'
-        : invoice.seller.name,
-    subtitle: Text(
-      '${invoiceType(invoice.typeCode)} ${invoice.number.isEmpty ? '· number not recorded' : invoice.number}',
-    ),
-    metadata: Wrap(
-      spacing: 12,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        AppStatusBadge(
-          label: invoice.structured
-              ? 'E-invoice · ${invoiceFormat(invoice.format)}'
-              : 'AI extracted · Review details',
-          tone: invoice.structured ? AppTone.neutral : AppTone.warning,
-        ),
-        Text(
-          invoice.issueDate.isEmpty ? 'Date not recorded' : invoice.issueDate,
-        ),
-        if (invoice.dueDate.isNotEmpty) Text('Due ${invoice.dueDate}'),
-      ],
-    ),
-    trailing: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Total', style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 4),
-        Text(
-          invoiceAmount(invoice.totalGross, invoice.currency),
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          key: ValueKey('invoiceDetails-${invoice.id}'),
-          onPressed: onOpen,
-          icon: const Icon(Icons.arrow_forward, size: 18),
-          label: const Text('Details'),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final value = GlacierInvoiceValue(
+      number: invoice.number,
+      supplier: invoice.seller.name,
+      amount: invoice.totalGross,
+      currency: invoice.currency,
+      amountLabel: invoiceAmount(invoice.totalGross, invoice.currency),
+      issueDate: invoice.issueDate,
+      dueDate: invoice.dueDate,
+      provenance: invoice.structured
+          ? 'E-invoice · ${invoiceFormat(invoice.format)}'
+          : 'AI extracted · Review details',
+      type: invoiceType(invoice.typeCode),
+      aiExtracted: !invoice.structured,
+    );
+    return KeyedSubtree(
+      key: ValueKey('invoice-${invoice.id}'),
+      child: MediaQuery.sizeOf(context).width < 600
+          ? GlacierMobileInvoiceRow(
+              key: ValueKey('invoiceDetails-${invoice.id}'),
+              invoice: value,
+              onOpen: onOpen,
+            )
+          : GlacierInvoiceRow(
+              invoice: value,
+              onOpen: onOpen,
+              openKey: ValueKey('invoiceDetails-${invoice.id}'),
+            ),
+    );
+  }
 }

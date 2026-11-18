@@ -82,6 +82,7 @@ final class _PaperlessOutcomesState extends State<PaperlessOutcomes> {
             _ => 'No completed document results yet.',
           }),
         AppPagedList(
+          glacier: true,
           key: PageStorageKey(
             'paperless-outcomes-${widget.run.id}-${state.status ?? 'all'}',
           ),
@@ -94,23 +95,22 @@ final class _PaperlessOutcomesState extends State<PaperlessOutcomes> {
             final outcome = state.items[index];
             final open =
                 outcome.documentId != null && widget.onOpenDocument != null;
-            return ListTile(
-              key: ValueKey(outcome.sourceId),
-              contentPadding: EdgeInsets.zero,
-              title: Text('#${outcome.sourceId} · ${outcome.title}'),
-              subtitle: SelectableText(
-                outcome.failureCode != null
+            return SelectionArea(
+              child: GlacierSettingsRecord(
+                key: ValueKey(outcome.sourceId),
+                title: '#${outcome.sourceId} · ${outcome.title}',
+                detail: outcome.failureCode != null
                     ? '${PaperlessFailure(outcome.failureCode!).message}\nError code: ${outcome.failureCode}'
                     : outcome.status == 'failed'
                     ? 'Import failed'
                     : outcome.status == 'duplicate'
                     ? 'Already in this library'
                     : 'Imported · processing queued',
+                status: open ? const Icon(Icons.open_in_new) : null,
+                onTap: open
+                    ? () => widget.onOpenDocument!(outcome.documentId!)
+                    : null,
               ),
-              trailing: open ? const Icon(Icons.open_in_new) : null,
-              onTap: open
-                  ? () => widget.onOpenDocument!(outcome.documentId!)
-                  : null,
             );
           },
         ),

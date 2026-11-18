@@ -4,7 +4,6 @@ import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/app/domabas_app.dart';
 import 'package:domabas/app/scanner_scope.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
-import 'package:domabas/ui/app_navigation_button.dart';
 import 'package:domabas/ui/app_workspace_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,14 +78,6 @@ void main() {
         if (!mustChangePassword) {
           expect(find.byKey(const Key('processingNavigation')), findsNothing);
           await navigateWorkspace(tester, 'processingNavigation');
-          expect(
-            tester
-                .widget<AppNavigationButton>(
-                  find.byKey(const Key('navigation-more')),
-                )
-                .selected,
-            isTrue,
-          );
           final shell = tester.widget<AppWorkspaceShell>(
             find.byType(AppWorkspaceShell),
           );

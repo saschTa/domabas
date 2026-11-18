@@ -26,7 +26,7 @@ final class LibrarySwitcher extends StatelessWidget {
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            onPressed: cubit.acting ? null : () => _open(context),
+            onPressed: cubit.acting ? null : () => open(context, cubit),
             child: Row(
               children: [
                 const Icon(Icons.folder_copy_outlined, size: 22),
@@ -53,22 +53,24 @@ final class LibrarySwitcher extends StatelessWidget {
         ),
       );
 
-  Future<void> _open(BuildContext context) async {
+  static Future<void> open(BuildContext context, LibrariesCubit cubit) async {
     cubit.setPickerActive(true);
     unawaited(cubit.load());
     try {
-      await showDialog<void>(
+      await showGlacierDialog<void>(
         context: context,
         builder: (_) => BlocBuilder<LibrariesCubit, LibrariesState>(
           bloc: cubit,
           builder: (context, _) => AppDialog(
+            glacier: true,
             title: 'Switch library',
             description: 'Choose the library you want to work in.',
             width: 560,
             actions: [
-              TextButton(
+              GlacierButton(
                 onPressed: cubit.acting ? null : () => Navigator.pop(context),
-                child: const Text('Close'),
+                label: 'Close',
+                kind: GlacierButtonKind.quiet,
               ),
             ],
             child: Column(
@@ -81,14 +83,16 @@ final class LibrarySwitcher extends StatelessWidget {
                   AppNotice(
                     message: error,
                     tone: AppTone.danger,
-                    action: TextButton(
+                    action: GlacierButton(
                       onPressed: cubit.loading || cubit.acting
                           ? null
                           : () => cubit.load(),
-                      child: const Text('Retry'),
+                      label: 'Retry',
+                      kind: GlacierButtonKind.quiet,
                     ),
                   ),
                 AppPagedList(
+                  glacier: true,
                   key: const PageStorageKey('library-picker-pages'),
                   itemCount: cubit.accounts.length,
                   hasMore: cubit.canLoadMore,
@@ -97,20 +101,16 @@ final class LibrarySwitcher extends StatelessWidget {
                   onLoadMore: () => cubit.load(more: true),
                   itemBuilder: (context, index) {
                     final library = cubit.accounts[index];
-                    return AppRecordRow(
+                    return GlacierSettingsRecord(
                       key: Key('switch-${library.id}'),
-                      leading: Icon(
-                        library.isOwner
-                            ? Icons.folder_outlined
-                            : Icons.folder_shared_outlined,
-                      ),
+                      icon: library.isOwner
+                          ? Icons.folder_outlined
+                          : Icons.folder_shared_outlined,
                       title: library.name,
-                      subtitle: Text(
-                        library.isOwner
-                            ? 'Your library'
-                            : 'Shared with you · ${library.role.name}',
-                      ),
-                      trailing: library.id == cubit.identity.accountId
+                      detail: library.isOwner
+                          ? 'Your library'
+                          : 'Shared with you · ${library.role.name}',
+                      status: library.id == cubit.identity.accountId
                           ? const Icon(Icons.check_circle_rounded)
                           : const Icon(Icons.arrow_forward_rounded),
                       onTap:

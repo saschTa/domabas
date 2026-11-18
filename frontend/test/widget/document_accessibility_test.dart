@@ -53,8 +53,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final download = find.byTooltip('Download original');
-    expect(find.byIcon(Icons.download_rounded), findsOneWidget);
+    final download = find.byKey(const Key('downloadDocument'));
+    expect(find.byIcon(Icons.download_outlined), findsOneWidget);
     expect(tester.getSize(download).width, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
     await tester.tap(download);
@@ -131,12 +131,12 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(tester.getTopLeft(find.byKey(const Key('documentDetails'))).dx, 8);
     expect(find.byKey(const Key('downloadDocument')), findsNothing);
-    await tester.tap(find.byTooltip('Document details'));
+    await tester.tap(find.text('Properties').first);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.byKey(const Key('documentInspectorWindow')), findsOneWidget);
-    await tester.tap(find.text('Edit properties'));
+    await tester.tap(find.byTooltip('Edit properties'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('edit-title')),
@@ -154,7 +154,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.records.single.title, 'Revised title');
     expect(tester.takeException(), isNull);
-    await tester.tap(find.text('Extracted text'));
+    await tester.tap(find.byTooltip('Close details'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Text'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Edit extracted text'));
     await tester.pumpAndSettle();
@@ -173,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getSize(editor).height, greaterThan(0));
     await tester.enterText(editor, 'Unsaved correction');
-    await tester.tap(find.byTooltip('Close details'));
+    await tester.tap(find.byKey(const Key('closeDocument')));
     await tester.pumpAndSettle();
     expect(find.text('Discard unsaved changes?'), findsOneWidget);
     await tester.tap(find.text('Keep editing'));
@@ -192,8 +194,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.ocr['letter']!.text, 'Unsaved correction');
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byTooltip('Close details'));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('closeDocument')));
     await tester.pumpAndSettle();
     expect(find.text('Open letter'), findsOneWidget);

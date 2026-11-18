@@ -242,7 +242,7 @@ void main() {
         await tester.pump();
         expect(tester.getRect(add), addBounds);
         expect(tester.element(add), same(addElement));
-        expect(tester.widget<FilledButton>(add).onPressed, isNotNull);
+        expect(tester.widget<GlacierButton>(add).onPressed, isNotNull);
         if (background) {
           expect(tester.getRect(empty), emptyBounds);
           expect(find.byType(AppStripedProgressIndicator), findsNothing);
@@ -351,7 +351,7 @@ void main() {
         expect(tester.state<FormFieldState<String>>(field).value, 'deu');
         expect(
           tester
-              .widget<FilledButton>(
+              .widget<GlacierButton>(
                 find.byKey(const Key('saveProcessingSettings')),
               )
               .onPressed,

@@ -189,92 +189,86 @@ void main() {
     );
   }
 
-  testWidgets(
-    'search shares its toolbar row with Filters and resizing retains focused input',
-    (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(1440, 1000);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPhysicalSize);
-      await tester.pumpWidget(workspace());
-      final term = find.byKey(const Key('documentSearchTerm'));
-      final filters = find.byKey(const Key('documentFilters'));
-      expect(tester.getSize(term).width, greaterThanOrEqualTo(280));
-      expect(
-        tester.getRect(filters).left,
-        closeTo(tester.getRect(term).right + 12, .1),
-      );
-      expect(
-        tester.getRect(filters).center.dy,
-        closeTo(tester.getRect(term).center.dy, 2),
-      );
-      await tester.tap(term);
-      await tester.enterText(term, 'draft');
-      final focus = FocusManager.instance.primaryFocus;
-      tester.view.physicalSize = const Size(320, 740);
-      await tester.pump();
-      expect(tester.widget<TextField>(term).controller!.text, 'draft');
-      expect(FocusManager.instance.primaryFocus, same(focus));
-      expect(tester.takeException(), isNull);
-      await tester.pump(const Duration(milliseconds: 300));
-    },
-  );
+  Future<void> openSearch(WidgetTester tester) async {
+    final trigger = find.byKey(const Key('documentFilters'));
+    await tester.ensureVisible(trigger);
+    await tester.tap(trigger);
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openValues(WidgetTester tester) async {
+    final trigger = find.text('Choose tags and people');
+    await tester.ensureVisible(trigger);
+    await tester.tap(trigger);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('dedicated search retains local focused input through resize', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1440, 1000);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(workspace());
+    expect(find.byKey(const Key('documentSearchTerm')), findsNothing);
+    await openSearch(tester);
+    final term = find.byKey(const Key('documentSearchTerm'));
+    expect(tester.getSize(term).width, greaterThanOrEqualTo(280));
+    await tester.enterText(term, 'draft');
+    final focus = FocusManager.instance.primaryFocus;
+    tester.view.physicalSize = const Size(320, 740);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(term).controller!.text, 'draft');
+    expect(FocusManager.instance.primaryFocus, same(focus));
+    expect(repository.criteria, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
-    'automatic typing, sort and immediate filters use the latest desired criteria',
+    'search draft and bounded vocabulary apply atomically; quick sort uses committed intent',
     (tester) async {
       await tester.pumpWidget(workspace());
+      await openSearch(tester);
       await tester.enterText(
         find.byKey(const Key('documentSearchTerm')),
         'invoice',
       );
+      await openValues(tester);
+      await tester.tap(find.byKey(const Key('documentFilter-sender')));
+      await tester.pumpAndSettle();
+      final option = find.byKey(ValueKey(vocabularyOption(0).key));
+      await revealFilterOption(tester, option);
+      await tester.tap(option);
+      await tester.pumpAndSettle();
+      expect(repository.criteria, isEmpty);
+      await tester.tap(find.byKey(const Key('closeDocumentFilters')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('applyDocumentSearch')));
       await tester.tap(find.byKey(const Key('applyDocumentSearch')));
       await tester.pumpAndSettle();
+      expect(repository.criteria, hasLength(1));
       expect(repository.criteria.single.query, 'invoice');
-      await tester.enterText(
-        find.byKey(const Key('documentSearchTerm')),
-        'unsubmitted draft',
+      expect(repository.criteria.single.sender, 'option-0000');
+      expect(
+        repository.criteria.single.senderMatch,
+        DocumentAddressMatch.exact,
       );
       await tester.tap(find.byKey(const Key('sortDocuments')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Title A–Z'));
       await tester.pumpAndSettle();
-      expect(repository.criteria.last.query, 'unsubmitted draft');
+      expect(repository.criteria.last.query, 'invoice');
       expect(repository.criteria.last.sort, DocumentSort.title);
-      expect(
-        tester
-            .widget<TextField>(find.byKey(const Key('documentSearchTerm')))
-            .controller!
-            .text,
+      await openSearch(tester);
+      await tester.enterText(
+        find.byKey(const Key('documentSearchTerm')),
         'unsubmitted draft',
       );
-      await tester.tap(find.byKey(const Key('documentFilters')));
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('documentFilter-sender')));
-      await tester.pumpAndSettle();
-      await revealFilterOption(
-        tester,
-        find.byKey(ValueKey(vocabularyOption(0).key)),
-      );
-      await tester.tap(find.byKey(ValueKey(vocabularyOption(0).key)));
-      await tester.pumpAndSettle();
-      expect(repository.criteria.last.sender, 'option-0000');
-      expect(repository.criteria.last.senderMatch, DocumentAddressMatch.exact);
-      await tester.tap(find.byKey(const Key('closeDocumentFilters')));
-      await tester.pumpAndSettle();
-      expect(repository.criteria.last.query, 'unsubmitted draft');
-      expect(repository.criteria.last.sender, 'option-0000');
-      expect(repository.criteria.last.sort, DocumentSort.title);
-      await tester.tap(find.byKey(const Key('clearDocumentSearch')));
-      await tester.pumpAndSettle();
-      expect(cubit.state.searching, isFalse);
-      expect(
-        tester
-            .widget<TextField>(find.byKey(const Key('documentSearchTerm')))
-            .controller!
-            .text,
-        '',
-      );
+      expect(cubit.state.rawTerm, 'invoice');
+      expect(repository.criteria, hasLength(2));
     },
   );
 
@@ -282,6 +276,7 @@ void main() {
     'IME composing Enter does not submit until composition completes',
     (tester) async {
       await tester.pumpWidget(workspace());
+      await openSearch(tester);
       final term = find.byKey(const Key('documentSearchTerm'));
       await tester.tap(term);
       tester.testTextInput.updateEditingValue(
@@ -364,7 +359,7 @@ void main() {
       await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('newDocument')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('closeNavigationChooser')));
+      await tester.tap(find.byTooltip('Close actions'));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -372,16 +367,18 @@ void main() {
             .height,
         greaterThan(0),
       );
+      await openSearch(tester);
       await tester.enterText(
         find.byKey(const Key('documentSearchTerm')),
         'invoice',
       );
-      await reveal(tester, find.byKey(const Key('applyDocumentSearch')));
+      await tester.ensureVisible(find.byKey(const Key('applyDocumentSearch')));
       await tester.tap(find.byKey(const Key('applyDocumentSearch')));
       await tester.pumpAndSettle();
       await reveal(tester, find.byKey(const Key('documentFilters')));
       await tester.tap(find.byKey(const Key('documentFilters')));
       await tester.pumpAndSettle();
+      await openValues(tester);
       await tester.ensureVisible(
         find.byKey(const Key('documentVocabularyQuery')),
       );
@@ -401,6 +398,9 @@ void main() {
       await tester.tap(find.byKey(const Key('closeDocumentFilters')));
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('workspaceBottomNavigation')),
         findsOneWidget,
@@ -418,14 +418,14 @@ void main() {
   );
 
   testWidgets(
-    'filter resize preserves lookup and Back retains immediate selection; Reset applies immediately',
+    'filter resize preserves lookup; Back retains draft and Cancel discards it',
     (tester) async {
       await cubit.applySearch(
         DocumentSearchCriteria(query: 'invoice', sender: 'Applied'),
       );
       await tester.pumpWidget(workspace());
-      await tester.tap(find.byKey(const Key('documentFilters')));
-      await tester.pumpAndSettle();
+      await openSearch(tester);
+      await openValues(tester);
       await tester.tap(find.byKey(const Key('documentFilter-sender')));
       await tester.pumpAndSettle();
       await revealFilterOption(
@@ -455,23 +455,28 @@ void main() {
       );
       Navigator.of(tester.element(find.byType(DocumentFilterDialog))).pop();
       await tester.pumpAndSettle();
-      expect(repository.criteria.last.sender, 'option-0000');
-      await reveal(tester, find.byKey(const Key('documentFilters')));
-      await tester.tap(find.byKey(const Key('documentFilters')));
+      expect(repository.criteria.last.sender, 'Applied');
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(
+      expect(cubit.state.desiredCriteria.sender, 'Applied');
+      await openSearch(tester);
+      await openValues(tester);
+      await tester.ensureVisible(
         find.descendant(
           of: find.byType(DocumentFilterDialog),
-          matching: find.text('Sender: option-0000'),
+          matching: find.text('Reset filters'),
         ),
-        findsOneWidget,
       );
-      await tester.ensureVisible(find.text('Reset filters'));
       await tester.tap(find.text('Reset filters'));
       await tester.pumpAndSettle();
-      expect(repository.criteria.last.sender, '');
+      expect(repository.criteria.last.sender, 'Applied');
       await tester.tap(find.byKey(const Key('closeDocumentFilters')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('applyDocumentSearch')));
+      await tester.tap(find.byKey(const Key('applyDocumentSearch')));
+      await tester.pumpAndSettle();
+      expect(repository.criteria.last.sender, '');
     },
   );
 
@@ -499,6 +504,7 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('documentFilters')));
       await tester.pumpAndSettle();
+      await openValues(tester);
       final dialog = tester.widget<DocumentFilterDialog>(
         find.byType(DocumentFilterDialog),
       );
@@ -573,8 +579,8 @@ void main() {
       final cardSize = tester.getSize(
         find.byKey(const Key('search-document-result')),
       );
-      expect(node.rect.width, closeTo(cardSize.width, .001));
-      expect(node.rect.height, closeTo(cardSize.height, .001));
+      expect(node.rect.width, closeTo(cardSize.width - 16, .001));
+      expect(node.rect.height, closeTo(cardSize.height - 16, .001));
       expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
       expect(repository.reads, 0);
       node.owner!.performAction(node.id, SemanticsAction.tap);

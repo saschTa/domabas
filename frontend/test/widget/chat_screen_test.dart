@@ -212,7 +212,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<IconButton>(find.byKey(const Key('sendChatMessage')))
+            .widget<GlacierButton>(find.byKey(const Key('sendChatMessage')))
             .onPressed,
         isNotNull,
       );

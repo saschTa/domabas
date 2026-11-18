@@ -120,6 +120,7 @@ final class DocumentThumbnailPipelineDiagram extends StatelessWidget {
       ),
     ];
     return AppPipelineDiagram(
+      glacier: true,
       stageKeyPrefix: 'thumbnail-pipeline-stage',
       steps: [
         for (var i = 0; i < stages.length; i++)
@@ -193,6 +194,7 @@ final class PipelineDiagram extends StatelessWidget {
       ),
     ];
     return AppPipelineDiagram(
+      glacier: true,
       steps: [
         for (var i = 0; i < stages.length; i++)
           AppPipelineStep(
@@ -287,6 +289,7 @@ final class DocumentAIPipelineDiagram extends StatelessWidget {
     }
 
     return AppPipelineDiagram(
+      glacier: true,
       steps: [
         for (var i = 0; i < stages.length; i++)
           AppPipelineStep(
@@ -446,6 +449,7 @@ final class _LegacyDocumentPipelineDiagram extends StatelessWidget {
     }
 
     return AppPipelineDiagram(
+      glacier: true,
       steps: [for (var i = 0; i < stages.length; i++) stage(i)],
     );
   }
@@ -507,6 +511,7 @@ final class ReindexBatchCard extends StatelessWidget {
   final DocumentReindexBatch batch;
   @override
   Widget build(BuildContext context) => AppSurface(
+    glacier: true,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -581,9 +586,10 @@ Future<bool> confirmReindex(
   BuildContext context, {
   required bool system,
 }) async =>
-    await showDialog<bool>(
+    await showGlacierDialog<bool>(
       context: context,
       builder: (dialogContext) => AppDialog(
+        glacier: true,
         title: system
             ? 'Reindex all library originals?'
             : 'Reindex library originals?',
@@ -591,14 +597,16 @@ Future<bool> confirmReindex(
             ? 'This request covers originals across every library.'
             : 'This request covers originals in the current library.',
         actions: [
-          TextButton(
+          GlacierButton(
+            kind: GlacierButtonKind.quiet,
+            label: 'Cancel',
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
           ),
-          FilledButton(
+          GlacierButton(
+            kind: GlacierButtonKind.primary,
+            label: 'Request reindex',
             key: const Key('confirmReindex'),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Request reindex'),
           ),
         ],
         child: const Text(

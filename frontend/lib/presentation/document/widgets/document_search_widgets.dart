@@ -165,32 +165,25 @@ final class DocumentKindFilters extends StatelessWidget {
         spacing: 8,
         runSpacing: 4,
         children: [
-          ChoiceChip(
+          GlacierChoice(
             key: Key('$keyPrefix-all'),
-            label: const Text('All types'),
+            label: 'All types',
+            compact: true,
             selected: kinds.isEmpty,
-            onSelected: (_) => unawaited(onChanged(const [])),
-            materialTapTargetSize: MaterialTapTargetSize.padded,
+            onChanged: (_) => unawaited(onChanged(const [])),
           ),
           for (final kind in DocumentKind.values)
-            FilterChip(
+            GlacierChoice(
               key: Key('$keyPrefix-${kind.name}'),
-              label: Text(kind.label),
-              avatar: kinds.contains(kind)
-                  ? null
-                  : Icon(switch (kind) {
-                      DocumentKind.document => Icons.description_outlined,
-                      DocumentKind.letter => Icons.markunread_mailbox_outlined,
-                      DocumentKind.email => Icons.mail_outline,
-                    }, size: 18),
+              label: kind.label,
+              compact: true,
               selected: kinds.contains(kind),
-              onSelected: (selected) => unawaited(
+              onChanged: (selected) => unawaited(
                 onChanged([
                   ...kinds.where((value) => value != kind),
-                  if (selected) kind,
+                  if (selected == true) kind,
                 ]),
               ),
-              materialTapTargetSize: MaterialTapTargetSize.padded,
             ),
         ],
       ),
@@ -251,12 +244,16 @@ final class DocumentActiveFilters extends StatelessWidget {
         ),
     ];
     if (compact) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          reset,
-          for (final chip in chips) ...[const SizedBox(width: 8), chip],
-        ],
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            reset,
+            for (final chip in chips) ...[const SizedBox(width: 8), chip],
+          ],
+        ),
       );
     }
     return Column(
@@ -320,13 +317,26 @@ final class DocumentSortControl extends StatelessWidget {
           ),
         ),
     ],
-    icon: compact ? const Icon(Icons.sort) : null,
-    child: compact
-        ? null
-        : Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            child: Text('Sort: ${criteria.sort.label} ▾'),
-          ),
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: GlacierTokens.of(context).solid.withValues(alpha: .72),
+        border: Border.all(color: GlacierTokens.of(context).border),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.sort, size: 18),
+          if (!compact) ...[
+            const SizedBox(width: 8),
+            Text(criteria.sort.label),
+            const Icon(Icons.expand_more, size: 16),
+          ],
+        ],
+      ),
+    ),
   );
 }
 
@@ -335,33 +345,6 @@ final class _DocumentFilterChip extends StatelessWidget {
   final String label;
   final VoidCallback onRemove;
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 12),
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-        IconButton(
-          tooltip: 'Remove $label',
-          onPressed: onRemove,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          icon: const Icon(Icons.close, size: 18),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) =>
+      GlacierTag(label: label, onDeleted: onRemove);
 }

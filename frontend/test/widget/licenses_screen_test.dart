@@ -172,7 +172,7 @@ void main() {
       expect(find.text(start), findsOneWidget);
     }
     await revealWorkspaceContent(tester, next, scrollable: scroll);
-    expect(tester.widget<TextButton>(next).onPressed, isNull);
+    expect(tester.widget<GlacierButton>(next).onPressed, isNull);
     await tester.scrollUntilVisible(
       find.byKey(const Key('licenseSearch')),
       -300,

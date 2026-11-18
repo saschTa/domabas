@@ -235,14 +235,31 @@ void main() {
         await wheel(tester, list, -20000);
         await tester.pumpAndSettle();
         expect(find.text('AI chat'), findsNothing);
-        final controls = tester.getRect(find.byKey(const Key('pageControls')));
+        final controls = tester.getRect(
+          find
+              .ancestor(
+                of: find.byKey(const Key('newChat')),
+                matching: find.byType(GlacierToolbar),
+              )
+              .first,
+        );
         final composer = find.byKey(const Key('chatMessage'));
         final composerBottom = tester.getRect(composer).bottom;
         await tester.drag(list, const Offset(0, -450));
         await tester.pumpAndSettle();
         expect(find.text('AI chat').hitTestable(), findsNothing);
         expect(composer.hitTestable(), findsOneWidget);
-        expect(tester.getRect(find.byKey(const Key('pageControls'))), controls);
+        expect(
+          tester.getRect(
+            find
+                .ancestor(
+                  of: find.byKey(const Key('newChat')),
+                  matching: find.byType(GlacierToolbar),
+                )
+                .first,
+          ),
+          controls,
+        );
         expect(find.byKey(const Key('newChat')).hitTestable(), findsOneWidget);
         expect(tester.getRect(composer).bottom, closeTo(composerBottom, .1));
         expect(find.text('Jump to latest').hitTestable(), findsOneWidget);

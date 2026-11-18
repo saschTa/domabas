@@ -61,7 +61,8 @@ void main() {
             'draft@example.test',
           );
           await openLicenses(tester);
-          expect(find.text('About Domabas'), findsOneWidget);
+          expect(find.text('Licenses'), findsWidgets);
+          expect(find.text('About Domabas'), findsNothing);
           expect(find.text('User settings'), findsNothing);
           await tester.enterText(
             find.byKey(const Key('licenseSearch')),

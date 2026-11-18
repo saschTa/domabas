@@ -108,7 +108,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           tester
-                  .widget<FilledButton>(find.byKey(const Key('email-import')))
+                  .widget<GlacierButton>(find.byKey(const Key('email-import')))
                   .onPressed !=
               null,
           upload,

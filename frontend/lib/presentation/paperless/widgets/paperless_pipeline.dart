@@ -106,6 +106,7 @@ final class PaperlessPipelineDiagram extends StatelessWidget {
     }
 
     return AppPipelineDiagram(
+      glacier: true,
       stageKeyPrefix: 'paperless-pipeline-stage',
       steps: [for (var i = 0; i < stages.length; i++) step(i)],
     );

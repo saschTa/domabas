@@ -8,6 +8,7 @@ import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/app/domabas_app.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
 import 'package:flutter/material.dart';
+import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_document_repository.dart';
@@ -82,20 +83,38 @@ void main() {
           find.text('A clear home for the details that matter.'),
           findsNothing,
         );
-        final header = tester.getRect(find.byKey(const Key('workspaceHeader')));
+        Rect headerRect() {
+          final mobile = find.byType(GlacierMobileHeader);
+          final viewport = find.ancestor(
+            of: mobile,
+            matching: find.byType(SingleChildScrollView),
+          );
+          return tester.getRect(
+            mobile.evaluate().isNotEmpty
+                ? viewport.evaluate().isNotEmpty
+                      ? viewport.first
+                      : mobile
+                : find.byType(GlacierToolbar).first,
+          );
+        }
+
+        final header = headerRect();
         expect(header.height, lessThanOrEqualTo(256));
         final navigation = find.byKey(const Key('workspaceBottomNavigation'));
         final bodyBottom = navigation.evaluate().isEmpty
             ? 1000.0
             : tester.getRect(navigation).top;
         expect(bodyBottom - header.bottom, greaterThanOrEqualTo(48));
-        final toolbar = tester.getRect(
-          find.byKey(const Key('collectionToolbarPrimary')),
+        expect(
+          find.byKey(
+            Key(
+              width >= 800 && width < 1050
+                  ? 'workspaceAccount'
+                  : 'librarySwitcher',
+            ),
+          ),
+          findsOneWidget,
         );
-        final library = tester.getRect(
-          find.byKey(const Key('collectionToolbarLibrary')),
-        );
-        expect(library.right, closeTo(toolbar.right, .1));
         await revealWorkspaceAction(tester, 'newDocument');
         expect(find.byKey(const Key('newDocument')), findsOneWidget);
         await tester.tap(find.byKey(const Key('newDocument')));
@@ -104,15 +123,30 @@ void main() {
         await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
         await navigateWorkspace(tester, 'manageLibraries');
-        expect(
-          tester.getSize(find.byKey(const Key('workspaceHeader'))).height,
-          lessThanOrEqualTo(80),
-        );
+        if (width < 800) {
+          expect(headerRect().height, lessThanOrEqualTo(256));
+          expect(
+            tester
+                .widget<GlacierMobileHeader>(find.byType(GlacierMobileHeader))
+                .subtitle,
+            'Account a',
+          );
+        } else {
+          expect(
+            tester
+                .widget<GlacierWorkspace>(find.byType(GlacierWorkspace))
+                .libraryLabel,
+            'Account a',
+          );
+        }
         expect(find.byKey(const Key('newDocument')), findsNothing);
         expect(
-          find.descendant(
-            of: find.byKey(const Key('librarySwitcher')),
-            matching: find.bySemanticsLabel(RegExp('^Current library:')),
+          find.byKey(
+            Key(
+              width >= 800 && width < 1050
+                  ? 'workspaceAccount'
+                  : 'librarySwitcher',
+            ),
           ),
           findsOneWidget,
         );
@@ -123,10 +157,10 @@ void main() {
         await tester.ensureVisible(find.byKey(const Key('inviteMember')));
         await tester.tap(find.byKey(const Key('inviteMember')));
         await tester.pumpAndSettle();
-        final read = tester.widget<CheckboxListTile>(
+        final read = tester.widget<GlacierChoice>(
           find.byKey(const Key('claim-documents:read')),
         );
-        expect(read.value, isTrue);
+        expect(read.selected, isTrue);
         expect(read.onChanged, isNull);
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Cancel'));
@@ -146,13 +180,14 @@ void main() {
             of: field,
             matching: find.byType(SingleChildScrollView),
           );
-          final position = tester
+          ScrollPosition currentPosition() => tester
               .state<ScrollableState>(
                 find
                     .descendant(of: scroll, matching: find.byType(Scrollable))
                     .first,
               )
               .position;
+          final position = currentPosition();
           position.jumpTo(40);
           await tester.pumpAndSettle();
           final offset = position.pixels;
@@ -166,12 +201,12 @@ void main() {
           tester.view.resetViewInsets();
           await tester.pumpAndSettle();
           expect(tester.state(field), same(formState));
-          expect(position.pixels, offset);
+          expect(currentPosition().pixels, offset);
           expect(
             tester.widget<TextFormField>(field).controller!.text,
             'retained draft',
           );
-          position.jumpTo(position.maxScrollExtent);
+          currentPosition().jumpTo(currentPosition().maxScrollExtent);
           await tester.pumpAndSettle();
           final save = find.byKey(const Key('savePassword'));
           expect(
@@ -190,12 +225,22 @@ void main() {
           'manageSystemUsers',
           group: 'Admin settings',
         );
-        final button = tester.widget<TextButton>(
+        final button = tester.widget<GlacierButton>(
           find.byKey(const Key('system-role-user-a')),
         );
         expect(button.onPressed, isNull);
         expect(tester.takeException(), isNull);
-        await tester.tap(find.byKey(const Key('librarySwitcher')));
+        var librarySwitcher = find.byKey(const Key('librarySwitcher'));
+        if (width >= 800 && width < 1050) {
+          await tester.tap(find.byKey(const Key('workspaceAccount')));
+          await tester.pumpAndSettle();
+          librarySwitcher = find.descendant(
+            of: find.byType(Dialog),
+            matching: librarySwitcher,
+          );
+        }
+        expect(librarySwitcher.hitTestable(), findsOneWidget);
+        await tester.tap(librarySwitcher);
         await tester.pumpAndSettle();
         expect(find.text('Switch library'), findsOneWidget);
         expect(find.byKey(const Key('switch-account-a')), findsOneWidget);

@@ -19,11 +19,13 @@ final class ScannerScreen extends StatefulWidget {
     required this.previewBuilder,
     required this.canReadDocuments,
     this.appearanceAction,
+    this.libraryName = '',
   });
   final ScannerCubit cubit;
   final WidgetBuilder previewBuilder;
   final bool canReadDocuments;
   final Widget? appearanceAction;
+  final String libraryName;
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -70,21 +72,24 @@ final class _ScannerScreenState extends State<ScannerScreen>
   }
 
   Future<bool> _confirm(String title, String message, String action) async =>
-      await showDialog<bool>(
+      await showGlacierDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: SingleChildScrollView(child: Text(message)),
+        builder: (context) => AppDialog(
+          glacier: true,
+          title: title,
           actions: [
-            TextButton(
+            GlacierButton(
+              label: 'Cancel',
+              kind: GlacierButtonKind.quiet,
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
             ),
-            FilledButton(
+            GlacierButton(
+              label: action,
+              kind: GlacierButtonKind.primary,
               onPressed: () => Navigator.pop(context, true),
-              child: Text(action),
             ),
           ],
+          child: Text(message),
         ),
       ) ??
       false;
@@ -171,26 +176,31 @@ final class _ScannerScreenState extends State<ScannerScreen>
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) unawaited(_back());
       },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
+      child: GlacierMobileShell(
+        title: switch (state.stage) {
+          ScannerStage.camera => 'Scan a page',
+          ScannerStage.correction =>
+            state.capture?.processed == true
+                ? 'Save scanned pages'
+                : 'Adjust page corners',
+          ScannerStage.review => 'Scan document',
+        },
+        subtitle: widget.libraryName.isEmpty ? null : widget.libraryName,
+        showNavigation: false,
+        maxBodyWidth: double.infinity,
+        scrollable: false,
+        insetBody: false,
+        boundedHeader: true,
+        actions: [
+          GlacierIconButton(
             key: const Key('closeScanner'),
-            tooltip: 'Leave scan',
+            label: 'Leave scan',
+            icon: Icons.close,
             onPressed: () => unawaited(_leave()),
-            icon: const Icon(Icons.close),
           ),
-          title: Text(switch (state.stage) {
-            ScannerStage.camera => 'Scan a page',
-            ScannerStage.correction =>
-              state.capture?.processed == true
-                  ? 'Save scanned pages'
-                  : 'Adjust page corners',
-            ScannerStage.review => 'Scan document',
-          }),
-          actions: [?widget.appearanceAction],
-        ),
-        body: AppPaperCanvas(child: SafeArea(child: _body(context, state))),
-        bottomNavigationBar: state.stage == ScannerStage.review
+          ?widget.appearanceAction,
+        ],
+        footer: state.stage == ScannerStage.review
             ? null
             : SafeArea(
                 top: false,
@@ -206,6 +216,7 @@ final class _ScannerScreenState extends State<ScannerScreen>
                   ),
                 ),
               ),
+        child: _body(context, state),
       ),
     ),
   );
@@ -222,9 +233,10 @@ final class _ScannerScreenState extends State<ScannerScreen>
         title: 'Scanner could not open',
         message: state.error ?? 'This scanner is unavailable.',
         action: widget.cubit.allowed
-            ? OutlinedButton(
+            ? GlacierButton(
+                label: 'Retry',
+                kind: GlacierButtonKind.secondary,
                 onPressed: widget.cubit.restore,
-                child: const Text('Retry'),
               )
             : null,
       );
@@ -246,25 +258,14 @@ final class _ScannerScreenState extends State<ScannerScreen>
                 if (state.submitting)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: TextButton(
+                    child: GlacierButton(
                       key: const Key('cancelScanUpload'),
+                      label: 'Cancel upload',
+                      kind: GlacierButtonKind.quiet,
                       onPressed: widget.cubit.cancelUpload,
-                      child: const Text('Cancel upload'),
                     ),
                   ),
                 const SizedBox(height: 12),
-              ],
-              if (state.error case final error?) ...[
-                AppNotice(
-                  message: error,
-                  action: state.dirty && !state.busy
-                      ? TextButton(
-                          onPressed: widget.cubit.flushProperties,
-                          child: const Text('Retry saving'),
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 16),
               ],
               if (state.pendingPages > 0) ...[
                 Text(
@@ -280,6 +281,19 @@ final class _ScannerScreenState extends State<ScannerScreen>
                   _pendingActions(state),
                   const SizedBox(height: 16),
                 ],
+              ],
+              if (state.error case final error?) ...[
+                AppNotice(
+                  message: error,
+                  action: state.dirty && !state.busy
+                      ? GlacierButton(
+                          label: 'Retry saving',
+                          kind: GlacierButtonKind.quiet,
+                          onPressed: widget.cubit.flushProperties,
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 16),
               ],
               switch (state.stage) {
                 ScannerStage.camera => const SizedBox.shrink(),
@@ -393,6 +407,7 @@ final class _ScannerScreenState extends State<ScannerScreen>
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(16),
                         child: AppSurface(
+                          glacier: true,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -429,28 +444,29 @@ final class _ScannerScreenState extends State<ScannerScreen>
     spacing: 12,
     runSpacing: 12,
     children: [
-      FilledButton.icon(
+      GlacierButton(
         key: const Key('captureScanPage'),
+        label: widget.cubit.usesSystemCapture ? 'Open scanner' : 'Capture page',
+        icon: Icons.camera_alt_outlined,
+        kind: GlacierButtonKind.primary,
         onPressed: state.camera.status == ScanCameraStatus.ready && !state.busy
             ? widget.cubit.capture
             : null,
-        icon: const Icon(Icons.camera_alt_outlined),
-        label: Text(
-          widget.cubit.usesSystemCapture ? 'Open scanner' : 'Capture page',
-        ),
       ),
       if (state.camera.status != ScanCameraStatus.ready &&
           !state.busy &&
           state.camera.status != ScanCameraStatus.starting)
-        OutlinedButton(
+        GlacierButton(
+          label: widget.cubit.usesSystemCapture
+              ? 'Open scanner'
+              : 'Open camera',
+          kind: GlacierButtonKind.secondary,
           onPressed: widget.cubit.addPage,
-          child: Text(
-            widget.cubit.usesSystemCapture ? 'Open scanner' : 'Open camera',
-          ),
         ),
-      TextButton(
+      GlacierButton(
+        label: 'Review scan',
+        kind: GlacierButtonKind.quiet,
         onPressed: state.busy ? null : widget.cubit.showReview,
-        child: const Text('Review scan'),
       ),
     ],
   );
@@ -561,9 +577,10 @@ final class _ScannerScreenState extends State<ScannerScreen>
                       )
                     : null,
               ),
-              TextButton(
+              GlacierButton(
+                label: 'Use whole image',
+                kind: GlacierButtonKind.quiet,
                 onPressed: state.editable ? widget.cubit.resetCorners : null,
-                child: const Text('Use whole image'),
               ),
             ],
           ),
@@ -576,16 +593,18 @@ final class _ScannerScreenState extends State<ScannerScreen>
     spacing: 12,
     runSpacing: 12,
     children: [
-      FilledButton.icon(
+      GlacierButton(
         key: const Key('retryPendingScans'),
+        label: 'Retry pending scans',
+        icon: Icons.save_outlined,
+        kind: GlacierButtonKind.primary,
         onPressed: state.editable ? widget.cubit.retryPendingPages : null,
-        icon: const Icon(Icons.save_outlined),
-        label: const Text('Retry pending scans'),
       ),
-      OutlinedButton(
+      GlacierButton(
         key: const Key('discardPendingScans'),
+        label: 'Discard pending pages',
+        kind: GlacierButtonKind.secondary,
         onPressed: state.editable ? _discardPending : null,
-        child: const Text('Discard pending pages'),
       ),
     ],
   );
@@ -596,17 +615,19 @@ final class _ScannerScreenState extends State<ScannerScreen>
           spacing: 12,
           runSpacing: 12,
           children: [
-            FilledButton.icon(
+            GlacierButton(
               key: const Key('keepScanPage'),
+              label: 'Keep page',
+              icon: Icons.check,
+              kind: GlacierButtonKind.primary,
               onPressed: state.editable && state.validCorners
                   ? widget.cubit.keepPage
                   : null,
-              icon: const Icon(Icons.check),
-              label: const Text('Keep page'),
             ),
-            OutlinedButton(
+            GlacierButton(
+              label: 'Retake page',
+              kind: GlacierButtonKind.secondary,
               onPressed: state.editable ? widget.cubit.retake : null,
-              child: const Text('Retake page'),
             ),
           ],
         );
@@ -637,15 +658,17 @@ final class _ScannerScreenState extends State<ScannerScreen>
                 tone: AppTone.warning,
               ),
               const SizedBox(height: 12),
-              OutlinedButton(
+              GlacierButton(
+                label: 'Retry local cleanup',
+                kind: GlacierButtonKind.secondary,
                 onPressed: state.busy ? null : widget.cubit.retryCleanup,
-                child: const Text('Retry local cleanup'),
               ),
             ],
             const SizedBox(height: 16),
-            FilledButton(
+            GlacierButton(
+              label: 'Done',
+              kind: GlacierButtonKind.primary,
               onPressed: () => unawaited(_leave()),
-              child: const Text('Done'),
             ),
           ],
         ),
@@ -671,20 +694,23 @@ final class _ScannerScreenState extends State<ScannerScreen>
             runSpacing: 12,
             children: [
               if (widget.canReadDocuments)
-                OutlinedButton(
+                GlacierButton(
+                  label: 'Check library',
+                  kind: GlacierButtonKind.secondary,
                   onPressed: state.busy
                       ? null
                       : () => unawaited(_leave(checkLibrary: true)),
-                  child: const Text('Check library'),
                 ),
               if (draft.status == ScanDraftStatus.uncertain)
-                FilledButton(
+                GlacierButton(
+                  label: 'Retry same upload',
+                  kind: GlacierButtonKind.primary,
                   onPressed: state.busy ? null : _retry,
-                  child: const Text('Retry same upload'),
                 ),
-              OutlinedButton(
+              GlacierButton(
+                label: 'Discard scan',
+                kind: GlacierButtonKind.secondary,
                 onPressed: state.busy ? null : _discard,
-                child: const Text('Discard scan'),
               ),
             ],
           ),
@@ -730,16 +756,17 @@ final class _ScannerScreenState extends State<ScannerScreen>
           ],
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+            child: GlacierButton(
               key: const Key('addScanPage'),
+              label: draft.pages.isEmpty ? 'Add first page' : 'Add page',
+              icon: Icons.add_a_photo_outlined,
+              kind: GlacierButtonKind.secondary,
               onPressed:
                   state.editable &&
                       state.pendingPages == 0 &&
                       draft.pages.length < 20
                   ? widget.cubit.addPage
                   : null,
-              icon: const Icon(Icons.add_a_photo_outlined),
-              label: Text(draft.pages.isEmpty ? 'Add first page' : 'Add page'),
             ),
           ),
         ],
@@ -775,26 +802,29 @@ final class _ScannerScreenState extends State<ScannerScreen>
             spacing: 12,
             runSpacing: 12,
             children: [
-              FilledButton.icon(
+              GlacierButton(
                 key: const Key('uploadScan'),
+                label: state.submitting
+                    ? 'Preparing / uploading…'
+                    : 'Upload PDF',
+                icon: Icons.cloud_upload_outlined,
+                kind: GlacierButtonKind.primary,
                 onPressed:
                     state.editable &&
                         state.pendingPages == 0 &&
                         draft.pages.isNotEmpty
                     ? widget.cubit.submit
                     : null,
-                icon: const Icon(Icons.cloud_upload_outlined),
-                label: Text(
-                  state.submitting ? 'Preparing / uploading…' : 'Upload PDF',
-                ),
               ),
-              OutlinedButton(
+              GlacierButton(
+                label: 'Save and close',
+                kind: GlacierButtonKind.secondary,
                 onPressed: state.busy ? null : () => unawaited(_leave()),
-                child: const Text('Save and close'),
               ),
-              TextButton(
+              GlacierButton(
+                label: 'Discard scan',
+                kind: GlacierButtonKind.quiet,
                 onPressed: state.busy ? null : _discard,
-                child: const Text('Discard scan'),
               ),
             ],
           ),
@@ -809,87 +839,25 @@ final class _ScannerScreenState extends State<ScannerScreen>
     ScanPage page,
     int index,
     ScannerState state,
-  ) => AppSurface(
+  ) => GlacierMobileScanPage(
     key: ValueKey(page.id),
-    padding: const EdgeInsets.all(12),
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        final stacked =
-            constraints.maxWidth < 420 ||
-            MediaQuery.textScalerOf(context).scale(14) > 20;
-        final preview = Row(
-          children: [
-            SizedBox(
-              width: 64,
-              height: 80,
-              child: ScanImage(
-                bytes: page.thumbnail,
-                fit: BoxFit.contain,
-                semanticLabel: 'Page ${index + 1} preview',
-                errorBuilder: (_, _, _) =>
-                    const Icon(Icons.broken_image_outlined),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Page ${index + 1}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-          ],
-        );
-        final actions = Wrap(
-          spacing: 4,
-          children: [
-            IconButton(
-              key: Key('moveScanPageEarlier-$index'),
-              tooltip: 'Move page ${index + 1} earlier',
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              onPressed: state.editable && index > 0
-                  ? () => widget.cubit.movePage(page.id, index - 1)
-                  : null,
-              icon: const Icon(Icons.arrow_upward),
-            ),
-            IconButton(
-              key: Key('moveScanPageLater-$index'),
-              tooltip: 'Move page ${index + 1} later',
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              onPressed: state.editable && index < state.draft!.pages.length - 1
-                  ? () => widget.cubit.movePage(page.id, index + 1)
-                  : null,
-              icon: const Icon(Icons.arrow_downward),
-            ),
-            IconButton(
-              key: Key('removeScanPage-$index'),
-              tooltip: 'Remove page ${index + 1}',
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              onPressed: state.editable
-                  ? () => widget.cubit.removePage(page.id)
-                  : null,
-              icon: const Icon(Icons.delete_outline),
-            ),
-          ],
-        );
-        if (stacked) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              preview,
-              if (state.draft!.editable) ...[
-                const SizedBox(height: 8),
-                actions,
-              ],
-            ],
-          );
-        }
-        return Row(
-          children: [
-            Expanded(child: preview),
-            if (state.draft!.editable) actions,
-          ],
-        );
-      },
+    number: index + 1,
+    preview: ScanImage(
+      bytes: page.thumbnail,
+      fit: BoxFit.contain,
+      semanticLabel: 'Page ${index + 1} preview',
+      errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
     ),
+    showActions: state.draft!.editable,
+    earlierKey: Key('moveScanPageEarlier-$index'),
+    laterKey: Key('moveScanPageLater-$index'),
+    removeKey: Key('removeScanPage-$index'),
+    onEarlier: state.editable && index > 0
+        ? () => widget.cubit.movePage(page.id, index - 1)
+        : null,
+    onLater: state.editable && index < state.draft!.pages.length - 1
+        ? () => widget.cubit.movePage(page.id, index + 1)
+        : null,
+    onRemove: state.editable ? () => widget.cubit.removePage(page.id) : null,
   );
 }

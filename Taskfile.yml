@@ -27,6 +27,32 @@ tasks:
     dir: frontend
     cmds: [flutter pub get --enforce-lockfile]
 
+  widgetbook:setup:
+    desc: Resolve the locked Glacier component catalog dependencies
+    dir: frontend/widgetbook
+    cmds: [flutter pub get --enforce-lockfile]
+
+  widgetbook:
+    desc: Run the Glacier component and screen catalog locally
+    dir: frontend/widgetbook
+    interactive: true
+    deps: [widgetbook:setup]
+    cmds: ['flutter run -d web-server --web-hostname 127.0.0.1 --web-port 7358 {{.CLI_ARGS}}']
+
+  widgetbook:check:
+    desc: Analyze and test all Glacier catalog examples
+    dir: frontend/widgetbook
+    deps: [widgetbook:setup]
+    cmds:
+      - flutter analyze --fatal-infos
+      - flutter test
+
+  widgetbook:build:
+    desc: Build the Glacier component catalog as a standalone web app
+    dir: frontend/widgetbook
+    deps: [widgetbook:setup]
+    cmds: [flutter build web --release --no-web-resources-cdn]
+
   doctor:
     desc: Inspect developer toolchains
     cmds:
@@ -279,6 +305,7 @@ tasks:
       - task: generate:icons:check
       - task: generate:licenses:check
       - task: test
+      - task: widgetbook:check
 
   test:all:
     desc: Run all application test levels, starting Compose infrastructure

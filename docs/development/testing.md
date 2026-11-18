@@ -108,6 +108,31 @@ persistence, including fresh app/client state.
 
 The Bun browser harness downloads pinned Chrome/ChromeDriver, creates a random schema, queue and document storage roots, and starts Go at `127.0.0.1:18080`, Flutter on port 7357 and WebDriver on port 4444. It cleans up owned processes and data. Use `bun --no-env-file scripts/testing/e2e.ts --external-services` with `TEST_DATABASE_URL`, `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` and `DOCUMENT_PROCESSOR_URL` for externally managed services. External mode requires `psql`; managed Docker mode can use its container client. `E2E_API_PORT`, `E2E_WEB_PORT`, and `E2E_DRIVER_PORT` override test ports. Logs remain in `.logs/`. When a development Flutter process already owns port 7357, use `E2E_WEB_PORT=7358 task test:e2e` or another free port; do not stop that development process.
 
+### Disposable application inspection
+
+Use `task test:e2e -- --external-services --inspect` to inspect the normal
+production application against prepared PostgreSQL, Temporal and document-processor
+services. It uses the same disposable schema, unique queues, storage roots and
+owned-workflow cleanup as the automated E2E suite. It runs `lib/main.dart` in
+release mode without Flutter test fixtures or ChromeDriver, and creates a review
+account through the normal registration API. This mode is an interactive review,
+not an automated E2E pass.
+
+The command prints the application URL and a private temporary JSON file path.
+That file contains the generated login and test-provider details; do not copy its
+contents into logs or tracked files. Use the real UI to create review documents or
+configure the isolated providers. The LLM, Paperless and email providers are test
+fixtures; PostgreSQL, the Go API, Temporal workers and document processing are
+real. Do not use the fixture responses to certify a live model or mailbox.
+
+Create the file identified by `stopFile` in the manifest to finish normally, or
+send Ctrl+C to the harness. A two-hour limit and unexpected application/API exit
+also trigger cleanup. The harness stops its processes, reconciles only its owned
+workflows, then drops its schema and removes its private files. Failed workflow
+cleanup retains the schema for diagnosis. Externally managed services remain
+running; the caller owns their lifecycle. Keep those services in an explicitly
+disposable Compose project when testing a complete isolated stack.
+
 Set `E2E_HOST` to this computer's reachable LAN IPv4 address to run the same browser
 workflows over non-loopback HTTP, for example
 `E2E_HOST=192.168.0.211 task test:e2e`. The API and Flutter bind to that address;
@@ -554,3 +579,18 @@ same Keychain group, and an Android release APK. Use a test account and library.
 OS share-sheet discovery, URI grants, phone provisioning and extension termination
 cannot be established by browser tests or unsigned compilation. Report which
 platforms and device scenarios were actually exercised in the PR.
+
+## Glacier component catalog
+
+`task check` includes `task widgetbook:check`: locked catalog dependency setup,
+static analysis, public-widget registration coverage, responsive case rendering
+and interaction tests. `task widgetbook:build` creates the separate web catalog;
+CI runs it after fast checks. `task widgetbook` starts its local development host.
+The catalog uses the repository-pinned Flutter SDK and needs no database or API.
+
+Each public Glacier widget needs a named case in `frontend/widgetbook/lib/catalog`.
+Tests render those cases in light/dark, constrained windows and enlarged text.
+The [coverage contract](../../frontend/widgetbook/COVERAGE.md) maps the desktop
+product families and states. Use Playwright MCP for rendered browser review;
+Flutter widget tests and web captures do not certify native platform interaction
+or full assistive-technology conformance.

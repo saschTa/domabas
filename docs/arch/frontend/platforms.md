@@ -209,3 +209,43 @@ copy-only; non-file URI candidates never open a path. Its native hover is an
 invitation and explicitly says links are ignored because the motion callback
 cannot establish offered file types. Native desktop compilation and physical drag
 interaction require their respective Linux/Windows hosts.
+
+## Glacier desktop window integration
+
+Desktop startup owns one `DesktopWindowController` above authentication and
+server replacement. An injected `DesktopWindowPort` separates application state
+from the `dev.domabas/desktop_window` method channel and the AppKit, Win32 and
+GTK3 runner handlers. Web, Android and iOS do not initialize this channel.
+
+The host starts with its operating-system decoration. It reports supported
+commands and authoritative activation/window mode, then accepts the current
+Glacier layout before switching to client decoration. Initialization or command
+failure requests restoration of system decoration. Missing handlers retain the
+ordinary native window; unsupported commands do not acquire simulated callbacks.
+During fullscreen recovery, Exit, F11 and Close remain available until native
+events confirm that fullscreen ended and system decoration was restored. Failed
+restoration can be retried; requesting an exit does not itself complete recovery.
+Window mode changes come from native snapshots and events, not optimistic Dart
+updates. Engine reconnection resets layout sequence and decoration readiness.
+
+`GlacierNativeFrame` renders the dedicated one-line titlebar at44 logical pixels,
+or52 with enlarged text. Its immutable layout includes typed caption bounds,
+drag regions and interactive exclusions. AppKit and GTK use the originating
+native mouse event for window movement. Win32 uses non-client hit testing,
+including the maximize/restore region for snap layouts; resize borders and
+screen-to-client DPI conversion remain native. Resize and scale changes invalidate
+old layout metadata until Flutter reports current geometry. Linux caption layouts
+preserve both the configured side and a Close-only button group.
+
+The application Navigator sits below the native titlebar. Its native content
+scope has no remaining top inset, so documents, content dialogs and compact
+navigation do not apply the titlebar spacing twice. Caption controls stay outside
+the content Navigator and its modal barrier. The catalog retains its independent
+nested-Navigator arrangement for isolated component demonstrations.
+
+Platform acceptance requires real native builds and interaction checks on each
+host, including macOS window/menu/fullscreen behavior, Windows snap and
+mixed-DPI monitors, and Linux X11 and Wayland decoration/drag behavior. Flutter
+widget tests and browser previews verify the Dart contract and layout; they do
+not certify OS behavior. Retain the existing platform build prerequisites and
+supported-host limits above when validating or distributing native clients.

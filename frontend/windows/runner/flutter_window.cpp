@@ -23,6 +23,7 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+  desktop_window_ = std::make_unique<DesktopWindowChannel>(GetHandle(), flutter_controller_->view()->GetNativeWindow(), flutter_controller_->engine()->messenger());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -37,6 +38,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  desktop_window_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -48,6 +50,9 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  if (desktop_window_) {
+    if (const auto result = desktop_window_->HandleMessage(message, wparam, lparam)) return *result;
+  }
   if (flutter_controller_) {
     std::optional<LRESULT> result =
         flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,

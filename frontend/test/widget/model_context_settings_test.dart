@@ -127,7 +127,7 @@ void main() {
             );
             await reveal(saveKey);
             expect(
-              tester.widget<FilledButton>(find.byKey(saveKey)).onPressed,
+              tester.widget<GlacierButton>(find.byKey(saveKey)).onPressed,
               isNull,
             );
             final externalKey = Key(

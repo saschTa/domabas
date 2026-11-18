@@ -198,6 +198,7 @@ final class _ProcessingJobsListState extends State<ProcessingJobsList> {
                       : 'Paperless imports, email imports and document processing attempts appear here.',
                 ),
               AppPagedList(
+                glacier: true,
                 key: PageStorageKey(
                   'pipeline-jobs-$_pipeline-${_status ?? 'all'}',
                 ),
@@ -215,81 +216,54 @@ final class _ProcessingJobsListState extends State<ProcessingJobsList> {
                 ),
                 itemBuilder: (context, index) {
                   final row = visible[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: AppSurface(
-                      padding: EdgeInsets.zero,
-                      child: AppRecordRow(
-                        key: Key(
-                          row.document != null
-                              ? 'job-${row.id}'
-                              : row.paperless != null
-                              ? 'paperless-job-${row.id}'
-                              : 'email-job-${row.id}',
-                        ),
-                        leading: Icon(
-                          row.document != null
-                              ? row.document!.isAI
-                                    ? Icons.auto_awesome_outlined
-                                    : row.document!.isThumbnail
-                                    ? Icons.image_outlined
-                                    : Icons.description_outlined
-                              : row.paperless != null
-                              ? Icons.file_download_outlined
-                              : Icons.mail_outline,
-                        ),
-                        title:
-                            row.document?.label ??
-                            row.paperless?.serverUrl ??
-                            email.providers
-                                .where(
-                                  (provider) =>
-                                      provider.id == row.email!.providerId,
-                                )
-                                .firstOrNull
-                                ?.label ??
-                            'Email import',
-                        subtitle: Text(
-                          row.document != null
-                              ? '${row.document!.pipelineLabel} · ${processingLabel(row.document!.reason)} · attempt ${row.document!.attemptNumber}\n${processingTime(row.createdAt)}'
-                              : row.paperless != null
-                              ? 'Paperless import · ${paperlessJobStage(row.paperless!)}\n${processingTime(row.createdAt)}'
-                              : 'Email import · ${_reason(row.email!.reason)} · ${_stage(row.email!)}\n${processingTime(row.createdAt)}',
-                        ),
-                        metadata: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            AppStatusBadge(
-                              running: row.status == 'running',
-                              label: row.status == 'partial'
-                                  ? 'Partially completed'
-                                  : processingLabel(row.status),
-                              tone: row.status == 'partial'
-                                  ? AppTone.warning
-                                  : processingTone(row.status),
-                            ),
-                          ],
-                        ),
-                        trailing: TextButton(
-                          onPressed:
-                              row.document != null && documents.detailLoading
-                              ? null
-                              : () {
-                                  if (row.document != null) {
-                                    unawaited(
-                                      widget.documents.selectJob(row.id),
-                                    );
-                                  } else if (row.paperless != null) {
-                                    widget.paperless.selectJob(row.paperless!);
-                                  } else {
-                                    widget.onOpenEmailJob(row.email!);
-                                  }
-                                },
-                          child: const Text('Details'),
-                        ),
-                      ),
+                  return GlacierJobRow(
+                    key: Key(
+                      row.document != null
+                          ? 'job-${row.id}'
+                          : row.paperless != null
+                          ? 'paperless-job-${row.id}'
+                          : 'email-job-${row.id}',
                     ),
+                    title:
+                        row.document?.label ??
+                        row.paperless?.serverUrl ??
+                        email.providers
+                            .where(
+                              (provider) =>
+                                  provider.id == row.email!.providerId,
+                            )
+                            .firstOrNull
+                            ?.label ??
+                        'Email import',
+                    pipeline:
+                        row.document?.pipelineLabel ??
+                        (row.paperless != null
+                            ? 'Paperless import'
+                            : 'Email import'),
+                    timestamp: processingTime(row.createdAt),
+                    status: row.status == 'partial'
+                        ? 'Partially completed'
+                        : processingLabel(row.status),
+                    tone: row.status == 'partial'
+                        ? AppTone.warning
+                        : processingTone(row.status),
+                    running: row.status == 'running',
+                    detail: row.document != null
+                        ? '${processingLabel(row.document!.reason)} · attempt ${row.document!.attemptNumber}'
+                        : row.paperless != null
+                        ? paperlessJobStage(row.paperless!)
+                        : '${_reason(row.email!.reason)} · ${_stage(row.email!)}',
+                    onOpen: row.document != null && documents.detailLoading
+                        ? null
+                        : () {
+                            if (row.document != null) {
+                              unawaited(widget.documents.selectJob(row.id));
+                            } else if (row.paperless != null) {
+                              widget.paperless.selectJob(row.paperless!);
+                            } else {
+                              widget.onOpenEmailJob(row.email!);
+                            }
+                          },
                   );
                 },
               ),
@@ -428,8 +402,15 @@ Map<String, ProcessingJobCountSnapshot> processingJobsCountSources(
 }
 
 final class ProcessingJobsFilterFields extends StatelessWidget {
-  const ProcessingJobsFilterFields({super.key, required this.filters});
+  const ProcessingJobsFilterFields({
+    super.key,
+    required this.filters,
+    this.quick = false,
+    this.actions = const [],
+  });
   final ProcessingJobsFiltersCubit filters;
+  final bool quick;
+  final List<Widget> actions;
   @override
   Widget build(BuildContext context) =>
       BlocBuilder<ProcessingJobsFiltersCubit, ProcessingJobsFiltersState>(
@@ -447,6 +428,100 @@ final class ProcessingJobsFilterFields extends StatelessWidget {
                             final countSources = processingJobsCountSources(
                               filters,
                             );
+                            if (quick) {
+                              Widget selector({
+                                required String label,
+                                required String value,
+                                required List<(String, String)> options,
+                                required ValueChanged<String?> onChanged,
+                                required bool pipeline,
+                              }) => SizedBox(
+                                width: 184,
+                                child: DropdownButtonFormField<String>(
+                                  key: ValueKey('$label-$value'),
+                                  initialValue: value,
+                                  isExpanded: true,
+                                  decoration: InputDecoration(labelText: label),
+                                  items: [
+                                    for (final (id, text) in options)
+                                      DropdownMenuItem(
+                                        value: id,
+                                        child: _countLabel(
+                                          context,
+                                          text,
+                                          processingJobCount(
+                                            countSources,
+                                            pipeline: pipeline
+                                                ? id
+                                                : filters.pipeline,
+                                            status: pipeline
+                                                ? filters.status
+                                                : id == 'all'
+                                                ? null
+                                                : id,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                  onChanged: onChanged,
+                                ),
+                              );
+                              return GlacierToolbar(
+                                trailing: actions,
+                                children: [
+                                  selector(
+                                    label: 'Pipeline',
+                                    value: filters.pipeline,
+                                    pipeline: true,
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        filters.filter(pipeline: value);
+                                      }
+                                    },
+                                    options: [
+                                      ('all', 'All pipelines'),
+                                      if (filters.documents.canReadJobs) ...[
+                                        ('document', 'Document ingestion'),
+                                        ('ai', 'AI processing'),
+                                        ('thumbnail', 'Thumbnail generation'),
+                                      ],
+                                      if (filters.email.allowed)
+                                        ('email', 'Email import'),
+                                      if (filters.paperless.allowed)
+                                        ('paperless', 'Paperless import'),
+                                    ],
+                                  ),
+                                  selector(
+                                    label: 'Status',
+                                    value: filters.status ?? 'all',
+                                    pipeline: false,
+                                    onChanged: (value) => filters.filter(
+                                      status: value == 'all' ? null : value,
+                                      changeStatus: true,
+                                    ),
+                                    options: [
+                                      ('all', 'All jobs'),
+                                      for (final status in [
+                                        'queued',
+                                        'running',
+                                        'succeeded',
+                                        'partial',
+                                        'failed',
+                                        'superseded',
+                                        'cancelled',
+                                        'skipped',
+                                      ])
+                                        (
+                                          status,
+                                          status == 'partial'
+                                              ? 'Partially completed'
+                                              : processingLabel(status),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            }
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -613,20 +688,24 @@ final class _ProcessingJobsToolbarState extends State<ProcessingJobsToolbar> {
     route = RawDialogRoute<void>(
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      barrierColor: Colors.black54,
+      barrierColor: Colors.black.withValues(alpha: .22),
       transitionDuration: Duration.zero,
-      pageBuilder: (context, _, _) => AppDialog(
-        title: 'Filter jobs',
-        description: 'Choose a pipeline and recorded status.',
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (route.isCurrent) navigator.pop();
-            },
-            child: const Text('Done'),
-          ),
-        ],
-        child: ProcessingJobsFilterFields(filters: filters),
+      pageBuilder: (context, _, _) => glacierDialogBackdrop(
+        context,
+        (context) => AppDialog(
+          glacier: true,
+          title: 'Filter jobs',
+          description: 'Choose a pipeline and recorded status.',
+          actions: [
+            GlacierButton(
+              onPressed: () {
+                if (route.isCurrent) navigator.pop();
+              },
+              label: 'Done',
+            ),
+          ],
+          child: ProcessingJobsFilterFields(filters: filters),
+        ),
       ),
     );
     _route = route;
@@ -638,49 +717,29 @@ final class _ProcessingJobsToolbarState extends State<ProcessingJobsToolbar> {
   Widget build(BuildContext context) =>
       BlocBuilder<ProcessingJobsFiltersCubit, ProcessingJobsFiltersState>(
         bloc: widget.filters,
-        builder: (context, _) => AppCollectionToolbar(
-          libraryPicker: widget.libraryPicker,
-          workspaceActions: widget.workspaceActions,
+        builder: (context, _) => ProcessingJobsFilterFields(
+          filters: widget.filters,
+          quick: true,
           actions: [
-            OutlinedButton.icon(
+            GlacierButton(
               key: const Key('jobFilters'),
+              label: 'All filters',
+              icon: Icons.tune,
+              kind: GlacierButtonKind.quiet,
               onPressed: _open,
-              icon: const Icon(Icons.tune, size: 18),
-              label: Text(
-                widget.filters.count == 0
-                    ? 'Filters'
-                    : 'Filters (${widget.filters.count})',
-              ),
             ),
             if (widget.filters.count > 0)
-              TextButton(
+              GlacierButton(
+                label: 'Clear filters',
+                kind: GlacierButtonKind.quiet,
                 onPressed: () => widget.filters.filter(
                   pipeline: 'all',
                   status: null,
                   changeStatus: true,
                 ),
-                child: const Text('Clear filters'),
               ),
+            if (widget.workspaceActions != null) widget.workspaceActions!,
           ],
-          summary: widget.filters.count == 0
-              ? null
-              : Text(
-                  [
-                    if (widget.filters.pipeline != 'all')
-                      switch (widget.filters.pipeline) {
-                        'document' => 'Document ingestion',
-                        'ai' => 'AI processing',
-                        'thumbnail' => 'Thumbnail generation',
-                        'email' => 'Email import',
-                        _ => 'Paperless import',
-                      },
-                    if (widget.filters.status != null)
-                      widget.filters.status == 'partial'
-                          ? 'Partially completed'
-                          : processingLabel(widget.filters.status!),
-                  ].join(' · '),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
         ),
       );
 }

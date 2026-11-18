@@ -14,10 +14,12 @@ final class DocumentPropertiesPanel extends StatelessWidget {
     required this.cubit,
     required this.onCancel,
     this.emailLinks,
+    this.showEditAction = true,
   });
   final DocumentCubit cubit;
   final VoidCallback onCancel;
   final Widget? emailLinks;
+  final bool showEditAction;
   @override
   Widget build(
     BuildContext context,
@@ -51,13 +53,14 @@ final class DocumentPropertiesPanel extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           ?emailLinks,
-          if (cubit.capabilities.update)
+          if (showEditAction && cubit.capabilities.update)
             Align(
               alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
+              child: GlacierButton(
+                label: 'Edit properties',
+                icon: Icons.edit_outlined,
+                kind: GlacierButtonKind.secondary,
                 onPressed: state.saving ? null : cubit.editMetadata,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit properties'),
               ),
             ),
           for (final entry in DocumentProperties.fromDocument(
@@ -80,7 +83,7 @@ final class DocumentPropertiesPanel extends StatelessWidget {
             value: document.createdAt.toLocal().toString(),
           ),
           if (document.file case final file?) ...[
-            const AppStripedDivider(height: 32, thickness: 8),
+            const Divider(height: 32),
             Text(
               'Original file',
               style: Theme.of(context).textTheme.titleMedium,
@@ -184,15 +187,14 @@ final class DocumentPropertiesPanel extends StatelessWidget {
                   processing.state == 'ready' &&
                   (ai.canRetry || state.pendingAIRetry != null)) ...[
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
+                GlacierButton(
                   key: const Key('retryDocumentAI'),
+                  label: state.pendingAIRetry == null
+                      ? 'Retry AI processing'
+                      : 'Retry same AI request',
+                  icon: Icons.auto_awesome_outlined,
+                  kind: GlacierButtonKind.secondary,
                   onPressed: state.saving ? null : cubit.retryAIProcessing,
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                  label: Text(
-                    state.pendingAIRetry == null
-                        ? 'Retry AI processing'
-                        : 'Retry same AI request',
-                  ),
                 ),
               ],
             ] else
@@ -206,10 +208,11 @@ final class DocumentPropertiesPanel extends StatelessWidget {
           if (cubit.capabilities.retry &&
               (document.processing?.state == 'failed' ||
                   state.ocr?.reason == 'legacy_text_missing'))
-            OutlinedButton.icon(
+            GlacierButton(
+              label: 'Retry processing',
+              icon: Icons.refresh,
+              kind: GlacierButtonKind.secondary,
               onPressed: state.saving ? null : cubit.retryProcessing,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry processing'),
             ),
         ],
       );
@@ -332,8 +335,8 @@ final class _DocumentPropertiesFormState
               runSpacing: 4,
               children: [
                 for (var index = 0; index < items.length; index++)
-                  InputChip(
-                    label: Text(items[index]),
+                  GlacierTag(
+                    label: items[index],
                     onDeleted: widget.cubit.state.saving
                         ? null
                         : () {
@@ -432,7 +435,8 @@ final class _DocumentPropertiesFormState
           spacing: 8,
           runSpacing: 8,
           children: [
-            FilledButton(
+            GlacierButton(
+              kind: GlacierButtonKind.primary,
               onPressed:
                   widget.cubit.state.saving ||
                       widget.cubit.state.reconcileRequired
@@ -443,13 +447,12 @@ final class _DocumentPropertiesFormState
                         widget.cubit.saveMetadata();
                       }
                     },
-              child: Text(
-                widget.cubit.state.saving ? 'Saving…' : 'Save properties',
-              ),
+              label: widget.cubit.state.saving ? 'Saving…' : 'Save properties',
             ),
-            TextButton(
+            GlacierButton(
+              label: 'Cancel',
+              kind: GlacierButtonKind.quiet,
               onPressed: widget.cubit.state.saving ? null : widget.onCancel,
-              child: const Text('Cancel'),
             ),
           ],
         ),

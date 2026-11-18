@@ -130,170 +130,150 @@ final class _EmailProviderEditorState extends State<EmailProviderEditor> {
     },
     builder: (context, state) => PopScope(
       canPop: !state.busy,
-      child: Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+      child: AppDialog(
+        glacier: true,
+        actions: const [],
+        width: 640,
+        title: widget.provider == null
+            ? 'Add email account'
+            : 'Edit email account',
+        child: GlacierEmailAccountForm(
+          connectionFields: [
+            _field('label', 'Account label', state),
+            _field('endpoint', 'IMAP host or imaps:// URL', state),
+            _field('port', 'Port', state, number: true),
+            _field('username', 'Username', state),
+            _field('mailbox', 'Mailbox', state),
+          ],
+          scheduleFields: [
+            _field(
+              'interval',
+              'Check every (minutes)',
+              state,
+              number: true,
+              helper:
+                  '${widget.capabilities.minIntervalMinutes}–${widget.capabilities.maxIntervalMinutes} minutes',
+            ),
+            _field(
+              'age',
+              'Maximum email age (days)',
+              state,
+              number: true,
+              helper: 'Increasing this value also looks for older mail.',
+            ),
+            _field(
+              'page',
+              'Messages per page',
+              state,
+              number: true,
+              helper:
+                  '${widget.capabilities.minPageSize}–${widget.capabilities.maxPageSize} messages',
+            ),
+          ],
+          credentialField: _field(
+            'password',
+            'Password or app password',
+            state,
+            secret: true,
+            helper: widget.provider == null
+                ? null
+                : 'Leave empty to keep the saved password.',
+          ),
+          enabledControl: GlacierSwitchRow(
+            key: const Key('email-enabled'),
+            label: 'Enable automatic import',
+            description: widget.canImport
+                ? 'Continues after sign-out. Disable or delete the account to stop future imports.'
+                : 'Document read and upload permissions are required.',
+            value: state.draft.enabled,
+            onChanged: !state.busy && !state.uncertain && widget.canImport
+                ? (value) => _cubit.edit(state.draft.copyWith(enabled: value))
+                : null,
+          ),
+          consentControl: !widget.capabilities.credentialsAvailable
+              ? const AppNotice(
+                  message: 'Email credentials are not configured on this server. Ask your administrator.',
+                )
+              : const SizedBox.shrink(),
+          testActions: [
+            GlacierButton(
+              key: const Key('email-editor-close'),
+              onPressed: state.busy ? null : () => widget.onClose(null),
+              label: 'Close',
+              kind: GlacierButtonKind.quiet,
+            ),
+            if (state.uncertain)
+              GlacierButton(
+                key: const Key('email-reconcile'),
+                onPressed: state.busy ? null : _cubit.reconcile,
+                label: 'Check saved account',
+                kind: GlacierButtonKind.secondary,
+              ),
+            if (state.secretUncertain && !state.uncertain)
+              GlacierButton(
+                onPressed: state.busy || state.testing
+                    ? null
+                    : () => _cubit.testConnection(savedCredentials: true),
+                label: 'Test saved credentials',
+                kind: GlacierButtonKind.secondary,
+              ),
+            GlacierButton(
+              key: const Key('email-test'),
+              onPressed:
+                  state.busy ||
+                      state.testing ||
+                      state.uncertain ||
+                      !widget.capabilities.credentialsAvailable
+                  ? null
+                  : () => _cubit.testConnection(),
+              label: 'Test connection',
+              kind: GlacierButtonKind.secondary,
+            ),
+            if (state.provider?.consentState == 'renewal_required' &&
+                state.draft.enabled)
+              GlacierButton(
+                key: const Key('email-renew-consent'),
+                onPressed:
+                    state.busy ||
+                        state.uncertain ||
+                        state.secretUncertain ||
+                        !widget.canImport ||
+                        !widget.capabilities.credentialsAvailable
+                    ? null
+                    : () => _cubit.save(renewConsent: true),
+                label: 'Renew consent and save',
+                kind: GlacierButtonKind.primary,
+              ),
+            GlacierButton(
+              key: const Key('email-save'),
+              onPressed:
+                  state.busy ||
+                      state.uncertain ||
+                      state.secretUncertain ||
+                      !widget.capabilities.credentialsAvailable
+                  ? null
+                  : _cubit.save,
+              label: 'Save account',
+              kind: GlacierButtonKind.primary,
+            ),
+          ],
+          feedback: Semantics(
+            key: _feedbackKey,
+            liveRegion: true,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  widget.provider == null
-                      ? 'Add email account'
-                      : 'Edit email account',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Connect using IMAP with implicit TLS. Imported email and supported attachments are kept in this library.',
-                ),
-                const SizedBox(height: 20),
-                _field('label', 'Account label', state),
-                _field('endpoint', 'IMAP host or imaps:// URL', state),
-                _field('port', 'Port', state, number: true),
-                _field('username', 'Username', state),
-                _field(
-                  'password',
-                  'Password or app password',
-                  state,
-                  secret: true,
-                  helper: widget.provider == null
-                      ? null
-                      : 'Leave empty to keep the saved password.',
-                ),
-                _field('mailbox', 'Mailbox', state),
-                _field(
-                  'interval',
-                  'Check every (minutes)',
-                  state,
-                  number: true,
-                  helper:
-                      '${widget.capabilities.minIntervalMinutes}–${widget.capabilities.maxIntervalMinutes} minutes',
-                ),
-                _field(
-                  'age',
-                  'Maximum email age (days)',
-                  state,
-                  number: true,
-                  helper: 'Increasing this value also looks for older mail.',
-                ),
-                _field(
-                  'page',
-                  'Messages per page',
-                  state,
-                  number: true,
-                  helper:
-                      '${widget.capabilities.minPageSize}–${widget.capabilities.maxPageSize} messages',
-                ),
-                SwitchListTile.adaptive(
-                  key: const Key('email-enabled'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Enable automatic import'),
-                  value: state.draft.enabled,
-                  subtitle: Text(
-                    widget.canImport
-                        ? 'Continues after sign-out. Disable or delete the account to stop future imports.'
-                        : 'Document read and upload permissions are required.',
+                if (state.busy || state.testing)
+                  const AppStripedProgressIndicator(),
+                if (state.error case final error?) AppNotice(message: error),
+                if (state.notice case final notice?)
+                  AppNotice(message: notice, tone: AppTone.neutral),
+                if (state.testResult case final result?)
+                  AppNotice(
+                    key: const Key('email-test-result'),
+                    message: result.success ? 'Connection successful.' : 'Connection failed. Check the server and credentials.',
+                    tone: result.success ? AppTone.success : AppTone.danger,
                   ),
-                  onChanged: !state.busy && !state.uncertain && widget.canImport
-                      ? (value) =>
-                            _cubit.edit(state.draft.copyWith(enabled: value))
-                      : null,
-                ),
-                if (!widget.capabilities.credentialsAvailable)
-                  const AppNotice(
-                    message: 'Email credentials are not configured on this server. Ask your administrator.',
-                  ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    TextButton(
-                      key: const Key('email-editor-close'),
-                      onPressed: state.busy ? null : () => widget.onClose(null),
-                      child: const Text('Close'),
-                    ),
-                    if (state.uncertain)
-                      OutlinedButton(
-                        key: const Key('email-reconcile'),
-                        onPressed: state.busy ? null : _cubit.reconcile,
-                        child: const Text('Check saved account'),
-                      ),
-                    if (state.secretUncertain && !state.uncertain)
-                      OutlinedButton(
-                        onPressed: state.busy || state.testing
-                            ? null
-                            : () =>
-                                  _cubit.testConnection(savedCredentials: true),
-                        child: const Text('Test saved credentials'),
-                      ),
-                    OutlinedButton(
-                      key: const Key('email-test'),
-                      onPressed:
-                          state.busy ||
-                              state.testing ||
-                              state.uncertain ||
-                              !widget.capabilities.credentialsAvailable
-                          ? null
-                          : () => _cubit.testConnection(),
-                      child: const Text('Test connection'),
-                    ),
-                    if (state.provider?.consentState == 'renewal_required' &&
-                        state.draft.enabled)
-                      FilledButton(
-                        key: const Key('email-renew-consent'),
-                        onPressed:
-                            state.busy ||
-                                state.uncertain ||
-                                state.secretUncertain ||
-                                !widget.canImport ||
-                                !widget.capabilities.credentialsAvailable
-                            ? null
-                            : () => _cubit.save(renewConsent: true),
-                        child: const Text('Renew consent and save'),
-                      ),
-                    FilledButton(
-                      key: const Key('email-save'),
-                      onPressed:
-                          state.busy ||
-                              state.uncertain ||
-                              state.secretUncertain ||
-                              !widget.capabilities.credentialsAvailable
-                          ? null
-                          : _cubit.save,
-                      child: const Text('Save account'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Semantics(
-                  key: _feedbackKey,
-                  liveRegion: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (state.busy || state.testing)
-                        const AppStripedProgressIndicator(),
-                      if (state.error case final error?)
-                        AppNotice(message: error),
-                      if (state.notice case final notice?)
-                        AppNotice(message: notice, tone: AppTone.neutral),
-                      if (state.testResult case final result?)
-                        AppNotice(
-                          key: const Key('email-test-result'),
-                          message: result.success ? 'Connection successful.' : 'Connection failed. Check the server and credentials.',
-                          tone: result.success
-                              ? AppTone.success
-                              : AppTone.danger,
-                        ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),

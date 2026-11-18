@@ -19,9 +19,11 @@ cancels invoice requests with the other authenticated resources.
 
 ## Collection and detail
 
-Each invoice occupies a borderless card directly on the workspace canvas.
-The collection has no enclosing card. Details group fields and line items with
-headings and spacing inside the dialog.
+Each invoice uses the shared Glacier desktop or mobile row with a subtle border.
+The full-height collection keeps pagination and counts in the scroll flow and
+reserves measured trailing clearance for the activity overlay. The glass detail
+dialog groups every retained typed field, reference and line item; compact and
+enlarged layouts keep its primary Open original action reachable.
 
 The collection uses shared themed page, surface, record, status and pagination
 presenters. Each row identifies the supplier, invoice number, gross total with
@@ -33,17 +35,9 @@ Pulling down from the top refreshes the collection, including an empty list.
 Refresh waits for the current read, retains the loaded row window and visible
 page, and preserves search and filter values. Errors keep a visible retry action.
 
-Search follows Documents: a persistent field, 300-millisecond debounce, immediate
-Search or Enter, and an explicit clear action. It searches extracted invoice
-properties, including number, parties, line items, payment details, references and
-notes; original document title and OCR are outside its scope. Source and query
-combine. Clear removes the text while retaining the chosen source. The field caps
-valid queries at 200 Unicode characters and waits for IME composition to finish.
-The feature-owned toolbar uses the shared search field and collection controls.
-App composition places it in the top bar, with library selection on the right.
-Source selection, filters and sort remain available while invoices
-scroll inside the fixed full-height content pane. Compact widths use a second controls row; controller
-and query state survive layout changes.
+Invoice property search opens from sidebar Search or Cmd/Ctrl+K while Invoices is active. The input-first glass modal owns a local query, source, sort and exact-filter draft. Enter or Apply search validates and commits the whole draft in one collection read; editing it does not change the current results. Cancel and dismissal retain the committed criteria. Escape clears the local draft and a second press closes it. Search waits for IME composition to finish and accepts at most200 Unicode characters.
+
+Search covers extracted invoice properties, including number, parties, line items, payment details, references and notes; original document title and OCR are outside its scope. The floating toolbar contains quick source, sort and filter controls, with active summaries below. Removing the query summary clears only query text, retaining source and filters. Library selection remains in the sidebar. Modal ownership and controllers survive responsive changes, and stale callbacks cannot apply after owner replacement.
 
 Sort offers newest or oldest added, earliest or latest due date and issue date,
 and ascending or descending invoice number, supplier and customer. Automatic uses
@@ -68,7 +62,7 @@ formats and common payment methods while retaining unknown codes. Each chooser
 retains one page of 20 values and up to 50 prior cursor positions. Next continues
 through the complete vocabulary; Previous and First support returning to older
 positions. Search resets to the first page and uses the same 300-millisecond
-debounce, immediate keyboard submission and IME guard as invoice search. It cancels
+debounce with immediate keyboard submission and an IME guard. It cancels
 and fences prior requests. Failed page reads retain the current page and Retry
 reissues the failed continuation. Closing the chooser cancels its request.
 

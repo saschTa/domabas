@@ -1,0 +1,34 @@
+name: domabas_widgetbook
+description: The local Domabas Glacier component and screen catalog.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.13.3 <4.0.0'
+  flutter: '>=3.47.4'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  domabas:
+    path: ../
+  widgetbook: 3.25.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: DMSans
+      fonts:
+        - asset: ../assets/fonts/DMSans-Regular.ttf
+          weight: 400
+        - asset: ../assets/fonts/DMSans-SemiBold.ttf
+          weight: 600
+    - family: BarlowCondensed
+      fonts:
+        - asset: ../assets/fonts/BarlowCondensed-Bold.ttf
+          weight: 700

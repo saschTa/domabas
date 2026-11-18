@@ -1,5 +1,11 @@
 # UI component library and responsive workspace
 
+The [Glacier library](glacier.md) supplies the production frosted-glass components
+and responsive screen compositions. `frontend/widgetbook/` hosts isolated
+examples of the same presenters. Compatibility presenters remain available for
+existing callers; their `glacier` option adopts the production material without
+changing refresh, pagination or controller ownership.
+
 Domabas builds its shared interface as a component library of **dumb presenters**
 under `frontend/lib/ui/`. A presenter renders values and child widgets supplied by
 its caller and forwards interaction through callbacks. It does not load data,
@@ -18,7 +24,7 @@ app composition → feature screens → shared UI presenters → Flutter Materia
                  feature Cubits → domain repository ports
 ```
 
-Shared UI code may import Flutter and other shared UI files. It must not import
+Shared UI code may import Flutter, `dart:ui` rendering primitives and other shared UI files. It must not import
 feature domain models, Cubits, repositories, generated transport models,
 clients, data adapters or `app/`. Pass strings, booleans, icons, immutable
 presentation values, widgets and callbacks instead. Domain and data code must not
@@ -36,14 +42,14 @@ Import `ui/domabas_ui.dart` from app or feature presentation code.
 
 | Presenter | Responsibility |
 | --- | --- |
-| `AppTheme`, `AppElevation` and `AppLayout` | Material colors, typography, flat surface styling, shape, spacing and width thresholds |
+| `GlacierTheme`, `GlacierTokens`, `AppElevation` and `AppLayout` | Production material roles, typography, shape, spacing and width thresholds; `AppTheme` remains a compatibility theme |
 | `AppWorkspaceShell` | Responsive navigation, persistent collection toolbar and account utilities |
-| `AppCollectionToolbar` and `AppSearchField` | Consistent caller-owned search, filter controls and active summaries, with the library picker on the right |
+| `GlacierToolbar` and feature-owned search dialogs | Quick filters, sort and collection actions; sidebar Search opens scoped draft criteria |
 | `AppWorkspaceAction` and its button/menu presenters | Immutable action labels and current callbacks supplied by feature owners |
 | `AppNavigationGroup` and `AppNavigationItem` | Immutable labels, icons, IDs and keys supplied by the caller |
 | `AppPage` | Transparent full-height content pane, bounded action controls and independently scrolling content |
 | `AppRefreshable` | Pull-to-refresh progress around a caller-owned vertical scroll view, with an awaited callback |
-| `AppSurface` | Borderless themed card with rounded corners |
+| `AppSurface` / `GlacierSurface` | Compatibility or edged glass material around caller-owned content |
 | `AppSectionHeader` | Group title, short description and optional trailing control |
 | `AppRecordRow` | List record with leading visual, text, metadata and responsive actions |
 | `AppStatusBadge` | Labeled neutral, information, success, warning or danger state |
@@ -59,8 +65,9 @@ Import `ui/domabas_ui.dart` from app or feature presentation code.
 The [license reader](licenses.md) composes these same page, surface, record,
 pagination and dialog presenters for searchable offline third-party notices.
 
-Use Flutter's existing buttons, text fields, menus and selection controls inside
-these components. Add a new shared presenter when repeated product UI has an
+Use Glacier buttons, named icon actions, rich choices and switches for ordinary
+application controls. Keep existing Form-aware text fields, validators, autofill
+and specialized viewer or native controls where their behavior is required. Add a new shared presenter when repeated product UI has an
 established responsibility. Do not create generic abstractions for hypothetical
 future screens or hide business logic in a component configuration object.
 
@@ -93,8 +100,7 @@ AppPage supplies a distinct PageStorage identity per title and body key. Inner
 scroll offsets restore independently, so opening job details starts at the
 outcome and returning preserves the position in older history. Chat messages
 and the independent conversation history sit directly on the canvas. Pipeline
-stages also sit directly on the canvas, with filled state colors instead of
-outlines.
+stages use the shared glass-edged diagram with recorded state colors.
 
 For lists of separate cards, set `AppPage.insetBody` to false and apply
 `AppLayout.cardListPadding(context)` to the list or scroll view. This keeps card
@@ -116,8 +122,9 @@ Paperless imports, email retrieval, document ingestion, AI processing and thumbn
 must join this list instead of adding a separate list to the page. Permissions
 still determine which jobs the user can see; mailbox and Paperless jobs remain
 private to their owner.
-The shared top bar opens the Jobs filter dialog. Its pipeline and status choices
-retain full server totals and the existing immediate filtering behavior. An
+The shared top bar exposes Pipeline and Status directly, with All filters opening
+the full chooser. Both retain full server totals, stale/unknown count labels and
+the existing immediate filtering behavior. An
 app-owned filter Cubit shares selection between the toolbar and paginated history.
 Pipeline setup follows the history in a collapsed section; opening it exposes
 resource rules and all permitted source and document pipeline configuration.
@@ -127,7 +134,9 @@ Paperless notifications while visible and foregrounded. Selected imports refresh
 independently of the history window; item notifications refresh outcome pages. Fatal terminal records that did not retain
 their earlier stage display Not recorded; per-file failures remain visible.
 
-The Details action opens the same Job details page structure: outcome and timing
+The Details action opens a feature-owned glass dialog while retaining the history
+window underneath. It closes before a document, source account or import handoff,
+and its exact route is removed when its owner is disposed. The content shows outcome and timing
 first, then Pipeline for this attempt. Show completed, active, waiting and failed
 steps from persisted evidence. Highlight the last recorded step when a run stops,
 and expose per-item failures separately. Never infer completed work from a later
@@ -157,11 +166,12 @@ retries within a workflow remain distinct from a persisted document job attempt.
 
 ## Responsive layout and navigation
 
-The shell's Activity card uses the Scaffold floating action slot, so it clears
-the measured phone navigation and keyboard. It is at most 280 pixels wide and
-opens one paginated, scrollable panel for uploads, jobs and reindex requests.
-Short windows and enlarged text use a compact row. Upload receipts remain
-available from View uploads after transient completion feedback disappears.
+The shell's Activity dock overlays the bottom right of the full-height workspace.
+Measured trailing scroll extent lets final records and actions reach above its
+visible panel without shrinking the document viewport. Constrained layouts use
+a compact token and an explicit Activity dialog. On phones the token clears
+the navigation and keyboard. Upload receipts remain available from View uploads
+after transient completion feedback disappears.
 
 `AppJobSpinner`, `AppJobProgress` and `AppJobActivityCard` receive only display
 values. Running badges and active pipeline steps share the spinner. Reduced
@@ -185,144 +195,80 @@ It has no polling timer. Job and reindex counts stay separate because batches
 contain document attempts and system batches span multiple libraries.
 
 Breakpoints use available logical window width, never platform name or orientation.
+Production uses the mobile shell below 800px and the desktop shell from 800px.
+Below 600px, permitted primary destinations appear in the bottom bar; 600–799px
+uses the tablet rail. Enlarged text widens the rail and allows bounded navigation
+scrolling. Desktop uses a 224px sidebar or 76px collapsed rail. User settings and
+Admin settings expand their permission-filtered leaf links inline in the sidebar.
+Parent controls toggle disclosure without navigation or settings loads; selecting
+a leaf keeps its group expanded. Rail activation expands the sidebar and reveals
+the group. `AppNavigationGroup.items` retains the permitted leaf routes, and the
+actual selected leaf ID remains owned by the workspace and its feature lifecycle.
+`overview` supplies the optional parent landing page used by mobile More and leaf
+back controls. Desktop overview cards have distinct keys from inline links.
+Leaf pages retain a compact parent/back control in their floating glass toolbar.
+Collapsing folds the utility row without moving icon anchors; reduced motion
+removes transitions.
 
-| Width | Navigation | Page inset |
-| --- | --- | --- |
-| Below 600 | Floating bar with up to five entries and centered Documents; additional secondary groups share More | 16 |
-| 600–1099 | 80-pixel rail; settings open nested destination menus | 24 |
-| At least 1100 | 224-pixel sidebar with expandable settings groups | 32 |
+The phone primary destinations are Invoices, Scanner, Documents, AI chat and More,
+filtered by real claims and available scanner support. Scanner opens its existing
+route without changing the selected workspace. More exposes secondary destinations,
+current feature actions, account context and utilities through the existing
+owned action-menu route. Settings entries open their overview pages;
+their leaf routes are not duplicated in More. The mobile header owns library
+selection and Search.
+Navigation hides while the keyboard is open, retaining feature State and drafts.
+Use 48px app touch targets; real native window caption controls keep their separate
+platform 44px contract.
 
-Workspace pages fill the available width with the responsive insets above.
-Document grids add columns on wide screens; focused forms, search inputs and
-dialogs retain their own readable width limits. Collection toolbars put search,
-filters, sorting and view controls beside the right-aligned library picker on wide
-screens. Compact layouts put search and the library picker on the first row and
-controls on a second row. Secondary actions move into More as width shrinks.
-The shell receives an explicit `toolbarBuilder`; feature toolbar widgets own their
-controllers and dialog routes and read the same Cubit state as the collection.
-Search and filter controls are not registered through a global toolbar service.
-Rows move their actions below the text
-when their available width is below 560 pixels or text is enlarged. Dialogs default
-to 720 pixels and stay inside a narrow viewport. Shared dialogs own a safe-area
-boundary so raw dialog routes also clear notches and system bars; Flutter's dialog
-insets continue to handle the keyboard. Custom raw dialog frames must provide the
-same safe-area boundary. Member and invitation forms use
-860 pixels, with two permission columns when space and text size allow it.
+Desktop Search sits below Domabas. Cmd/Ctrl+K opens search for the active Documents
+or Invoices collection. Other destinations prefer authorized document search;
+invoice-only users retain invoice search. The app checks the current owner route,
+selected scope and capability before opening and again after any navigation.
+A covered dialog or dirty reader cannot trigger navigation behind itself.
+Feature toolbar States own query drafts and exact modal routes. Enter commits query
+and filters atomically; quick filters remain immediate. Resize retains the field's
+focus, controller and active IME composition. No global toolbar service or fixture
+vocabulary is involved.
 
-The [mobile navigation rules](mobile-navigation.md) keep Invoices, Scanner,
-Documents, AI chat and More in the phone bar when available. Scanner requires
-upload permission and native scanner support; it opens the scanner without
-changing the selected workspace. Jobs, Settings, Admin and future secondary
-groups are available through More even when the bar has fewer than five entries.
-Desktop and tablet navigation retain their existing destinations.
+Quick filters, sorting and view actions occupy the floating collection toolbar.
+Library, Activity and Appearance occupy the sidebar utility row, with additional
+account and connection actions in the account menu. Library selection and library
+management are separate operations. The selected sidebar destination supplies the
+page context; repeated collection headlines are omitted.
 
-The workspace has Documents and nested User settings destinations for Libraries,
-Members, Invitations and Password. Members and Invitations refer to the selected
-library and require the corresponding management claim. Admin settings contains
-System users and requires system authority. The top bar switches libraries; it
-does not contain library-management actions. Appearance, live updates, Your jobs
-and Sign out occupy four labeled-by-tooltip icons in the desktop sidebar footer.
-The rail groups these utilities under Account; phones include them in the sidebar
-opened by the bottom More button, alongside the current workspace's actions.
+Pages fill a bounded, clipped viewport. Collections and forms own their scrolling;
+measured trailing activity clearance is appended inside that scroll flow. Settings
+Save, pagination and Chat Send/Stop remain reachable above the bottom-right overlay.
+Small headers and toolbars scroll within bounded space rather than consuming the
+whole page. Dialog bodies and actions also remain reachable at narrow sizes and
+large text. The shared dialog backdrop clears safe areas and the actual native
+bar when present; exact feature-owned routes retain disposal and dirty guards.
 
-Documents fills a fixed pane with its internally scrolling collection; the library
-picker stays on the right of the toolbar. Upload is the primary action, becoming an icon beside the
-collection controls and a More entry when space is limited. Scan, New document
-and Upload history remain available in More. The selector uses one visible line
-with its complete library/account context in semantics. Settings use the same
-transparent AppPage pane and retain meaningful section labels. Shared UI receives immutable action values, current callbacks
-and widgets, never a document Cubit or permission object.
-
-Feature action builders keep appearance, activity and connection state mounted
-above the shell. Opening or closing More does not dispose those owners. The menu
-updates its current rows for busy state, badges and connection changes. It owns
-one exact route and generation, rejects covered or stale callbacks, and invalidates
-on owner, action-set, viewport or text-scale changes. Activation removes only that
-route and invokes the current callback synchronously, preserving browser upload
-gestures. Focus returns after the feature action completes, only to a surviving
-trigger on the current owner route. Menus have a fixed Close control and scrollable
-natural-scale rows with targets of at least 48 pixels.
-
-The shell receives allowed navigation entries and the selected ID. It neither
-checks claims nor constructs feature screens. Navigating replaces the selected
-body without swipe tabs or custom page transitions. Ordinary navigation keeps the
-same authenticated dependency scope; sign-out, expiry and library switching still
-replace the entire session-keyed MaterialApp/Navigator subtree.
-
-Groups have stable IDs independent of their full and compact labels. The selected
-primary group follows the selected leaf; opening or cancelling a chooser does not
-select a page. On normal phone widths, Documents is a permanent raised accent
-circle above a curved cutout in the rounded surface. Permitted destinations fill
-the two sides; a separate marker identifies the selected group, including Documents.
-Labels use the user's natural text scale. Their actual measured width and height
-determine whether the cutout layout fits. Narrow or enlarged-text layouts use a
-full-width Documents row above paired or full-width destinations. Scroll the bar when its
-contents exceed 40 percent of usable height, with its margin and bottom safe inset
-inside that budget. Focused buttons scroll into view. The body extends behind the
-bar, so content remains visible through its notch and outer margins. The bar has
-eight pixels of bottom spacing above the system safe inset. Page panes also
-stop above the physical bottom safe inset on iPhone;
-their inner scrolling content retains the remaining navigation clearance. Scaffold
-supplies the bar's measured height as bottom MediaQuery padding. Settings lists
-consume it automatically; the document footer and password form include it inside
-their scrollable content. Final rows and actions can scroll above the bar without
-reserving a solid footer strip. Keep the extended body enabled across keyboard
-and width changes to preserve the child subtree. The bar hides while a software
-keyboard is visible and returns with selection and drafts intact.
-
-Navigation buttons own their hover, press and focus decoration without a second
-Material overlay. Transparent decoration endpoints retain the visible endpoint's
-color channels so intermediate frames do not darken during alpha interpolation.
-The raised center uses an outline for interaction feedback, preserving the cutout.
-Desktop sidebar and tablet rail items retain a primary hover outline without
-shadows or translation. Document cards use a subtle hover fill and a primary
-container fill for keyboard focus, with no outline in either state. Pointer exit
-removes the navigation hover outline, including after a click; the selected fill
-and keyboard feedback remain. Navigation hit targets and positions remain fixed.
-
-Collection toolbars scroll within a bounded height in short windows: at most
-40 percent of the available height, capped at 256 pixels including padding.
-The default header for pages without collection controls stays on one row.
-`AppPage` bounds its fixed action controls to 40 percent of the height above
-navigation, capped at 240 pixels. Oversized controls scroll within that row,
-leaving the content pane available. The pane extends behind the mobile bar;
-inner lists include bottom clearance so final rows remain reachable. The document
-toolbar and pagination also keep their controls bounded. Text scaling remains
-natural in short windows.
-
-Mobile choosers have a fixed close control above a scrollable heading, account label
-and permitted destinations. Tablet menus retain their anchored native popup. The
-shell owns each exact route and an interaction generation, validates returned IDs
-against current groups, and ignores stale callbacks. Resize, membership changes and
-motion-preference changes invalidate and remove only that route. Focus returns to a
-surviving group trigger after dismissal or resize; disposal restores nothing.
+Feature action menus keep current callbacks and state, dismiss only their own
+route before invoking an action, and preserve browser upload gestures. Scope,
+permission or owner changes invalidate stale selections. Focus returns only to a
+surviving trigger on the current route. Refresh, selection and pagination continue
+to belong to the existing feature Cubits.
 
 ## Visual and interaction rules
 
-Studio uses an achromatic `#F5F5F5` canvas, `#FFFFFF` surfaces and `#232323`
-text. Dark mode uses `#181818`, `#222222` and `#F0F0F0` respectively. Orange
-provides focus, selection and primary actions. The light primary role is
-`#B83E23` so small white action labels retain contrast; dark mode uses `#FF8869`
-with dark foreground text. Presenters resolve semantic roles at build time,
-including matching status foreground/background pairs. Read
-[appearance and client preferences](appearance.md) for lifetime and persistence.
+Glacier uses teal-tinted light and dark canvases, translucent glass navigation and
+controls, explicit surface edges and DM Sans typography. Material roles and exact
+tokens are documented in [Glacier](glacier.md). Source documents remain opaque and
+retain their original colors. Backdrop filters are clipped to bounded surfaces;
+avoid repeating blur on every collection item. Appearance persists the existing
+light/dark/system mode; catalog-only background preferences are not exposed as
+unbacked production settings.
 
-Cards, panels and dialogs use rounded corners without borders. Ordinary
-buttons retain 12-pixel corners. AppElevation retains its existing API but returns
-no shadows. Surfaces have no texture, blur or hover lift. Locally bundled Barlow
-Condensed provides display and page headings; DM Sans supplies body text,
-navigation, control labels and form titles. Destination headings are omitted;
-record details and standalone setup can show a heading. Form sections use a fine
-neutral rule. The root canvas is a plain fill.
-Progress uses a solid rounded segment with transparent remaining space and
-preserves determinate, RTL and reduced-motion behavior.
-
-Filled inputs, secondary buttons and chips retain focus, selection and error
-indicators. Control focus and error outlines remain two pixels wide. Pipeline
-current and failed stages use semantic fills. Document cards use hover and focus
-fills; navigation retains primary rings for pointer and keyboard use. Thin list
-separators, checkbox/radio geometry and scanner guides remain meaningful. Use
-semantic state labels alongside color.
+Document hover draws a 1px accent edge. Rich choices use a softer selected edge,
+strengthened on hover; disabled controls do not acquire hover feedback. Keyboard
+focus uses its own 2px outline, while pointer selection does not retain that ring.
+A nested Retry button owns its focus without also outlining the document opener.
+These states must preserve layout, semantics and touch behavior. Ordinary sidebar
+and button hover remains a fill change. Thin list separators, scanner guides and
+semantic status labels remain meaningful. Keep danger, mixed, unknown, stale and
+recorded-success states distinct.
 
 Refresh feedback keeps its layout space. `AppProgressSlot` removes the inactive
 indicator while retaining its bounds, and respects reduced-motion preferences.

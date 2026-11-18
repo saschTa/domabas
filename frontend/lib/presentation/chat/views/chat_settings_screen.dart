@@ -67,14 +67,15 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       final external = draft.provider == 'openai';
       final editable = !state.saving;
       return AppPage(
+        glacier: true,
         insetBody: false,
-        eyebrow: 'ADMIN SETTINGS',
+
         title: 'AI chat',
         description: 'Choose the model people use to ask questions about their documents.',
         onRefresh: state.loading || state.saving ? null : cubit.load,
         child: ListView(
           key: const Key('chatSettingsScroll'),
-          padding: AppLayout.cardListPadding(context),
+          padding: GlacierSettingsPage.scrollPadding(context),
           children: [
             AppProgressSlot(active: state.loading || state.saving),
             if (state.error != null)
@@ -83,15 +84,17 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                 child: AppNotice(
                   message: state.error!,
                   action: state.requiresRefresh
-                      ? TextButton(
+                      ? GlacierButton(
                           onPressed: state.loading ? null : cubit.load,
-                          child: const Text('Refresh saved settings'),
+                          label: 'Refresh saved settings',
+                          kind: GlacierButtonKind.quiet,
                         )
                       : null,
                 ),
               ),
             if (state.saved != null)
               AppSurface(
+                glacier: true,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -122,65 +125,126 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                       'These settings are independent of the document AI pipeline. Changes apply to new chat messages.',
                     ),
                     const SizedBox(height: 16),
-                    SwitchListTile(
+                    GlacierSwitchRow(
                       key: const Key('chatEnabled'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Enable AI chat'),
-                      subtitle: const Text(
-                        'Existing conversations remain available when new messages are paused.',
-                      ),
+                      label: 'Enable AI chat',
+                      description: 'Existing conversations remain available when new messages are paused.',
                       value: draft.enabled,
                       onChanged: editable
                           ? (value) => cubit.edit(enabled: value)
                           : null,
                     ),
-                    SwitchListTile(
+                    GlacierSwitchRow(
                       key: const Key('chatThinkingEnabled'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Enable thinking for chat'),
-                      subtitle: const Text(
-                        'Let supported models reason before answering. This can take longer.',
-                      ),
+                      label: 'Enable thinking for chat',
+                      description: 'Let supported models reason before answering. This can take longer.',
                       value: draft.thinkingEnabled,
                       onChanged: editable
                           ? (value) => cubit.edit(thinkingEnabled: value)
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        ChoiceChip(
-                          key: const Key('chatProviderOllama'),
-                          label: const Text('Internal Ollama'),
-                          avatar: const Icon(Icons.dns_outlined, size: 18),
-                          selected: !external,
-                          onSelected: editable
-                              ? (_) => cubit.edit(provider: 'ollama')
-                              : null,
-                        ),
-                        ChoiceChip(
-                          key: const Key('chatProviderOpenAI'),
-                          label: const Text('External service'),
-                          avatar: const Icon(Icons.cloud_outlined, size: 18),
-                          selected: external,
-                          onSelected: editable
-                              ? (_) => cubit.edit(provider: 'openai')
-                              : null,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      external
-                          ? 'Sends chat messages and selected document text to your OpenAI-compatible service.'
-                          : 'Runs on this installation. A model may need to download before its first reply.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 24),
-                    if (external) ...[
-                      TextField(
+                    GlacierModelConnection(
+                      provider: external ? 'external' : 'local',
+                      enabled: editable,
+                      providerField: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              GlacierChoice(
+                                key: const Key('chatProviderOllama'),
+                                label: 'Internal Ollama',
+                                compact: true,
+                                selected: !external,
+                                onChanged: editable
+                                    ? (_) => cubit.edit(provider: 'ollama')
+                                    : null,
+                              ),
+                              GlacierChoice(
+                                key: const Key('chatProviderOpenAI'),
+                                label: 'External service',
+                                compact: true,
+                                selected: external,
+                                onChanged: editable
+                                    ? (_) => cubit.edit(provider: 'openai')
+                                    : null,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            external
+                                ? 'Sends chat messages and selected document text to your OpenAI-compatible service.'
+                                : 'Runs on this installation. A model may need to download before its first reply.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                      modelField: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            key: const Key('chatModel'),
+                            controller: _model,
+                            enabled: editable,
+                            autocorrect: false,
+                            decoration: InputDecoration(
+                              labelText: 'Model',
+                              hintText: external
+                                  ? 'Your service model name'
+                                  : const ChatConfigurationDraft().model,
+                            ),
+                            onChanged: (value) => cubit.edit(model: value),
+                          ),
+                          if (!external) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Installed models',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                            AppProgressSlot(active: state.loadingModels),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final model in state.models)
+                                  GlacierButton(
+                                    label: model,
+                                    onPressed: editable
+                                        ? () => cubit.edit(model: model)
+                                        : null,
+                                    kind: GlacierButtonKind.quiet,
+                                  ),
+                                if (state.nextModelOffset != null)
+                                  GlacierButton(
+                                    key: const Key('moreChatModels'),
+                                    onPressed: state.loadingModels
+                                        ? null
+                                        : () => cubit.loadModels(more: true),
+                                    label: 'Load more models',
+                                    kind: GlacierButtonKind.quiet,
+                                  ),
+                              ],
+                            ),
+                            if (state.modelsError != null)
+                              Text(
+                                state.modelsError!,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            GlacierButton(
+                              onPressed: state.loadingModels
+                                  ? null
+                                  : cubit.loadModels,
+                              label: 'Refresh installed models',
+                              kind: GlacierButtonKind.quiet,
+                            ),
+                          ],
+                        ],
+                      ),
+                      endpointField: TextField(
                         key: const Key('chatBaseUrl'),
                         controller: _url,
                         enabled: editable,
@@ -194,171 +258,123 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                         ),
                         onChanged: (value) => cubit.edit(baseUrl: value),
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                    TextField(
-                      key: const Key('chatModel'),
-                      controller: _model,
-                      enabled: editable,
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        labelText: 'Model',
-                        hintText: external
-                            ? 'Your service model name'
-                            : const ChatConfigurationDraft().model,
-                      ),
-                      onChanged: (value) => cubit.edit(model: value),
-                    ),
-                    if (!external) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Installed models',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      AppProgressSlot(active: state.loadingModels),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                      credentialField: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          for (final model in state.models)
-                            ActionChip(
-                              label: Text(model),
-                              onPressed: editable
-                                  ? () => cubit.edit(model: model)
-                                  : null,
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Context length is managed by the external service. Your Ollama setting is retained.',
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            key: const Key('chatApiKey'),
+                            controller: _secret,
+                            enabled: editable && !draft.clearApiKey,
+                            obscureText: true,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            decoration: InputDecoration(
+                              labelText: state.saved!.hasApiKey
+                                  ? 'Replacement API key'
+                                  : 'API key (optional)',
+                              helperText: 'Stored encrypted on the server. Leave blank to keep the stored key for this address.',
+                              helperMaxLines: 3,
                             ),
-                          if (state.nextModelOffset != null)
-                            TextButton(
-                              key: const Key('moreChatModels'),
-                              onPressed: state.loadingModels
-                                  ? null
-                                  : () => cubit.loadModels(more: true),
-                              child: const Text('Load more models'),
-                            ),
-                        ],
-                      ),
-                      if (state.modelsError != null)
-                        Text(
-                          state.modelsError!,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      TextButton(
-                        onPressed: state.loadingModels
-                            ? null
-                            : cubit.loadModels,
-                        child: const Text('Refresh installed models'),
-                      ),
-                    ],
-                    if (external) ...[
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Context length is managed by the external service. Your Ollama setting is retained.',
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        key: const Key('chatApiKey'),
-                        controller: _secret,
-                        enabled: editable && !draft.clearApiKey,
-                        obscureText: true,
-                        autocorrect: false,
-                        enableSuggestions: false,
-                        decoration: InputDecoration(
-                          labelText: state.saved!.hasApiKey
-                              ? 'Replacement API key'
-                              : 'API key (optional)',
-                          helperText: 'Stored encrypted on the server. Leave blank to keep the stored key for this address.',
-                          helperMaxLines: 3,
-                        ),
-                        onChanged: (value) => cubit.edit(apiKey: value),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          IndexedStack(
-                            index: state.saved!.hasApiKey ? 1 : 0,
-                            children: const [
-                              AppStatusBadge(label: 'No API key stored'),
-                              AppStatusBadge(label: 'API key stored'),
+                            onChanged: (value) => cubit.edit(apiKey: value),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              IndexedStack(
+                                index: state.saved!.hasApiKey ? 1 : 0,
+                                children: const [
+                                  AppStatusBadge(label: 'No API key stored'),
+                                  AppStatusBadge(label: 'API key stored'),
+                                ],
+                              ),
+                              GlacierButton(
+                                key: const Key('clearChatApiKey'),
+                                onPressed: editable && state.saved!.hasApiKey
+                                    ? () => cubit.edit(
+                                        clearApiKey: !draft.clearApiKey,
+                                      )
+                                    : null,
+                                icon: draft.clearApiKey
+                                    ? Icons.undo
+                                    : Icons.delete_outline,
+                                label: 'Remove stored key',
+                                alternateLabel: 'Keep stored key',
+                                showAlternateLabel: draft.clearApiKey,
+                                kind: GlacierButtonKind.quiet,
+                              ),
                             ],
                           ),
-                          TextButton.icon(
-                            key: const Key('clearChatApiKey'),
-                            onPressed: editable && state.saved!.hasApiKey
-                                ? () => cubit.edit(
-                                    clearApiKey: !draft.clearApiKey,
-                                  )
-                                : null,
-                            icon: Icon(
-                              draft.clearApiKey
-                                  ? Icons.undo
-                                  : Icons.delete_outline,
-                            ),
-                            label: IndexedStack(
-                              index: draft.clearApiKey ? 1 : 0,
-                              children: const [
-                                Text('Remove stored key'),
-                                Text('Keep stored key'),
-                              ],
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Removing a key or changing the service address clears the stored key when you save.',
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ),
                         ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Removing a key or changing the service address clears the stored key when you save.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                    if (!external) ...[
-                      const SizedBox(height: 16),
-                      AppModelContextField(
-                        controller: _contextLength,
-                        fieldKey: const Key('chatContextLength'),
-                        checkKey: const Key('checkChatModelContext'),
-                        defaultKey: const Key('resetChatContextLength'),
-                        scope: 'Applies to new chat messages. Independent of AI processing.',
-                        enabled: editable,
-                        loading: state.loadingModelContext,
-                        errorText: draft.contextLengthError,
-                        lookupError: state.modelContextError,
-                        maxContextLength: state.modelContext?.maxContextLength,
-                        requestedContextLength: draft.contextLengthValue,
-                        onChanged: (value) => cubit.edit(contextLength: value),
-                        onCheck: draft.model.trim().isEmpty
-                            ? null
-                            : cubit.checkModelContext,
-                        onDefault: () => cubit.edit(contextLength: '32768'),
-                      ),
-                    ],
+                      contextField: external
+                          ? const SizedBox.shrink()
+                          : AppModelContextField(
+                              controller: _contextLength,
+                              fieldKey: const Key('chatContextLength'),
+                              checkKey: const Key('checkChatModelContext'),
+                              defaultKey: const Key('resetChatContextLength'),
+                              scope: 'Applies to new chat messages. Independent of AI processing.',
+                              enabled: editable,
+                              loading: state.loadingModelContext,
+                              errorText: draft.contextLengthError,
+                              lookupError: state.modelContextError,
+                              maxContextLength:
+                                  state.modelContext?.maxContextLength,
+                              requestedContextLength: draft.contextLengthValue,
+                              onChanged: (value) =>
+                                  cubit.edit(contextLength: value),
+                              onCheck: draft.model.trim().isEmpty
+                                  ? null
+                                  : cubit.checkModelContext,
+                              onDefault: () =>
+                                  cubit.edit(contextLength: '32768'),
+                            ),
+                    ),
                     if (draft.error != null && state.dirty)
                       Padding(
                         padding: const EdgeInsets.only(top: 16),
                         child: AppNotice(message: draft.error!),
                       ),
                     const SizedBox(height: 24),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.icon(
-                          key: const Key('saveChatSettings'),
-                          onPressed: state.canSave ? cubit.save : null,
-                          icon: const Icon(Icons.save_outlined),
-                          label: const Text('Save settings'),
-                        ),
-                        TextButton(
-                          key: const Key('resetChatSettings'),
-                          onPressed: editable && state.dirty
-                              ? cubit.reset
-                              : null,
-                          child: const Text('Use saved settings'),
-                        ),
-                      ],
+                    GlacierWorkspaceGeometry.measureEndActions(
+                      context,
+                      followingExtent: 24,
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          GlacierButton(
+                            key: const Key('saveChatSettings'),
+                            onPressed: state.canSave ? cubit.save : null,
+                            label: 'Save settings',
+                            icon: Icons.save_outlined,
+                            kind: GlacierButtonKind.primary,
+                          ),
+                          GlacierButton(
+                            key: const Key('resetChatSettings'),
+                            onPressed: editable && state.dirty
+                                ? cubit.reset
+                                : null,
+                            label: 'Use saved settings',
+                            kind: GlacierButtonKind.quiet,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

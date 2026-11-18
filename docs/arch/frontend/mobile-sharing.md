@@ -69,7 +69,11 @@ to finish or discard the first; it does not replace those files.
 
 `MobileShareCubit` belongs to the selected-server app scope. Shared files wait
 through initial server setup and sign-in, then show a confirmation naming the
-current library. Upload feeds `DocumentUploadCoordinator` and the existing
+current library. The Flutter host uses a bounded Glacier panel: file details
+scroll independently of the visible Discard and authorized Upload actions. It
+shows only staged filenames and the actual current destination; sign-in and
+permission blocks never expose a working upload callback. The native iOS
+extension remains its own system share sheet. Upload feeds `DocumentUploadCoordinator` and the existing
 session-owned queue, transport, receipt checks and progress UI. A batch already
 bound to a session is discarded on a library/session change, including a late
 native read. Busy and upload-forbidden sessions cannot admit files. Upload-only

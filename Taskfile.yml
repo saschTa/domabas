@@ -213,6 +213,7 @@ tasks:
   lint:frontend:
     internal: true
     dir: frontend
+    deps: [widgetbook:setup]
     cmds: [flutter analyze --fatal-infos]
 
   test:

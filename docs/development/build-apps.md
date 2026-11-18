@@ -127,6 +127,9 @@ open frontend/build/macos/Build/Products/Release/domabas.app
 You can also find `domabas.app` at that location in Finder and copy it to
 Applications. The app requires macOS 12 or later. This is a local release build;
 it is not an installer or a notarized download for distribution to other people.
+GitHub releases also package the app in an unsigned DMG; see
+[native preview downloads](releases.md#native-preview-downloads) for installation
+and signing limits.
 
 ### Build the iPhone and iPad app
 

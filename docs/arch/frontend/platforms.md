@@ -101,8 +101,8 @@ ordering and scope.
 
 Android applies Flutter's Gradle plugin after the Android plugin and takes SDK/version values from Flutter. Its current release build configuration uses development signing; store distribution needs separate signing setup. All build modes permit HTTP networking. Android styles and drawable files control the launch background and the transition to the Flutter view.
 
-GitHub releases publish containers only. Android, iOS and desktop targets remain
-available for local development, with no native downloads or CI build claim.
+GitHub releases publish containers, Android preview APKs and unsigned macOS DMGs.
+iOS, Linux and Windows remain local builds; device behavior needs separate checks.
 See the [release support table](../../development/releases.md#supported-artifacts).
 
 iOS debug and release property lists permit HTTP to user-selected servers and

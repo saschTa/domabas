@@ -42,7 +42,7 @@ Go's module declares the exact toolchain requirement and keeps development tools
 
 ## Monorepo tooling
 
-Go Task remains the command entry point. Every repository-owned orchestration script under `scripts/` is TypeScript executed directly by Bun. `task setup:tooling` installs dependencies with `bun install --frozen-lockfile`; tasks that need tooling dependencies invoke it automatically, including `task dev` on a clean checkout. `task lint:scripts` runs TypeScript checking, and `task test:scripts` tests the orchestration behavior. `task check` runs both; GitHub CI runs `task check` and isolated PostgreSQL integration. See the [release guide](releases.md) for publishing and initial repository setup.
+Go Task remains the command entry point. Every repository-owned orchestration script under `scripts/` is TypeScript executed directly by Bun. `task setup:tooling` installs dependencies with `bun install --frozen-lockfile`; tasks that need tooling dependencies invoke it automatically, including `task dev` on a clean checkout. `task lint:scripts` runs TypeScript checking, and `task test:scripts` tests the orchestration behavior. `task check` runs both; GitHub CI selects complete check suites on PRs and runs all configured suites, including isolated PostgreSQL integration, on main pushes. See the [release guide](releases.md) for publishing native previews and containers and for initial repository setup.
 
 Scripts are grouped by purpose; the [script directory map](../../scripts/README.md)
 lists each folder and its task commands. Tests live beside their implementation.
@@ -156,7 +156,7 @@ Android supports API 24 and later; session preferences are excluded from backup 
 
 Use `flutter devices` and `task dev -- --device <id>` for a connected target. An Android emulator reaches the host API at `http://10.0.2.2:8080`; set `API_BASE_URL` accordingly. A physical device needs an API address it can reach and an intentional backend bind address. Flutter's web debugger can attach with `--device chrome`; set `CHROME_EXECUTABLE` when Chrome is installed outside its usual location.
 
-See the [frontend guide](../arch/frontend/index.md) for mobile networking configuration. HTTP and HTTPS work in debug and release builds. Native build tasks validate compilation on the corresponding host. GitHub releases distribute containers only; app signing and distribution are outside this baseline.
+See the [frontend guide](../arch/frontend/index.md) for mobile networking configuration. HTTP and HTTPS work in debug and release builds. Native build tasks validate compilation on the corresponding host. GitHub releases distribute containers plus development-signed Android APKs and unsigned macOS DMGs; see the [native preview limits](releases.md#native-preview-downloads).
 
 Live browser connections use the same configured API endpoint and exact CORS origins as the HTTP client. See [live connection deployment](compose.md#live-connections) and [realtime checks](testing.md#realtime-checks).
 

@@ -179,14 +179,14 @@ final class _DomabasAppState extends State<DomabasApp>
               : const AnimationStyle(duration: Duration(milliseconds: 200)),
           builder: (context, child) => glacierApplicationTheme(
             context,
-            DocumentUploadHost(
-              cubit: _scope?.uploads,
-              child: MobileShareHost(
-                shares: widget.shares,
-                child: NativeDesktopFrame(
-                  navigatorKey: _nativeNavigator,
-                  observer: _nativeRoutes,
-                  library: _session?.identity.accountName ?? 'Sign in',
+            NativeDesktopFrame(
+              navigatorKey: _nativeNavigator,
+              observer: _nativeRoutes,
+              library: _session?.identity.accountName ?? 'Sign in',
+              child: DocumentUploadHost(
+                cubit: _scope?.uploads,
+                child: MobileShareHost(
+                  shares: widget.shares,
                   child: child ?? const SizedBox.shrink(),
                 ),
               ),

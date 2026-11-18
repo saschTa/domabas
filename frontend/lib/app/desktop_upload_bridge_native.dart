@@ -8,7 +8,7 @@ import 'desktop_upload_bridge_stub.dart';
 DesktopUploadBridge createDesktopUploadBridge({
   required bool Function() canAcquire,
   required void Function() onBusyChanged,
-}) => Platform.isLinux || Platform.isWindows
+}) => Platform.isLinux || Platform.isWindows || Platform.isMacOS
     ? NativeDesktopUploadBridge(
         canAcquire: canAcquire,
         onBusyChanged: onBusyChanged,

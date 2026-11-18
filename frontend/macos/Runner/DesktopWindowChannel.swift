@@ -60,6 +60,7 @@ final class DesktopWindowChannel {
             "commands": ["close", "minimize", "maximize", "restore", "enterFullscreen", "exitFullscreen", "titlebarDoubleClick"]]
   }
   private func emit() {
+    updateCaptionVisibility()
     if initialized { channel.invokeMethod("windowChanged", arguments: snapshot()) }
   }
   private func decoration(_ enabled: Bool) {
@@ -69,10 +70,13 @@ final class DesktopWindowChannel {
     window.titlebarAppearsTransparent = enabled
     if enabled { window.styleMask.insert(.fullSizeContentView) }
     else { window.styleMask.remove(.fullSizeContentView) }
-    for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-      window.standardWindowButton(button)?.isHidden = enabled
-    }
+    updateCaptionVisibility()
     layoutValid = false
+  }
+  private func updateCaptionVisibility() {
+    for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+      window?.standardWindowButton(button)?.isHidden = clientDecoration
+    }
   }
   private func beginFullscreenTransition() {
     fullscreenTransition = true

@@ -8,6 +8,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class WindowPortFake implements DesktopWindowPort {
+  WindowPortFake({this.platform = GlacierNativePlatform.windows});
+  final GlacierNativePlatform platform;
+  int missingInitializations = 0;
+  int rejectedDecorations = 0;
   final events = StreamController<DesktopWindowSnapshot>.broadcast(sync: true);
   final calls = <String>[];
   int revision = 0;
@@ -26,7 +30,7 @@ class WindowPortFake implements DesktopWindowPort {
     revision: rev ?? ++revision,
     ready: true,
     state: GlacierNativeWindowState(
-      platform: GlacierNativePlatform.windows,
+      platform: platform,
       mode: mode,
       decoration: client
           ? GlacierNativeDecoration.client
@@ -38,13 +42,18 @@ class WindowPortFake implements DesktopWindowPort {
   @override
   Future<DesktopWindowSnapshot> initialize() async {
     calls.add('initialize');
-    if (failInitialize) throw MissingPluginException();
+    if (failInitialize || missingInitializations-- > 0) {
+      throw MissingPluginException();
+    }
     return snapshot();
   }
 
   @override
   Future<DesktopWindowSnapshot> setClientDecoration(bool enabled) async {
     calls.add('decoration:$enabled');
+    if (enabled && rejectedDecorations-- > 0) {
+      throw PlatformException(code: 'not_ready');
+    }
     if (!enabled && failRecovery) throw StateError('recovery');
     if (!enabled && pendingFullscreenRecovery) {
       return snapshot(client: true, mode: GlacierNativeWindowMode.fullscreen);
@@ -121,7 +130,8 @@ void main() {
       final controller = DesktopWindowController(port);
       await controller.initialize();
       expect(controller.available, false);
-      expect(port.calls, ['initialize', 'decoration:false']);
+      expect(port.calls.where((value) => value == 'initialize'), hasLength(10));
+      expect(port.calls.last, 'decoration:false');
       controller.request(GlacierNativeCommand.close);
       await flush();
       expect(port.calls, isNot(contains('close')));

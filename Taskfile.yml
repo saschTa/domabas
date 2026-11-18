@@ -70,6 +70,16 @@ tasks:
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/ci/setup-ci.ts]
 
+  ci:select:
+    desc: Select complete GitHub CI suites from the tested pull request changes
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/ci/select-suites.ts]
+
+  ci:gate:
+    desc: Verify that all selected GitHub CI jobs succeeded
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/ci/check-results.ts]
+
   ci:flutter:
     desc: Install and verify the pinned Linux x64 Flutter SDK for CI
     deps: [setup:tooling]
@@ -297,6 +307,27 @@ tasks:
     desc: Run real Flutter + Go + PostgreSQL/Temporal browser E2E (downloads pinned Chrome)
     deps: [setup:tooling]
     cmds: ['bun --no-env-file scripts/testing/e2e.ts {{.CLI_ARGS}}']
+
+  check:tooling:
+    desc: Run tooling analysis/tests and icon/license consistency without application SDKs
+    cmds:
+      - task: lint:scripts
+      - task: test:scripts
+      - task: generate:icons:check
+      - task: generate:licenses:check
+
+  check:backend:
+    desc: Run Go analysis and the complete backend unit/architecture suite
+    cmds:
+      - go -C backend vet ./...
+      - task: test:backend
+
+  check:frontend:
+    desc: Run Flutter analysis and the complete application test suite
+    deps: [setup:frontend]
+    cmds:
+      - task: lint:frontend
+      - task: test:frontend
 
   check:
     desc: Run static analysis, generated contract consistency, and fast tests

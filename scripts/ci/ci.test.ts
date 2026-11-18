@@ -77,7 +77,7 @@ test("a failing backend suite stops later tests in either mode", async () => {
 
 test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main runs can publish", async () => {
   type Step = { run?: string; uses?: string; with?: Record<string, unknown>; env?: Record<string, string> };
-  type Job = { if?: string; needs?: string[]; "runs-on": string; "timeout-minutes": number; permissions?: Record<string, string>; steps: Step[]; concurrency?: { queue: string; "cancel-in-progress": boolean }; services?: Record<string, { image: string }> };
+  type Job = { if?: string; needs?: string | string[]; "runs-on": string; "timeout-minutes": number; permissions?: Record<string, string>; steps: Step[]; concurrency?: { queue: string; "cancel-in-progress": boolean }; services?: Record<string, { image: string }> };
   const workflow = Bun.YAML.parse(await Bun.file(join(ROOT, ".github/workflows/ci.yml")).text()) as {
     on: { push: { branches: string[] }; pull_request: unknown; workflow_dispatch: { inputs: Record<string, { type: string; required: boolean; default: string; options: string[] }> } };
     permissions: Record<string, string>;
@@ -97,7 +97,14 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
       if (step.uses.startsWith("actions/checkout@")) expect(step.with?.["persist-credentials"]).toBe(false);
     }
   }
-  expect(workflow.jobs.checks!.steps.some(step => step.run === "task check")).toBe(true);
+  expect(workflow.jobs.changes!.steps.some(step => step.run === "task check:tooling")).toBe(true);
+  expect(workflow.jobs.backend!.steps.some(step => step.run === "task check:backend")).toBe(true);
+  expect(workflow.jobs.frontend!.steps.some(step => step.run === "task check:frontend")).toBe(true);
+  expect(workflow.jobs.widgetbook!.steps.some(step => step.run === "task widgetbook:check")).toBe(true);
+  expect(workflow.jobs.widgetbook!.steps.some(step => step.run === "task widgetbook:build")).toBe(true);
+  expect(workflow.jobs.contracts!.steps.some(step => step.run === "task generate:check")).toBe(true);
+  expect(workflow.jobs.checks!.steps.find(step => step.run === "task ci:gate")?.env?.CI_NEEDS).toBe("${{ toJSON(needs) }}");
+  expect(workflow.jobs.changes!.steps.find(step => step.uses?.startsWith("actions/checkout@"))?.with?.["fetch-depth"]).toBe(0);
   const integration = workflow.jobs.integration!;
   expect(integration.steps.some(step => step.run === "task ci:database")).toBe(true);
   expect(integration.steps.some(step => step.run === "task test:integration")).toBe(true);
@@ -105,8 +112,8 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
   const compose = Bun.YAML.parse(await Bun.file(join(ROOT, "compose.yaml")).text()) as { services: { postgres: { image: string } } };
   expect(integration.services!.postgres!.image).toBe(compose.services.postgres.image);
   const release = workflow.jobs.release!;
-  expect(release.needs).toEqual(["checks", "integration", "dependencies"]);
-  expect(release.permissions).toEqual({ contents: "write", packages: "write" });
+  expect(release.needs).toBeUndefined();
+  expect(release.permissions).toEqual({ actions: "read", contents: "write", packages: "write" });
   expect(release.steps.find(step => step.run === "task release")?.env?.RELEASE_BUMP).toBe("${{ inputs.release_bump }}");
   expect(release.steps.find(step => step.uses?.startsWith("actions/checkout@"))?.with?.ref).toBe("${{ github.sha }}");
   expect(release.concurrency?.queue).toBe("max");
@@ -121,7 +128,7 @@ test("GitHub PRs use read-only checks and isolated PostgreSQL; only manual main 
   }
   expect(workflow.jobs.dependencies!.steps.some(step => step.run === "task security:dependencies")).toBe(true);
   for (const [event_name, ref, expected] of [
-    ["push", "refs/heads/main", true], ["workflow_dispatch", "refs/heads/main", true],
+    ["push", "refs/heads/main", true], ["workflow_dispatch", "refs/heads/main", false],
     ["pull_request", "refs/heads/main", false], ["workflow_dispatch", "refs/heads/feature", false],
   ] as const) {
     const select = new Function("github", "return (" + workflow.jobs.dependencies!.if + ");");

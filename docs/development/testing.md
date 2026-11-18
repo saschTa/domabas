@@ -203,25 +203,58 @@ for pull requests, pushes to `main` and manual release runs. Feature-branch and 
 pushes do not create duplicate pipelines. New commits cancel older runs of the
 same PR. Main runs are retained; only publication is serialized.
 
-| Check | Pull request | Main push | Manual run on main |
+| Check | Pull request | Main push | Manual release on main |
 | --- | --- | --- | --- |
-| `task check`: TypeScript, Go vet, Flutter analysis, API/icon/license generation, Bun, Go race/structure and Flutter unit/widget/repository tests | Required | Required | Required |
-| `task test:integration` and `task generate:db:check` | Required | Required | Required |
-| `task security:dependencies`: critical-only OSV gate | — | Required | Required |
-| Build and Trivy-scan four container images, then push and release | — | — | After all checks |
+| `task check:tooling`: TypeScript, Bun tests and icon/license consistency | Always | Required | Reused from main |
+| `task check:backend`: Go vet and complete Go race/architecture suite | Backend changes | Required | Reused from main |
+| `task check:frontend`: Flutter analysis and complete unit/widget/repository suite | Frontend changes | Required | Reused from main |
+| `task widgetbook:check` and `task widgetbook:build` | Frontend changes | Required | Reused from main |
+| `task generate:check`: Go and Dart API generation consistency | Contract/generator changes | Required | Reused from main |
+| `task test:integration` and `task generate:db:check` | Backend changes | Required | Reused from main |
+| `task security:dependencies`: critical-only OSV gate | — | Required | Reused from main |
+| Build and Trivy-scan four container images, then push and release | — | — | After verifying successful main CI for the same commit |
 | Temporal, focused Chrome, API/browser E2E, live models and Compose smoke | Local | Local | Local |
 
+`task ci:select` compares the pull request's checked-out merge revision with the
+event's base commit. It uses the complete NUL-delimited Git diff, including deleted
+paths and both sides of renames. It selects whole suites, never individual tests
+or packages. Backend paths select Go and PostgreSQL checks. Frontend paths select
+both application and Widgetbook checks because the catalog imports application
+code and frontend analysis includes the catalog.
+
+OpenAPI inputs, generated Go/Dart API files, generator configuration and Go module
+locks select both application sides and contract generation. Shared tooling,
+workflow changes and unrecognized paths select everything. Known documentation
+paths skip application suites while retaining tooling, icon and license checks.
+Test fixtures remain application inputs even when they contain Markdown.
+Unavailable base history also selects everything. Main pushes always select all
+configured suites. Manual runs outside main retain full checks without publishing.
+
+The selected jobs run independently after tooling and selection succeed. The
+existing **Fast checks** name is the final gate: `task ci:gate` runs even when
+prerequisites fail and rejects failures, cancellations, missing results, invalid
+selection outputs and selected jobs that were skipped. Only unselected jobs may
+be skipped. Require **Fast checks** in branch protection; the existing
+**PostgreSQL integration** name also remains available. The workflow itself has
+no path filter, so documentation-only PRs still receive a completed gate.
+`task check` retains the complete local fast-check sequence.
+
 Start a release with **Actions → CI and releases → Run workflow**, selecting
-`main` and `release_bump` (`patch`, `minor` or `major`). The run checks and
-publishes its captured commit. Merges and pushes never trigger publication.
-Manual runs on other refs run checks without publishing.
+`main` and `release_bump` (`patch`, `minor` or `major`). Manual main runs skip the
+check jobs and source dependency scan. The publisher requires a successful
+`push` run of this workflow on `main` for its exact captured commit before
+reserving a version or building. If that run is missing, unfinished or failed,
+wait for it to succeed and retry the release; the publisher does not rerun tests.
+Release notes link to the reused main run. Image builds and Trivy scans still
+run during publication. Merges and pushes never trigger publication.
 
 The integration job starts only a pinned pgvector PostgreSQL service. It prepares
 shared extensions with `task ci:database`, then uses the existing disposable
-schema harness. It has no persistent development volume. The two check jobs run
-independently with 30- and 20-minute limits; the dependency scan has 10 minutes.
-Cold runner timing must be measured in the first hosted run. The full local
-suites remain available for release acceptance and changes that require them.
+schema harness. It has no persistent development volume. Application jobs have
+30-minute limits, PostgreSQL has 20 minutes, contract generation has 15 minutes,
+tooling and dependency scanning have 10 minutes, and the final gate has five
+minutes. The full local suites remain available for release acceptance and
+changes that require them.
 
 Go and Bun come from the repository pins. Flutter uses the checksum-verified
 installer and SDK cache; pub packages and Go modules/build outputs are cached.
@@ -233,7 +266,7 @@ permissions. No native platform toolchains or app builds are part of this workfl
 `task ci` retains its local units mode. `task ci -- --suite=full` provisions
 an isolated Linux stack and adds analysis, generation, database/Temporal tests,
 API and system E2E; `--builds` adds local Go, web and Linux builds. This helper is
-separate from GitHub's `task check` gate. Full local runners need Docker,
+separate from GitHub's selected suites and final gate. Full local runners need Docker,
 Java and the dependencies installed by `task ci:setup`; model tests need the
 resources documented below. Database suites own their schemas and queues.
 Compose smoke owns and removes only its randomly named projects and volumes.
@@ -585,7 +618,8 @@ platforms and device scenarios were actually exercised in the PR.
 `task check` includes `task widgetbook:check`: locked catalog dependency setup,
 static analysis, public-widget registration coverage, responsive case rendering
 and interaction tests. `task widgetbook:build` creates the separate web catalog;
-CI runs it after fast checks. `task widgetbook` starts its local development host.
+CI runs it in the selected frontend catalog job. `task widgetbook` starts its
+local development host.
 The catalog uses the repository-pinned Flutter SDK and needs no database or API.
 
 Each public Glacier widget needs a named case in `frontend/widgetbook/lib/catalog`.

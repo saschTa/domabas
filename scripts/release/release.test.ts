@@ -59,7 +59,9 @@ describe("release deployment", () => {
   });
 });
 
-function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[]; releases?: GitHubRelease[]; bump?: ReleaseBump; forbidden?: boolean; failDraft?: boolean } = {}) {
+const mainRun = { id: 321, event: "push", head_branch: "main", head_sha: config.sha, status: "completed", conclusion: "success" };
+
+function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[]; releases?: GitHubRelease[]; bump?: ReleaseBump; forbidden?: boolean; failDraft?: boolean; ciRuns?: unknown[]; ciStatus?: number } = {}) {
   const calls: { method: string; path: string; body?: any }[] = [];
   const tags = [...options.tags ?? []], releases = [...options.releases ?? []];
   let nextDraftFails = options.failDraft;
@@ -69,6 +71,10 @@ function fakeGitHub(options: { tags?: { name: string; commit: { sha: string } }[
     const method = init.method ?? "GET", body = init.body ? JSON.parse(String(init.body)) : undefined;
     calls.push({ method, path: path + new URL(url).search, body });
     if (options.forbidden) return new Response("sensitive server response", { status: 403 });
+    if (method === "GET" && path === "/actions/workflows/ci.yml/runs") {
+      if (options.ciStatus) return new Response("sensitive server response", { status: options.ciStatus });
+      return Response.json({ workflow_runs: options.ciRuns ?? [mainRun] });
+    }
     const paginated = (items: unknown[]) => { const page = Number(new URL(url).searchParams.get("page")); return Response.json(items.slice((page - 1) * 100, page * 100)); };
     if (method === "GET" && path === "/tags") return paginated(tags);
     if (method === "GET" && path === "/releases") return paginated(releases);
@@ -96,6 +102,41 @@ const reservedTag = { name: "v0.0.1", commit: { sha: config.sha } };
 const draft: GitHubRelease = { id: 1, draft: true, tag_name: "v0.0.1", target_commitish: config.sha, html_url: "https://github.com/example-owner/domabas/releases/tag/v0.0.1" };
 
 describe("GitHub publication and recovery", () => {
+  test("reuses successful push/main CI for the exact commit before reserving or building", async () => {
+    const fake = fakeGitHub();
+    await publishRelease(config, fake.client, async version => images(version), source);
+    expect(fake.calls[0]!.method).toBe("GET");
+    const request = new URL(fake.calls[0]!.path, "https://api.github.com");
+    expect(request.pathname).toBe("/actions/workflows/ci.yml/runs");
+    expect(Object.fromEntries(request.searchParams)).toEqual({ branch: "main", event: "push", head_sha: config.sha, status: "success", per_page: "1" });
+    expect(fake.calls.find(call => call.method === "PATCH")!.body.body).toContain("[main CI](https://github.com/Example-Owner/Domabas/actions/runs/321)");
+  });
+  test("missing, pending, failed and mismatched main CI cannot reserve a version or build", async () => {
+    const invalid = [
+      [], [null], [{ ...mainRun, id: -1 }], [{ ...mainRun, event: "pull_request" }],
+      [{ ...mainRun, event: "workflow_dispatch" }], [{ ...mainRun, head_branch: "feature" }],
+      [{ ...mainRun, head_sha: "b".repeat(40) }], [{ ...mainRun, status: "in_progress" }],
+      [{ ...mainRun, conclusion: "failure" }], [{ ...mainRun, conclusion: "cancelled" }],
+    ];
+    for (const ciRuns of invalid) {
+      const fake = fakeGitHub({ ciRuns });
+      let built = false;
+      await expect(publishRelease(config, fake.client, async version => { built = true; return images(version); }, source)).rejects.toThrow("Main CI has not passed");
+      expect(built).toBe(false);
+      expect(fake.calls).toHaveLength(1);
+      expect(fake.calls[0]!.method).toBe("GET");
+      expect(fake.tags).toEqual([]);
+      expect(fake.releases).toEqual([]);
+    }
+  });
+  test("CI lookup errors stop publication without exposing tokens or response bodies", async () => {
+    for (const ciStatus of [403, 404, 429, 500]) {
+      const fake = fakeGitHub({ ciStatus });
+      await expect(publishRelease(config, fake.client, async () => { throw new Error("must not build"); }, source)).rejects.toThrow(ciStatus === 404 ? "Cannot find the main CI workflow" : `HTTP ${ciStatus}`);
+      expect(fake.calls).toHaveLength(1);
+      expect(fake.tags).toEqual([]);
+    }
+  });
   test("reserves the exact commit and publishes only after all images succeed", async () => {
     const fake = fakeGitHub();
     await publishRelease(config, fake.client, async version => {

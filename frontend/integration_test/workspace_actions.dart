@@ -96,6 +96,7 @@ Future<void> revealWorkspaceAction(WidgetTester tester, String key) async {
       'liveUpdatesStatus',
       'personal-activity',
       'logout',
+      'librarySwitcher',
     }.contains(key);
     final account = find.byKey(const Key('workspaceAccount'));
     final mobileMore = find.byKey(const Key('navigation-more'));

@@ -38,29 +38,32 @@ final class _DocumentProcessingSettingsScreenState
         builder: (context, state) {
           final config = state.configuration;
           return AppPage(
+            glacier: true,
             insetBody: false,
-            eyebrow: 'ADMIN SETTINGS',
+
             title: 'Document processing',
             description: 'Configure OCR, optional AI property and invoice extraction, and indexing across all libraries.',
             onRefresh: state.loading || state.saving ? null : cubit.load,
             child: ListView(
-              padding: AppLayout.cardListPadding(context),
+              padding: GlacierSettingsPage.scrollPadding(context),
               children: [
                 if (state.error != null) ...[
                   AppNotice(
                     message: state.error!,
                     action: state.pendingRequest != null
-                        ? TextButton(
+                        ? GlacierButton(
                             onPressed: state.loading || state.saving
                                 ? null
                                 : () => cubit.requestReindex(retry: true),
-                            child: const Text('Retry same request'),
+                            label: 'Retry same request',
+                            kind: GlacierButtonKind.quiet,
                           )
-                        : TextButton(
+                        : GlacierButton(
                             onPressed: state.loading || state.saving
                                 ? null
                                 : () => cubit.load(),
-                            child: const Text('Retry'),
+                            label: 'Retry',
+                            kind: GlacierButtonKind.quiet,
                           ),
                   ),
                   const SizedBox(height: 16),
@@ -74,8 +77,7 @@ final class _DocumentProcessingSettingsScreenState
                 AppProgressSlot(active: state.loading || state.saving),
                 const SizedBox(height: 16),
                 if (config != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  GlacierSettingsSection(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -137,6 +139,7 @@ final class _DocumentProcessingSettingsScreenState
                   ),
                   const SizedBox(height: 20),
                   AppSurface(
+                    glacier: true,
                     key: const Key('propertyExtractionSettings'),
                     child: PropertyExtractionSettings(
                       cubit: cubit,
@@ -145,6 +148,7 @@ final class _DocumentProcessingSettingsScreenState
                   ),
                   const SizedBox(height: 20),
                   AppSurface(
+                    glacier: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -194,27 +198,33 @@ final class _DocumentProcessingSettingsScreenState
                               : (value) => cubit.edit(segmentation: value),
                         ),
                         const SizedBox(height: 20),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton(
-                              key: const Key('saveProcessingSettings'),
-                              onPressed: cubit.canSave
-                                  ? () => cubit.save()
-                                  : null,
-                              child: const Text('Save settings'),
-                            ),
-                            TextButton(
-                              onPressed:
-                                  state.saving ||
-                                      state.reconcileRequired ||
-                                      !state.dirty
-                                  ? null
-                                  : cubit.resetDraft,
-                              child: const Text('Use saved settings'),
-                            ),
-                          ],
+                        GlacierWorkspaceGeometry.measureEndActions(
+                          context,
+                          followingExtent: 24,
+                          child: Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              GlacierButton(
+                                key: const Key('saveProcessingSettings'),
+                                onPressed: cubit.canSave
+                                    ? () => cubit.save()
+                                    : null,
+                                label: 'Save settings',
+                                kind: GlacierButtonKind.primary,
+                              ),
+                              GlacierButton(
+                                onPressed:
+                                    state.saving ||
+                                        state.reconcileRequired ||
+                                        !state.dirty
+                                    ? null
+                                    : cubit.resetDraft,
+                                label: 'Use saved settings',
+                                kind: GlacierButtonKind.quiet,
+                              ),
+                            ],
+                          ),
                         ),
                         if (state.draftRevision != null &&
                             state.draftRevision !=
@@ -229,6 +239,7 @@ final class _DocumentProcessingSettingsScreenState
                   ),
                   const SizedBox(height: 20),
                   AppSurface(
+                    glacier: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -237,19 +248,21 @@ final class _DocumentProcessingSettingsScreenState
                           description: 'Request another complete pass through the current pipeline for every library. Progress reflects completed document attempts.',
                         ),
                         const SizedBox(height: 16),
-                        FilledButton.icon(
+                        GlacierButton(
                           key: const Key('reindexSystem'),
                           onPressed: cubit.canRequest
                               ? () => _reindex(context)
                               : null,
-                          icon: const Icon(Icons.restart_alt),
-                          label: const Text('Reindex all library originals'),
+                          label: 'Reindex all library originals',
+                          icon: Icons.restart_alt,
+                          kind: GlacierButtonKind.primary,
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
                   AppSurface(
+                    glacier: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -259,11 +272,12 @@ final class _DocumentProcessingSettingsScreenState
                         ),
                         const SizedBox(height: 16),
                         if (config.dashboardUrl != null)
-                          OutlinedButton.icon(
+                          GlacierButton(
                             key: const Key('openTemporalDashboard'),
                             onPressed: cubit.openDashboard,
-                            icon: const Icon(Icons.open_in_new),
-                            label: const Text('Open Temporal dashboard'),
+                            label: 'Open Temporal dashboard',
+                            icon: Icons.open_in_new,
+                            kind: GlacierButtonKind.secondary,
                           )
                         else
                           const Text(
@@ -279,12 +293,15 @@ final class _DocumentProcessingSettingsScreenState
                   ),
                   const SizedBox(height: 16),
                   if (state.batches.isEmpty)
-                    const AppEmptyState(
-                      icon: Icons.restart_alt,
-                      title: 'No reindex requests yet',
-                      message: 'Manual requests and automatic pipeline changes will appear here.',
+                    const GlacierSettingsSection(
+                      child: AppEmptyState(
+                        icon: Icons.restart_alt,
+                        title: 'No reindex requests yet',
+                        message: 'Manual requests and automatic pipeline changes will appear here.',
+                      ),
                     ),
                   AppPagedList(
+                    glacier: true,
                     key: const PageStorageKey('system-reindex-pages'),
                     itemCount: state.batches.length,
                     hasMore: state.nextCursor != null,
@@ -303,10 +320,12 @@ final class _DocumentProcessingSettingsScreenState
                     },
                   ),
                 ] else if (!state.loading && state.error == null)
-                  const AppEmptyState(
-                    icon: Icons.settings_outlined,
-                    title: 'Processing settings are unavailable',
-                    message: 'Pull down to load the installed pipeline.',
+                  const GlacierSettingsSection(
+                    child: AppEmptyState(
+                      icon: Icons.settings_outlined,
+                      title: 'Processing settings are unavailable',
+                      message: 'Pull down to load the installed pipeline.',
+                    ),
                   ),
               ],
             ),
@@ -318,7 +337,7 @@ final class _DocumentProcessingSettingsScreenState
     ScaffoldMessenger.of(context).clearSnackBars();
     String? savedNotice;
     try {
-      await showDialog<void>(
+      await showGlacierDialog<void>(
         context: context,
         builder: (context) =>
             BlocConsumer<
@@ -338,6 +357,7 @@ final class _DocumentProcessingSettingsScreenState
               listener: (context, state) => savedNotice = state.notice,
               builder: (context, state) {
                 return AppDialog(
+                  glacier: true,
                   title: 'Extraction settings',
                   onRefresh: state.loading || state.saving ? null : cubit.load,
                   actions: [
@@ -355,9 +375,10 @@ final class _DocumentProcessingSettingsScreenState
                         ),
                       ),
                     ),
-                    TextButton(
+                    GlacierButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
+                      label: 'Close',
+                      kind: GlacierButtonKind.quiet,
                     ),
                   ],
                   child: Column(
@@ -366,9 +387,10 @@ final class _DocumentProcessingSettingsScreenState
                       if (state.error != null) ...[
                         AppNotice(
                           message: state.error!,
-                          action: TextButton(
+                          action: GlacierButton(
                             onPressed: state.saving ? null : () => cubit.load(),
-                            child: const Text('Retry'),
+                            label: 'Retry',
+                            kind: GlacierButtonKind.quiet,
                           ),
                         ),
                         const SizedBox(height: 16),

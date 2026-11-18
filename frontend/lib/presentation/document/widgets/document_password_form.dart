@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../ui/domabas_ui.dart';
 import '../cubits/document_cubit.dart';
 
 final class DocumentPasswordForm extends StatefulWidget {
@@ -84,18 +85,14 @@ final class _DocumentPasswordFormState extends State<DocumentPasswordForm> {
                 ),
                 const SizedBox(height: 12),
               ],
-              FilledButton.icon(
+              GlacierButton(
+                kind: GlacierButtonKind.primary,
+                label: widget.state.saving ? 'Unlocking…' : 'Unlock PDF',
+                icon: Icons.lock_open_rounded,
+                busy: widget.state.saving,
                 onPressed: widget.state.saving || _password.text.isEmpty
                     ? null
                     : _unlock,
-                icon: widget.state.saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.lock_open_rounded),
-                label: Text(widget.state.saving ? 'Unlocking…' : 'Unlock PDF'),
               ),
             ],
           ],

@@ -53,10 +53,11 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.pub-cache
-          key: pub-${{ runner.os }}-${{ hashFiles('frontend/pubspec.lock', 'scripts/ci/setup-flutter.ts') }}
+          key: pub-${{ runner.os }}-${{ hashFiles('frontend/pubspec.lock', 'frontend/widgetbook/pubspec.lock', 'scripts/ci/setup-flutter.ts') }}
       - run: task ci:flutter
       - run: task setup
       - run: task check
+      - run: task widgetbook:build
 
   integration:
     name: PostgreSQL integration

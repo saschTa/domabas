@@ -1,3 +1,5 @@
+import 'package:domabas/ui/domabas_ui.dart';
+
 import 'dart:convert';
 
 import 'package:domabas/app/http_client.dart';
@@ -177,7 +179,7 @@ Future<void> exerciseLLMProcessing(
   ]) {
     await _reveal(tester, find.byKey(Key(choice.$1)));
     expect(
-      tester.widget<SwitchListTile>(find.byKey(Key(choice.$1))).value,
+      tester.widget<GlacierSwitchRow>(find.byKey(Key(choice.$1))).value,
       choice.$2,
     );
   }
@@ -192,7 +194,7 @@ Future<void> exerciseLLMProcessing(
   await _reveal(tester, find.byKey(const Key('llmLMStudioCompatibility')));
   expect(
     tester
-        .widget<SwitchListTile>(
+        .widget<GlacierSwitchRow>(
           find.byKey(const Key('llmLMStudioCompatibility')),
         )
         .value,
@@ -517,7 +519,7 @@ Future<void> exerciseLLMProcessing(
   ]) {
     final toggle = find.byKey(Key(choice.$1));
     await _reveal(tester, toggle);
-    if (tester.widget<SwitchListTile>(toggle).value != choice.$2) {
+    if (tester.widget<GlacierSwitchRow>(toggle).value != choice.$2) {
       await tester.tap(toggle);
       await tester.pumpAndSettle();
     }

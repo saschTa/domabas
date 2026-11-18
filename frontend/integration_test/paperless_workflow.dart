@@ -1,3 +1,4 @@
+import 'package:domabas/ui/domabas_ui.dart';
 import 'package:domabas/app/job_activity_cubit.dart';
 import 'package:domabas/app/job_activity_indicator.dart';
 import 'package:flutter/material.dart';
@@ -201,11 +202,9 @@ Future<void> exercisePaperlessWorkflow(
     await tester.pump(const Duration(milliseconds: 200));
   }
   expect(importRows(), findsOneWidget);
-  final details = find.descendant(
-    of: importRows(),
-    matching: find.text('Details'),
-  );
+  final details = importRows();
   await _reveal(tester, details);
+  expect(tester.widget<GlacierJobRow>(details).onOpen, isNotNull);
   await tester.tap(details);
   await tester.pumpAndSettle();
   expect(find.text('Job details'), findsOneWidget);

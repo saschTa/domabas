@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'glacier/glacier_surfaces.dart';
+
 @immutable
 final class AppWorkspaceAction {
   const AppWorkspaceAction({
@@ -9,11 +11,13 @@ final class AppWorkspaceAction {
     required this.onPressed,
     this.detail,
     this.badge,
+    this.key,
   });
   final String id, label;
   final IconData icon;
   final Future<void> Function()? onPressed;
   final String? detail, badge;
+  final Key? key;
 
   String get tooltip => detail == null ? label : '$label. $detail';
   Widget get visual => Badge(
@@ -42,7 +46,7 @@ final class AppWorkspaceActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (primary && labeled) {
       return FilledButton.icon(
-        key: Key(action.id),
+        key: action.key ?? Key(action.id),
         onPressed: action.onPressed,
         icon: action.visual,
         label: Text(action.label, maxLines: 1),
@@ -50,14 +54,14 @@ final class AppWorkspaceActionButton extends StatelessWidget {
     }
     if (primary) {
       return IconButton.filled(
-        key: Key(action.id),
+        key: action.key ?? Key(action.id),
         tooltip: action.tooltip,
         onPressed: action.onPressed,
         icon: action.visual,
       );
     }
     return IconButton(
-      key: Key(action.id),
+      key: action.key ?? Key(action.id),
       tooltip: action.tooltip,
       onPressed: action.onPressed,
       icon: action.visual,
@@ -74,12 +78,16 @@ final class AppWorkspaceActionMenu extends StatefulWidget {
     this.accountLabel,
     this.label = 'More actions',
     this.icon = Icons.more_horiz,
+    this.glacier = false,
+    this.triggerBuilder,
   });
   final List<AppWorkspaceAction> actions, utilities;
   final Object owner;
   final String? accountLabel;
   final String label;
   final IconData icon;
+  final bool glacier;
+  final Widget Function(BuildContext, VoidCallback, FocusNode)? triggerBuilder;
 
   @override
   State<AppWorkspaceActionMenu> createState() => _AppWorkspaceActionMenuState();
@@ -169,76 +177,89 @@ final class _AppWorkspaceActionMenuState extends State<AppWorkspaceActionMenu> {
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black26,
       transitionDuration: Duration.zero,
-      pageBuilder: (context, _, _) => ValueListenableBuilder(
-        valueListenable: _updates,
-        builder: (context, _, _) => !mounted || _route != route
-            ? const SizedBox.shrink()
-            : SafeArea(
-                child: Dialog(
-                  insetPadding: const EdgeInsets.all(16),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 380),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.label,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
+      pageBuilder: (context, _, _) => _backdrop(
+        context,
+        ValueListenableBuilder(
+          valueListenable: _updates,
+          builder: (context, _, _) => !mounted || _route != route
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  child: Dialog(
+                    backgroundColor: widget.glacier ? Colors.transparent : null,
+                    elevation: widget.glacier ? 0 : null,
+                    insetPadding: const EdgeInsets.all(16),
+                    child: _surface(
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 380),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      widget.label,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Close actions',
+                                    onPressed: () {
+                                      if (_route == route && route.isCurrent) {
+                                        route.navigator?.pop();
+                                      }
+                                    },
+                                    icon: const Icon(Icons.close),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Flexible(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    for (final action in widget.actions)
+                                      _item(context, action, route, generation),
+                                    if (widget.utilities.isNotEmpty) ...[
+                                      if (widget.actions.isNotEmpty)
+                                        const Divider(),
+                                      if (widget.accountLabel != null)
+                                        Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Text(
+                                            widget.accountLabel!,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                          ),
+                                        ),
+                                      for (final action in widget.utilities)
+                                        _item(
+                                          context,
+                                          action,
+                                          route,
+                                          generation,
+                                        ),
+                                    ],
+                                  ],
                                 ),
                               ),
-                              IconButton(
-                                tooltip: 'Close actions',
-                                onPressed: () {
-                                  if (_route == route && route.isCurrent) {
-                                    route.navigator?.pop();
-                                  }
-                                },
-                                icon: const Icon(Icons.close),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                for (final action in widget.actions)
-                                  _item(context, action, route, generation),
-                                if (widget.utilities.isNotEmpty) ...[
-                                  if (widget.actions.isNotEmpty)
-                                    const Divider(),
-                                  if (widget.accountLabel != null)
-                                    Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Text(
-                                        widget.accountLabel!,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
-                                      ),
-                                    ),
-                                  for (final action in widget.utilities)
-                                    _item(context, action, route, generation),
-                                ],
-                              ],
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
     _route = route;
@@ -254,7 +275,7 @@ final class _AppWorkspaceActionMenuState extends State<AppWorkspaceActionMenu> {
     RawDialogRoute<void> route,
     int generation,
   ) => TextButton(
-    key: Key(action.id),
+    key: action.key ?? Key(action.id),
     style: TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       alignment: Alignment.centerLeft,
@@ -308,6 +329,13 @@ final class _AppWorkspaceActionMenuState extends State<AppWorkspaceActionMenu> {
     }
   }
 
+  Widget _backdrop(BuildContext context, Widget child) =>
+      widget.glacier ? glacierDialogBackdrop(context, (_) => child) : child;
+
+  Widget _surface(Widget child) => widget.glacier
+      ? GlacierSurface(padding: EdgeInsets.zero, radius: 20, child: child)
+      : child;
+
   @override
   void dispose() {
     _invalidate(restoreFocus: false);
@@ -317,10 +345,12 @@ final class _AppWorkspaceActionMenuState extends State<AppWorkspaceActionMenu> {
   }
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    focusNode: _focus,
-    tooltip: widget.label,
-    onPressed: _show,
-    icon: Icon(widget.icon),
-  );
+  Widget build(BuildContext context) =>
+      widget.triggerBuilder?.call(context, _show, _focus) ??
+      IconButton(
+        focusNode: _focus,
+        tooltip: widget.label,
+        onPressed: _show,
+        icon: Icon(widget.icon),
+      );
 }

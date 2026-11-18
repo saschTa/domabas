@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'glacier/glacier_controls.dart';
+import 'glacier/glacier_workspace_geometry.dart';
+
 final class AppPagedList extends StatefulWidget {
   const AppPagedList({
     super.key,
@@ -12,11 +15,13 @@ final class AppPagedList extends StatefulWidget {
     this.loadMoreLabel = 'Load more',
     this.loadMoreKey,
     this.footer,
+    this.glacier = false,
   });
 
   final int itemCount, pageSize;
   final IndexedWidgetBuilder itemBuilder;
   final bool hasMore, loading;
+  final bool glacier;
   final VoidCallback? onLoadMore;
   final String loadMoreLabel;
   final Key? loadMoreKey;
@@ -98,36 +103,60 @@ final class _AppPagedListState extends State<AppPagedList> {
         for (var i = start; i < end; i++) widget.itemBuilder(context, i),
         ?widget.footer,
         if (widget.itemCount > widget.pageSize || widget.hasMore)
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              TextButton(
-                onPressed: _page == 0 || widget.loading
-                    ? null
-                    : () {
-                        setState(() => _page--);
-                        _remember();
-                        _showFirstRow();
-                      },
-                child: const Text('Previous'),
-              ),
-              Text(
-                widget.itemCount == 0
-                    ? 'No matching records loaded'
-                    : '${start + 1}–$end',
-              ),
-              TextButton(
-                key: widget.loadMoreKey,
-                onPressed: widget.loading || (!loadedNext && !widget.hasMore)
-                    ? null
-                    : _next,
-                child: Text(loadedNext ? 'Next' : widget.loadMoreLabel),
-              ),
-            ],
+          _measure(
+            context,
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _button(
+                  label: 'Previous',
+                  onPressed: _page == 0 || widget.loading
+                      ? null
+                      : () {
+                          setState(() => _page--);
+                          _remember();
+                          _showFirstRow();
+                        },
+                ),
+                Text(
+                  widget.itemCount == 0
+                      ? 'No matching records loaded'
+                      : '${start + 1}–$end',
+                ),
+                _button(
+                  key: widget.loadMoreKey,
+                  label: loadedNext ? 'Next' : widget.loadMoreLabel,
+                  onPressed: widget.loading || (!loadedNext && !widget.hasMore)
+                      ? null
+                      : _next,
+                ),
+              ],
+            ),
           ),
       ],
     );
   }
+
+  Widget _measure(BuildContext context, Widget child) => widget.glacier
+      ? GlacierWorkspaceGeometry.measureEndActions(
+          context,
+          followingExtent: 24,
+          child: child,
+        )
+      : child;
+
+  Widget _button({
+    Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+  }) => widget.glacier
+      ? GlacierButton(
+          key: key,
+          label: label,
+          onPressed: onPressed,
+          kind: GlacierButtonKind.quiet,
+        )
+      : TextButton(key: key, onPressed: onPressed, child: Text(label));
 }

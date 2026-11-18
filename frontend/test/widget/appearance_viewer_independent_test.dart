@@ -2,10 +2,12 @@ import 'dart:typed_data';
 
 import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/app/domabas_app.dart';
+import 'package:domabas/domain/appearance/models/appearance_preference.dart';
 import 'package:domabas/domain/document/models/document.dart';
 import 'package:domabas/domain/document/models/document_email.dart';
 import 'package:domabas/domain/document/models/document_search.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
+import 'package:domabas/presentation/appearance/cubits/appearance_cubit.dart';
 import 'package:domabas/presentation/document/widgets/document_detail_dialog.dart';
 import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter/material.dart';
@@ -98,6 +100,7 @@ Document _mail(String id, String title) => Document(
 void main() {
   late _Documents documents;
   late FakeAppearanceRepository appearance;
+  late AppearanceCubit appearanceCubit;
   late FakeRealtimeRepository realtime;
   var scopes = 0;
   var closes = 0;
@@ -120,6 +123,8 @@ void main() {
         semanticIndexing: 'ready',
       );
     appearance = FakeAppearanceRepository();
+    appearanceCubit = AppearanceCubit(appearance)..restore();
+    addTearDown(appearanceCubit.close);
     realtime = FakeRealtimeRepository();
     scopes = 0;
     closes = 0;
@@ -136,6 +141,7 @@ void main() {
       DomabasApp(
         auth: FakeAuthRepository()..saved = session,
         appearance: appearance,
+        appearanceCubit: appearanceCubit,
         authenticate: (_, _) {
           scopes++;
           return AuthenticatedDependencies(
@@ -178,9 +184,7 @@ void main() {
       await mount(tester);
       await openMail(tester);
       final viewer = tester.state(find.byType(DocumentDetailDialog));
-      await tester.tap(find.byTooltip('Document details'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Extracted text'));
+      await tester.tap(find.text('Text'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Edit extracted text'));
       await tester.pumpAndSettle();
@@ -196,19 +200,17 @@ void main() {
         extentOffset: 8,
       );
       final route = ModalRoute.of(tester.element(editor));
-      final inspector = tester.element(find.text('Document details'));
+      final textView = tester.element(find.text('Text'));
       final connects = realtime.connectCalls;
       tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
       await tester.pumpAndSettle();
       expect(Theme.of(tester.element(editor)).brightness, Brightness.dark);
-      final sheetSurface = tester
-          .widgetList<Material>(
-            find.ancestor(of: editor, matching: find.byType(Material)),
-          )
-          .firstWhere((widget) => widget.color != null && widget.color!.a == 1);
-      expect(sheetSurface.color, AppTheme.dark().colorScheme.surface);
+      expect(
+        find.ancestor(of: editor, matching: find.byType(GlacierSurface)),
+        findsWidgets,
+      );
       expect(ModalRoute.of(tester.element(editor)), same(route));
-      expect(tester.element(find.text('Document details')), same(inspector));
+      expect(tester.element(find.text('Text')), same(textView));
       await choose(tester, 'light');
       expect(Theme.of(tester.element(editor)).brightness, Brightness.light);
       expect(tester.widget<TextField>(editor).controller, same(controller));
@@ -233,18 +235,30 @@ void main() {
   );
 
   testWidgets(
-    'search result viewer preserves automatic search intent and dirty properties across appearance changes',
+    'search draft and committed result preserve their scopes through appearance changes',
     (tester) async {
       await mount(tester, width: 1400);
+      await tester.tap(find.byKey(const Key('documentFilters')));
+      await tester.pumpAndSettle();
       final search = find.byKey(const Key('documentSearchTerm'));
       await tester.enterText(search, 'applied words');
       await tester.tap(find.byKey(const Key('applyDocumentSearch')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('documentFilters')));
+      await tester.pumpAndSettle();
       await tester.enterText(search, 'unsubmitted new words');
       final searchController = tester.widget<TextField>(search).controller!;
-      await tester.tap(find.byKey(const Key('search-document-mail')));
+      appearanceCubit.select(AppearancePreference.dark);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Document details'));
+      expect(
+        tester.widget<TextField>(search).controller,
+        same(searchController),
+      );
+      expect(searchController.text, 'unsubmitted new words');
+      expect(documents.criteria.map((value) => value.query), ['applied words']);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('search-document-mail')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Edit properties'));
       await tester.pumpAndSettle();
@@ -254,7 +268,7 @@ void main() {
       await tester.enterText(title, 'Unsaved metadata');
       final controller = tester.widget<TextFormField>(title).controller!;
       final viewer = tester.state(find.byType(DocumentDetailDialog));
-      await choose(tester, 'dark');
+      await choose(tester, 'light');
       expect(tester.widget<TextFormField>(title).controller, same(controller));
       expect(controller.text, 'Unsaved metadata');
       expect(tester.state(find.byType(DocumentDetailDialog)), same(viewer));
@@ -263,16 +277,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard').last);
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('documentFilters')));
+      await tester.pumpAndSettle();
       expect(
-        tester.widget<TextField>(search).controller,
-        same(searchController),
-      );
-      expect(searchController.text, 'unsubmitted new words');
-      expect(documents.criteria, isNotEmpty);
-      expect(documents.criteria.map((value) => value.query), [
+        tester.widget<TextField>(search).controller!.text,
         'applied words',
-        'unsubmitted new words',
-      ]);
+      );
+      expect(documents.criteria.map((value) => value.query), ['applied words']);
       expect(scopes, 1);
       expect(closes, 0);
       expect(tester.takeException(), isNull);

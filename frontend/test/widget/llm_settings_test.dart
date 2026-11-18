@@ -92,14 +92,14 @@ void main() {
         'http://127.0.0.1:1234/v1',
       );
       await reveal(tester, 'llmLMStudioCompatibility');
-      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      expect(tester.widget<GlacierSwitchRow>(toggle).value, isFalse);
       expect(
         tester.getTopLeft(find.byKey(const Key('llmBaseUrl'))).dy,
         lessThan(tester.getTopLeft(toggle).dy),
       );
       expect(
-        tester.getTopLeft(toggle).dy,
-        lessThan(tester.getTopLeft(find.byKey(const Key('llmModel'))).dy),
+        tester.getTopLeft(find.byKey(const Key('llmModel'))).dy,
+        lessThan(tester.getTopLeft(find.byKey(const Key('llmBaseUrl'))).dy),
       );
       await tester.tap(toggle);
       await tester.pumpAndSettle();
@@ -107,14 +107,14 @@ void main() {
       expect(cubit.state.dirty, isTrue);
       await cubit.load(poll: true);
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(tester.widget<GlacierSwitchRow>(toggle).value, isTrue);
       await reveal(tester, 'llmProviderOllama');
       await tester.tap(find.byKey(const Key('llmProviderOllama')));
       await tester.pumpAndSettle();
       expect(toggle, findsNothing);
       await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(tester.widget<GlacierSwitchRow>(toggle).value, isTrue);
       await reveal(tester, 'saveLLMSettings');
       await tester.tap(find.byKey(const Key('saveLLMSettings')));
       await tester.pumpAndSettle();
@@ -125,7 +125,7 @@ void main() {
       await reveal(tester, 'resetLLMSettings');
       await tester.tap(find.byKey(const Key('resetLLMSettings')));
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(tester.widget<GlacierSwitchRow>(toggle).value, isTrue);
       expect(cubit.state.dirty, isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
     },
@@ -263,7 +263,7 @@ void main() {
       await mount(tester);
       expect(
         tester
-            .widget<SwitchListTile>(find.byKey(const Key('llmEnabled')))
+            .widget<GlacierSwitchRow>(find.byKey(const Key('llmEnabled')))
             .value,
         isFalse,
       );
@@ -371,7 +371,7 @@ void main() {
       await tester.tap(control);
       await tester.pumpAndSettle();
       expect(cubit.state.llm.enabled, isTrue);
-      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.tap(find.widgetWithText(GlacierButton, 'Close'));
       await tester.pumpAndSettle();
       expect(find.byType(AppDialog), findsNothing);
       expect(cubit.state.dirty, isTrue);
@@ -493,7 +493,7 @@ void main() {
           );
           expect(
             tester
-                .widget<FilledButton>(find.byKey(const Key('saveLLMSettings')))
+                .widget<GlacierButton>(find.byKey(const Key('saveLLMSettings')))
                 .onPressed,
             isNull,
           );

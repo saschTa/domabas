@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_presenters.dart';
 import 'app_ink_widgets.dart';
+import 'glacier/glacier_controls.dart';
 
 @immutable
 final class AppAppearanceOption {
@@ -38,15 +39,17 @@ final class AppAppearanceMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppDialog(
+    glacier: true,
     key: const Key('appearanceDialog'),
     title: 'Appearance',
     description: 'Choose how Domabas looks on this device.',
     width: 440,
     actions: [
-      TextButton(
+      GlacierButton(
         key: const Key('closeAppearance'),
         onPressed: onClose,
-        child: const Text('Done'),
+        label: 'Done',
+        kind: GlacierButtonKind.quiet,
       ),
     ],
     child: Column(
@@ -56,29 +59,14 @@ final class AppAppearanceMenu extends StatelessWidget {
         for (final option in options)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Semantics(
+            child: GlacierChoice(
+              key: Key('appearance-${option.id}'),
+              label: option.label,
+              description: option.id == 'system'
+                  ? 'Follow your device settings'
+                  : null,
               selected: selectedId == option.id,
-              child: ListTile(
-                key: Key('appearance-${option.id}'),
-                minTileHeight: 56,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                selected: selectedId == option.id,
-                selectedColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                selectedTileColor: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer,
-                leading: Icon(option.icon),
-                title: Text(option.label),
-                subtitle: option.id == 'system'
-                    ? const Text('Follow your device settings')
-                    : null,
-                trailing: selectedId == option.id
-                    ? const Icon(Icons.check_rounded)
-                    : null,
-                onTap: () => onSelected(option.id),
-              ),
+              onChanged: (_) => onSelected(option.id),
             ),
           ),
         if (busy) const AppStripedProgressIndicator(),
@@ -91,11 +79,12 @@ final class AppAppearanceMenu extends StatelessWidget {
           if (onRetry != null)
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton.icon(
+              child: GlacierButton(
                 key: const Key('retryAppearance'),
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
+                label: 'Try again',
+                icon: Icons.refresh,
+                kind: GlacierButtonKind.quiet,
               ),
             ),
         ],

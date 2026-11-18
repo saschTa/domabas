@@ -13,8 +13,10 @@ final class JobActivityIndicator extends StatelessWidget {
     required this.uploads,
     required this.onOpen,
     this.onSelectFiles,
+    this.glacier = false,
   });
   final JobActivityCubit cubit;
+  final bool glacier;
   final DocumentUploadsCubit? uploads;
   final ValueChanged<JobActivityItem> onOpen;
   final VoidCallback? onSelectFiles;
@@ -54,6 +56,92 @@ final class JobActivityIndicator extends StatelessWidget {
         pending == 0 &&
         uploadsState?.showFeedback != true) {
       return const SizedBox.shrink();
+    }
+    if (glacier) {
+      final totalsKnown =
+          jobs.runningCount != null &&
+          jobs.queuedCount != null &&
+          jobs.batchCount != null;
+      final count = totalsKnown
+          ? jobs.runningCount! + jobs.queuedCount! + jobs.batchCount! + pending
+          : null;
+      final detail = [
+        if (pending > 0) '$pending uploads',
+        if (jobs.runningCount != null) '${jobs.runningCount} running',
+        if (jobs.queuedCount != null) '${jobs.queuedCount} queued',
+        if (jobs.batchCount != null && jobs.batchCount! > 0)
+          '${jobs.batchCount} reindexes',
+        if (!totalsKnown) 'Activity totals unavailable',
+        if (jobs.discovering) 'Checking activity…',
+        if (jobs.stale) 'Job updates paused',
+        if (pending == 0 && uploadsState?.showFeedback == true)
+          uploadsState!.feedback,
+      ].join(' · ');
+      final rows = [
+        for (final row in uploadsState?.rows ?? const <DocumentUploadRow>[])
+          GlacierActivityJob(
+            id: 'upload-${row.candidate.id}',
+            title: row.candidate.displayName,
+            status: row.label,
+            stage: row.message.isEmpty ? null : row.message,
+            library: uploads?.libraryName,
+            running:
+                row.phase == DocumentUploadPhase.reading ||
+                row.phase == DocumentUploadPhase.uploading,
+            terminal:
+                !row.pending && row.phase != DocumentUploadPhase.uncertain,
+            failed: row.phase == DocumentUploadPhase.rejected,
+          ),
+        for (final item in jobs.items)
+          GlacierActivityJob(
+            id: '${item.kind.name}-${item.id}',
+            title: item.title,
+            status: processingLabel(item.status),
+            stage: item.batch == null
+                ? processingLabel(item.stage)
+                : reindexProgressLabel(item.batch!),
+            progress: item.batch?.progress,
+            running: item.running && !jobs.stale,
+            terminal: !item.active,
+            failed: item.status == 'failed',
+            onOpen: () => onOpen(item),
+          ),
+      ];
+      return GlacierActivityDock(
+        key: const Key('jobActivityIndicator'),
+        jobs: rows.take(4).toList(growable: false),
+        summary: GlacierActivitySummary(
+          title: pending > 0
+              ? '$pending uploads'
+              : count == null
+              ? 'Activity'
+              : count > 0
+              ? '$count active jobs'
+              : 'Upload results',
+          detail: detail,
+          count: count,
+          running:
+              activeUpload != null ||
+              (!jobs.stale &&
+                  ((jobs.runningCount ?? 0) > 0 ||
+                      (jobs.batchCount ?? 0) > 0 ||
+                      jobs.items.any((item) => item.running))),
+        ),
+        compact:
+            MediaQuery.sizeOf(context).width < 800 ||
+            MediaQuery.viewInsetsOf(context).bottom > 0,
+        truncated: jobs.hasMore || rows.length > 4,
+        continuationLabel: 'This preview shows up to four entries. View all activity for the available history.',
+        stale: jobs.stale && activeUpload == null,
+        onRetryRefresh: jobs.loading ? null : cubit.refresh,
+        onOpenActivity: () => showJobActivity(
+          context,
+          cubit: cubit,
+          uploads: uploads,
+          onOpen: onOpen,
+          onSelectFiles: onSelectFiles,
+        ),
+      );
     }
     final running = jobs.runningCount ?? 0;
     final waiting = jobs.queuedCount ?? 0;
@@ -124,7 +212,7 @@ Future<void> showJobActivity(
   required DocumentUploadsCubit? uploads,
   required ValueChanged<JobActivityItem> onOpen,
   VoidCallback? onSelectFiles,
-}) => showDialog<void>(
+}) => showGlacierDialog<void>(
   context: context,
   builder: (context) => BlocBuilder<JobActivityCubit, JobActivityState>(
     bloc: cubit,
@@ -143,19 +231,22 @@ Future<void> showJobActivity(
                 : state!.rows.indexOf(b).compareTo(state.rows.indexOf(a));
           });
         return AppDialog(
+          glacier: true,
           title: 'Activity',
           onRefresh: jobs.loading ? null : cubit.refresh,
           description: 'Uploads, document processing and reindex progress',
           width: 560,
           actions: [
             if (uploads != null && state!.rows.any((row) => !row.pending))
-              TextButton(
+              GlacierButton(
+                kind: GlacierButtonKind.quiet,
+                label: 'Clear finished uploads',
                 onPressed: uploads.clearFinished,
-                child: const Text('Clear finished uploads'),
               ),
-            FilledButton(
+            GlacierButton(
+              kind: GlacierButtonKind.primary,
+              label: 'Close',
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
             ),
           ],
           child: Column(
@@ -177,6 +268,7 @@ Future<void> showJobActivity(
                     ),
                   ),
                 AppPagedList(
+                  glacier: true,
                   key: const PageStorageKey('upload-outcome-pages'),
                   itemCount: state.rows.length,
                   pageSize: 10,
@@ -185,6 +277,7 @@ Future<void> showJobActivity(
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: AppSurface(
+                        glacier: true,
                         padding: EdgeInsets.zero,
                         child: AppRecordRow(
                           leading: const Icon(Icons.upload_file_outlined),
@@ -221,26 +314,39 @@ Future<void> showJobActivity(
                 if (onSelectFiles != null)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
+                    child: GlacierButton(
+                      kind: GlacierButtonKind.quiet,
+                      label: 'Select files',
                       onPressed: state.usable
                           ? () {
                               Navigator.pop(context);
                               onSelectFiles();
                             }
                           : null,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Select files'),
+                      icon: Icons.add,
                     ),
                   ),
                 const SizedBox(height: 20),
               ],
               const AppSectionHeader(title: 'Background jobs'),
+              Text(
+                [
+                  if (jobs.runningCount != null) '${jobs.runningCount} running',
+                  if (jobs.queuedCount != null) '${jobs.queuedCount} queued',
+                  if (jobs.batchCount != null) '${jobs.batchCount} reindexes',
+                  if (jobs.runningCount == null ||
+                      jobs.queuedCount == null ||
+                      jobs.batchCount == null)
+                    'Activity totals unavailable',
+                ].join(' · '),
+              ),
               if (jobs.stale)
                 AppNotice(
                   message: 'Updates paused. Showing last known progress.',
-                  action: TextButton(
+                  action: GlacierButton(
+                    kind: GlacierButtonKind.quiet,
+                    label: 'Retry',
                     onPressed: cubit.refresh,
-                    child: const Text('Retry'),
                   ),
                 ),
               if (jobs.discovering) const Text('Checking activity totals…'),
@@ -294,12 +400,13 @@ Future<void> showJobActivity(
                           label: processingLabel(item.status),
                           running: item.running && !jobs.stale,
                         ),
-                        trailing: TextButton(
+                        trailing: GlacierButton(
+                          kind: GlacierButtonKind.quiet,
+                          label: 'View',
                           onPressed: () {
                             Navigator.pop(context);
                             onOpen(item);
                           },
-                          child: const Text('View'),
                         ),
                       ),
                     ),
@@ -307,9 +414,10 @@ Future<void> showJobActivity(
                 },
               ),
               if (jobs.hasMore)
-                TextButton(
+                GlacierButton(
+                  kind: GlacierButtonKind.quiet,
+                  label: 'Load more active jobs',
                   onPressed: jobs.loading ? null : cubit.loadMore,
-                  child: const Text('Load more active jobs'),
                 ),
             ],
           ),

@@ -266,6 +266,8 @@ void main() {
       expect(find.byKey(const Key('navigation-more')), findsOneWidget);
       await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('navigation-admin-settings')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('manageSystemUsers')), findsNothing);
       await tester.tap(find.byKey(const Key('manageDocumentProcessing')));
       await tester.pumpAndSettle();
@@ -287,10 +289,10 @@ void main() {
       expect(find.byKey(const Key('reindexLibrary')), findsNothing);
       expect(find.byKey(const Key('navigation-admin-settings')), findsNothing);
       expect(find.text('Shared resource limits'), findsNothing);
-      expect(find.text('Details').hitTestable(), findsOneWidget);
+      expect(find.byKey(const Key('job-job')).hitTestable(), findsOneWidget);
       await revealWorkspaceContent(
         tester,
-        find.text('Details'),
+        find.byKey(const Key('job-job')),
         scrollable: find
             .descendant(
               of: find.byKey(const PageStorageKey('processingPage')),
@@ -305,7 +307,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tester.tap(find.text('Details'));
+      await tester.tap(find.byKey(const Key('job-job')));
       await tester.pumpAndSettle();
       expect(find.text('Job details'), findsOneWidget);
       expect(find.text('Pipeline for this attempt'), findsOneWidget);

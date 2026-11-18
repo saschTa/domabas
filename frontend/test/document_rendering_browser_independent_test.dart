@@ -263,6 +263,8 @@ void main() {
       addTearDown(cubit.close);
       await cubit.load();
       expect(cubit.state.image, isNull);
+      expect(cubit.state.failed, isFalse);
+      expect(cubit.state.loading, isFalse);
       coordinator.resume();
       await tester.runAsync(cubit.resume);
       final ready = cubit.state.image;

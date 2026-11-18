@@ -110,6 +110,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   late final LibrariesCubit _libraries;
   late final SystemUsersCubit _systemUsers;
   late final DocumentProcessingCubit _processing;
+  GlobalKey<DocumentProcessingScreenState> _processingScreen = GlobalKey();
   late final ProcessingJobsFiltersCubit _jobFilters;
   late final EmailProvidersCubit _email;
   late final EmailJobsCubit _emailJobs;
@@ -128,6 +129,8 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   ScannerCubit? _scannerCubit;
   bool get _coveredRoute => _documentRoute || _scannerRoute;
   final WorkspaceCubit _navigation = WorkspaceCubit();
+  final _documentToolbar = GlobalKey<DocumentsWorkspaceToolbarState>();
+  final _invoiceToolbar = GlobalKey<InvoicesWorkspaceToolbarState>();
   String get _destination => _navigation.state;
 
   @override
@@ -381,6 +384,12 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
         label: 'User settings',
         compactLabel: 'Settings',
         icon: Icons.settings_outlined,
+        overview: const AppNavigationItem(
+          id: 'user-settings',
+          label: 'User settings',
+          icon: Icons.settings_outlined,
+          key: Key('navigation-user-settings'),
+        ),
         items: [
           if (widget.serverSettings != null)
             const AppNavigationItem(
@@ -450,6 +459,12 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
           label: 'Admin settings',
           compactLabel: 'Admin',
           icon: Icons.admin_panel_settings_outlined,
+          overview: const AppNavigationItem(
+            id: 'admin-settings',
+            label: 'Admin settings',
+            icon: Icons.admin_panel_settings_outlined,
+            key: Key('navigation-admin-settings'),
+          ),
           items: [
             if (_workloadSettings.allowed)
               const AppNavigationItem(
@@ -494,9 +509,11 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   void _select(String destination) {
     if (!mounted || _coveredRoute) return;
     if (widget.session.identity.mustChangePassword ||
-        !_groups
-            .expand((group) => group.items)
-            .any((item) => item.id == destination)) {
+        !_groups.any(
+          (group) =>
+              group.overview?.id == destination ||
+              group.items.any((item) => item.id == destination),
+        )) {
       return;
     }
     if (destination == _destination) return;
@@ -625,6 +642,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
     _paperlessJobs.clearSelection();
     setState(() {
       _activityView++;
+      _processingScreen = GlobalKey();
       _activityBatches = item.batch != null;
     });
     _select(item.batch?.scope == 'system' ? 'processing-settings' : 'jobs');
@@ -764,6 +782,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
         MaterialPageRoute(
           fullscreenDialog: true,
           builder: (_) => ScannerScreen(
+            libraryName: identity.accountName,
             cubit: scannerCubit,
             previewBuilder: scannerScope.previewBuilder,
             canReadDocuments: identity.allows(IdentityPermission.readDocuments),
@@ -864,6 +883,80 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
   bool get _canAct =>
       mounted && ModalRoute.of(context)?.isCurrent == true && !_coveredRoute;
 
+  AppNavigationGroup? get _settingsGroup => _groups
+      .where(
+        (group) =>
+            group.overview != null &&
+            group.items.any((item) => item.id == _destination),
+      )
+      .firstOrNull;
+
+  Widget _settingsOverview(String id) {
+    final group = _groups.firstWhere((group) => group.overview?.id == id);
+    return AppPage(
+      glacier: true,
+      insetBody: false,
+      title: group.label,
+      child: GlacierSettingsOverview(
+        destinations: [
+          for (final item in group.items)
+            GlacierSettingsDestination(
+              id: item.id,
+              label: item.label,
+              icon: item.icon,
+              key: MediaQuery.sizeOf(context).width < 800
+                  ? item.key
+                  : Key('settings-overview-${item.id}'),
+              description: switch (item.id) {
+                'server' => 'Manage the server this app connects to.',
+                'libraries' =>
+                  'Review your libraries or join with an invitation.',
+                'members' => 'Manage people and permissions in this library.',
+                'invitations' =>
+                  'Invite people and review shared access codes.',
+                'email' => 'Manage email accounts and their import history.',
+                'paperless' =>
+                  'Import documents from a Paperless installation.',
+                'password' => 'Change the password for your account.',
+                'licenses' => 'Read the licenses included with Domabas.',
+                'workload-settings' =>
+                  'Set shared worker and AI provider capacity.',
+                'chat-settings' =>
+                  'Configure the model and provider for AI chat.',
+                'system-users' =>
+                  'Manage administrators for this installation.',
+                'processing-settings' =>
+                  'Configure OCR, extraction and indexing.',
+                'paperless-settings' => 'Set the pace of Paperless retrievals.',
+                _ => item.label,
+              },
+            ),
+        ],
+        onSelected: _select,
+      ),
+    );
+  }
+
+  Widget _settingsToolbar({Widget? controls}) {
+    final group = _settingsGroup!;
+    final item = group.items.firstWhere((item) => item.id == _destination);
+    return GlacierSurface(
+      radius: 13,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GlacierSettingsHeader(
+            parentLabel: group.label,
+            title: item.label,
+            onBack: () => _select(group.overview!.id),
+          ),
+          if (controls != null) ...[const SizedBox(height: 12), controls],
+        ],
+      ),
+    );
+  }
+
   void _selectNavigation(String destination) {
     if (destination == 'scanner') {
       if (_canAct && widget.dependencies.scanner != null) {
@@ -872,6 +965,39 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
       return;
     }
     _select(destination);
+  }
+
+  void _openWorkspaceSearch() {
+    if (!_canAct) return;
+    final destination = _destination == 'invoices' && _invoices.allowed
+        ? 'invoices'
+        : _documents.capabilities.search
+        ? 'documents'
+        : _invoices.allowed
+        ? 'invoices'
+        : null;
+    if (destination == null) return;
+    final session = widget.session;
+    void open() {
+      if (!mounted ||
+          !identical(widget.session, session) ||
+          !_canAct ||
+          _destination != destination) {
+        return;
+      }
+      if (destination == 'invoices' && _invoices.allowed) {
+        _invoiceToolbar.currentState?.openSearch();
+      } else if (destination == 'documents' && _documents.capabilities.search) {
+        _documentToolbar.currentState?.openSearch();
+      }
+    }
+
+    if (_destination == destination) {
+      open();
+    } else {
+      _select(destination);
+      WidgetsBinding.instance.addPostFrameCallback((_) => open());
+    }
   }
 
   Widget _shell(
@@ -888,6 +1014,31 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
         if (!didPop) _select('documents');
       },
       child: AppWorkspaceShell(
+        glacier: true,
+        libraryLabel: identity.accountName,
+        onLibrary: _libraries.acting
+            ? null
+            : () {
+                if (_canAct) LibrarySwitcher.open(context, _libraries);
+              },
+        searchLabel:
+            _destination == 'invoices' || !_documents.capabilities.search
+            ? 'Search invoices'
+            : 'Search documents',
+        onSearch: _documents.capabilities.search || _invoices.allowed
+            ? _openWorkspaceSearch
+            : null,
+        onActivity: () {
+          if (_canAct) {
+            showJobActivity(
+              context,
+              cubit: _jobActivity,
+              uploads: widget.dependencies.uploads,
+              onOpen: _openJobActivity,
+              onSelectFiles: widget.onUpload,
+            );
+          }
+        },
         mobilePrimaryGroupIds: const [
           'invoices',
           'scanner',
@@ -914,6 +1065,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
             ),
         ],
         activityIndicator: JobActivityIndicator(
+          glacier: true,
           cubit: _jobActivity,
           uploads: widget.dependencies.uploads,
           onOpen: _openJobActivity,
@@ -930,12 +1082,16 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
         toolbarBuilder: switch (_destination) {
           'documents' =>
             (context, library, actions) => DocumentsWorkspaceToolbar(
+              key: _documentToolbar,
+              libraryName: identity.accountName,
               cubit: _documents,
               vocabulary: widget.dependencies.vocabulary,
               libraryPicker: library,
               workspaceActions: actions,
             ),
           'invoices' => (context, library, actions) => InvoicesWorkspaceToolbar(
+            key: _invoiceToolbar,
+            libraryName: identity.accountName,
             cubit: _invoices,
             libraryPicker: library,
             workspaceActions: actions,
@@ -945,12 +1101,17 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
             libraryPicker: library,
             workspaceActions: actions,
           ),
-          'licenses' => (context, library, actions) => LicensesWorkspaceToolbar(
-            cubit: _licenses,
-            libraryPicker: library,
-            workspaceActions: actions,
+          'licenses' => (context, library, actions) => _settingsToolbar(
+            controls: LicensesWorkspaceToolbar(
+              cubit: _licenses,
+              libraryPicker: library,
+              workspaceActions: actions,
+            ),
           ),
-          _ => null,
+          _ =>
+            _settingsGroup == null
+                ? null
+                : (context, library, actions) => _settingsToolbar(),
         },
         utilityActions: [?widget.appearanceWorkspaceAction, realtime, activity],
         actions: [
@@ -1040,6 +1201,8 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
               ),
             Expanded(
               child: switch (_destination) {
+                'user-settings' ||
+                'admin-settings' => _settingsOverview(_destination),
                 'licenses' => LicensesScreen(
                   cubit: _licenses,
                   shellToolbar: true,
@@ -1083,7 +1246,8 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                         bloc: _paperlessJobs,
                         builder: (context, paperlessJobs) =>
                             DocumentProcessingScreen(
-                              key: ValueKey('activity-view-$_activityView'),
+                              key: _processingScreen,
+                              modalDetails: true,
                               initialBatches: _activityBatches,
                               cubit: _processing,
                               refreshing:
@@ -1145,8 +1309,16 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                                           widget.dependencies.paperless!,
                                       run: paperlessJobs.selected!,
                                       error: paperlessJobs.error,
-                                      onOpenImport: () => _select('paperless'),
-                                      onOpenDocument: _openProcessingDocument,
+                                      onOpenImport: () => _processingScreen
+                                          .currentState
+                                          ?.performOutsideDetails(
+                                            () => _select('paperless'),
+                                          ),
+                                      onOpenDocument: (id) => _processingScreen
+                                          .currentState
+                                          ?.performOutsideDetails(
+                                            () => _openProcessingDocument(id),
+                                          ),
                                     )
                                   : emailJobs.selected == null
                                   ? null
@@ -1160,10 +1332,12 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                                                 emailJobs.selected!.providerId,
                                           )
                                           .firstOrNull,
-                                      onOpenAccount: (id) {
-                                        _select('email');
-                                        unawaited(_email.select(id));
-                                      },
+                                      onOpenAccount: (id) => _processingScreen
+                                          .currentState
+                                          ?.performOutsideDetails(() {
+                                            _select('email');
+                                            unawaited(_email.select(id));
+                                          }),
                                     ),
                               onClearSourceSelection: () {
                                 _emailJobs.clearSelection();
@@ -1213,16 +1387,24 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                 ),
                 _ =>
                   identity.allows(IdentityPermission.readDocuments)
-                      ? DocumentsScreen(
-                          shellToolbar: true,
-                          vocabulary: widget.dependencies.vocabulary,
-                          appearanceAction: widget.appearanceAction,
-                          cubit: _documents,
-                          canCreate: identity.allows(
-                            IdentityPermission.createDocuments,
+                      ? BlocBuilder<JobActivityCubit, JobActivityState>(
+                          bloc: _jobActivity,
+                          builder: (context, jobs) => DocumentsScreen(
+                            preparingPreviewDocumentIds:
+                                _foreground && !_coveredRoute
+                                ? jobs.preparingPreviewDocumentIds
+                                : const {},
+                            shellToolbar: true,
+                            vocabulary: widget.dependencies.vocabulary,
+                            appearanceAction: widget.appearanceAction,
+                            cubit: _documents,
+                            canCreate: identity.allows(
+                              IdentityPermission.createDocuments,
+                            ),
                           ),
                         )
                       : const AppPage(
+                          glacier: true,
                           title: 'Documents',
                           child: AppEmptyState(
                             icon: Icons.lock_outline,
@@ -1240,12 +1422,13 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
 
   Widget _passwordSettings() => Builder(
     builder: (context) => AppPage(
+      glacier: true,
       insetBody: false,
       eyebrow: 'USER SETTINGS',
       title: 'Password',
       description: 'Keep your account secure with a password only you know.',
       child: SingleChildScrollView(
-        padding: AppLayout.cardListPadding(context),
+        padding: GlacierSettingsPage.scrollPadding(context),
         child: SafeArea(
           top: false,
           bottom: false,
@@ -1254,6 +1437,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 640),
               child: AppSurface(
+                glacier: true,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1299,7 +1483,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
         ),
       ],
     ),
-    body: AppPaperCanvas(
+    body: GlacierActivityBackdrop(
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(

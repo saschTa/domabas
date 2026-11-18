@@ -177,6 +177,35 @@ final class InvoicesCubit extends Cubit<InvoicesState> {
     }
   }
 
+  Future<void> applySearch(InvoiceCriteria criteria, {String? rawTerm}) {
+    if (isClosed ||
+        !allowed ||
+        criteria.filters.validation != null ||
+        (criteria.source != null &&
+            criteria.source != "structured" &&
+            criteria.source != "ai")) {
+      return Future.value();
+    }
+    final raw = rawTerm ?? criteria.query;
+    final error = raw.trim().runes.length > 200
+        ? "Use 200 characters or fewer."
+        : null;
+    _stop();
+    emit(
+      state.copyWith(
+        criteria: criteria.copyWith(query: raw.trim()),
+        rawTerm: raw,
+        composing: false,
+        debouncing: false,
+        loading: false,
+        termError: error,
+        clearTermError: error == null,
+        clearError: true,
+      ),
+    );
+    return load();
+  }
+
   Future<void> submitSearch() => load();
 
   Future<void> clearSearch() {

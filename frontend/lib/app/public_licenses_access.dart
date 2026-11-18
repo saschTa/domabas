@@ -25,6 +25,7 @@ final class PublicLicensesFooter extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: TextButton.icon(
         key: const Key('publicLicenses'),
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
         onPressed: () {
           FocusScope.of(context).unfocus();
           Navigator.of(context).push<void>(
@@ -72,7 +73,7 @@ final class _PublicLicensesPageState extends State<_PublicLicensesPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(),
-    body: AppPaperCanvas(
+    body: GlacierActivityBackdrop(
       child: SafeArea(
         child: LicensesScreen(cubit: _licenses, eyebrow: 'About Domabas'),
       ),

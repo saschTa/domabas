@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -23,9 +25,10 @@ final class DocumentProcessingScreen extends StatefulWidget {
     this.refreshing = false,
     this.onEditExtraction,
     this.initialBatches = false,
+    this.modalDetails = false,
   });
   final DocumentProcessingCubit cubit;
-  final bool initialBatches;
+  final bool initialBatches, modalDetails;
   final bool canReadDocuments;
   final void Function(String) onOpenDocument;
   final Widget? sourcePipeline, jobsList, selectedSourceDetails;
@@ -36,12 +39,116 @@ final class DocumentProcessingScreen extends StatefulWidget {
   final VoidCallback? onEditExtraction;
   @override
   State<DocumentProcessingScreen> createState() =>
-      _DocumentProcessingScreenState();
+      DocumentProcessingScreenState();
 }
 
-final class _DocumentProcessingScreenState
+final class DocumentProcessingScreenState
     extends State<DocumentProcessingScreen> {
   late bool _batches = widget.initialBatches;
+  DialogRoute<void>? _detailRoute;
+  final _detailUpdates = ValueNotifier(0);
+  bool _detailSyncPending = false;
+  void performOutsideDetails(VoidCallback callback) {
+    final route = _detailRoute;
+    if (route == null) {
+      callback();
+      return;
+    }
+    if (!route.isCurrent) return;
+    route.navigator?.pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) callback();
+    });
+  }
+
+  void _syncDetails() {
+    if (!widget.modalDetails || _detailSyncPending) return;
+    _detailSyncPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _detailSyncPending = false;
+      if (!mounted) return;
+      final hasDetails =
+          widget.cubit.state.selected != null ||
+          widget.selectedSourceDetails != null;
+      if (!hasDetails) {
+        final route = _detailRoute;
+        if (route?.isCurrent == true) route!.navigator?.pop();
+        return;
+      }
+      if (_detailRoute != null) {
+        _detailUpdates.value++;
+        return;
+      }
+      if (ModalRoute.of(context)?.isCurrent != true) return;
+      final navigator = Navigator.of(context);
+      late final DialogRoute<void> route;
+      route = createGlacierDialogRoute<void>(
+        context: context,
+        builder: (dialogContext) => ValueListenableBuilder<int>(
+          valueListenable: _detailUpdates,
+          builder: (context, _, _) {
+            final state = widget.cubit.state;
+            final selected = state.selected;
+            return AppDialog(
+              glacier: true,
+              width: 900,
+              title: 'Job details',
+              description: selected?.label ?? widget.selectedSourceTitle,
+              onRefresh:
+                  state.loading || state.detailLoading || widget.refreshing
+                  ? null
+                  : widget.onRefresh ?? widget.cubit.load,
+              actions: [
+                GlacierButton(
+                  label: 'Back to jobs',
+                  kind: GlacierButtonKind.quiet,
+                  onPressed: () {
+                    if (route.isCurrent) navigator.pop();
+                  },
+                ),
+              ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (state.error != null) AppNotice(message: state.error!),
+                  AppProgressSlot(active: state.detailLoading),
+                  if (selected != null)
+                    ..._details(context, selected)
+                  else if (widget.selectedSourceDetails != null)
+                    widget.selectedSourceDetails!,
+                ],
+              ),
+            );
+          },
+        ),
+      );
+      _detailRoute = route;
+      unawaited(
+        navigator.push(route).whenComplete(() {
+          if (!mounted || _detailRoute != route) return;
+          _detailRoute = null;
+          widget.cubit.clearSelection();
+          widget.onClearSourceSelection?.call();
+        }),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    final route = _detailRoute;
+    final navigator = route?.navigator;
+    if (route != null && navigator != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (navigator.mounted && route.navigator == navigator) {
+          navigator.removeRoute(route);
+        }
+      });
+    }
+    _detailUpdates.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -49,12 +156,15 @@ final class _DocumentProcessingScreenState
     bloc: widget.cubit,
     builder: (context, state) {
       final cubit = widget.cubit;
-      final selected = state.selected;
-      final details = selected != null || widget.selectedSourceDetails != null;
+      _syncDetails();
+      final selected = widget.modalDetails ? null : state.selected;
+      final details =
+          !widget.modalDetails &&
+          (selected != null || widget.selectedSourceDetails != null);
       return AppPage(
+        glacier: true,
         insetBody: false,
         showHeading: details,
-        eyebrow: 'CURRENT LIBRARY',
         title: !details ? 'Jobs & pipeline' : 'Job details',
         description: !details
             ? 'Track imports, document processing and reindexing.'
@@ -70,16 +180,17 @@ final class _DocumentProcessingScreenState
                   (cubit.canReadJobs || cubit.canReindex ? cubit.load : null),
         actions: [
           if (details)
-            TextButton.icon(
+            GlacierButton(
+              kind: GlacierButtonKind.quiet,
+              label: 'Back to jobs',
               onPressed: selected != null
                   ? cubit.clearSelection
                   : widget.onClearSourceSelection,
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Back to jobs'),
+              icon: Icons.arrow_back,
             ),
         ],
         child: ListView(
-          padding: AppLayout.cardListPadding(context),
+          padding: GlacierSettingsPage.scrollPadding(context),
           key: PageStorageKey(
             !details
                 ? 'processingPage'
@@ -89,11 +200,12 @@ final class _DocumentProcessingScreenState
             if (cubit.canReindex && !details) ...[
               Align(
                 alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
+                child: GlacierButton(
+                  kind: GlacierButtonKind.primary,
+                  label: 'Reindex library originals',
                   key: const Key('reindexLibrary'),
                   onPressed: cubit.canRequest ? () => _reindex(context) : null,
-                  icon: const Icon(Icons.restart_alt),
-                  label: const Text('Reindex library originals'),
+                  icon: Icons.restart_alt,
                 ),
               ),
               const SizedBox(height: 16),
@@ -102,17 +214,19 @@ final class _DocumentProcessingScreenState
               AppNotice(
                 message: state.error!,
                 action: state.pendingRequest != null
-                    ? TextButton(
+                    ? GlacierButton(
+                        kind: GlacierButtonKind.quiet,
+                        label: 'Retry same request',
                         onPressed: state.loading || state.saving
                             ? null
                             : () => cubit.requestReindex(retry: true),
-                        child: const Text('Retry same request'),
                       )
-                    : TextButton(
+                    : GlacierButton(
+                        kind: GlacierButtonKind.quiet,
+                        label: 'Retry',
                         onPressed: state.loading || state.saving
                             ? null
                             : () => cubit.load(),
-                        child: const Text('Retry'),
                       ),
               ),
               const SizedBox(height: 16),
@@ -133,8 +247,9 @@ final class _DocumentProcessingScreenState
             const SizedBox(height: 16),
             if (selected != null)
               ..._details(context, selected)
-            else if (widget.selectedSourceDetails case final sourceDetails?)
-              sourceDetails
+            else if (!widget.modalDetails &&
+                widget.selectedSourceDetails != null)
+              widget.selectedSourceDetails!
             else ...[
               if (cubit.canReadJobs ||
                   (cubit.canReindex && widget.sourcePipeline != null)) ...[
@@ -174,6 +289,7 @@ final class _DocumentProcessingScreenState
                     message: 'Accepted requests and their outcomes will appear here.',
                   ),
                 AppPagedList(
+                  glacier: true,
                   key: const PageStorageKey('namespace-reindex-pages'),
                   itemCount: state.batches.length,
                   hasMore: state.batchCursor != null,
@@ -247,6 +363,7 @@ final class _DocumentProcessingScreenState
                     message: 'Processing attempts appear here when originals are uploaded, corrected, retried or reindexed.',
                   ),
                 AppPagedList(
+                  glacier: true,
                   key: PageStorageKey('document-jobs-${state.status ?? 'all'}'),
                   itemCount: state.jobs.length,
                   hasMore: state.nextCursor != null,
@@ -258,6 +375,7 @@ final class _DocumentProcessingScreenState
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: AppSurface(
+                        glacier: true,
                         padding: EdgeInsets.zero,
                         child: AppRecordRow(
                           key: Key('job-${job.id}'),
@@ -281,11 +399,12 @@ final class _DocumentProcessingScreenState
                               ),
                             ],
                           ),
-                          trailing: TextButton(
+                          trailing: GlacierButton(
+                            kind: GlacierButtonKind.quiet,
+                            label: 'Details',
                             onPressed: state.detailLoading
                                 ? null
                                 : () => cubit.selectJob(job.id),
-                            child: const Text('Details'),
                           ),
                         ),
                       ),
@@ -382,6 +501,7 @@ final class _DocumentProcessingScreenState
 
   List<Widget> _details(BuildContext context, DocumentProcessingJob job) => [
     AppSurface(
+      glacier: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -426,11 +546,14 @@ final class _DocumentProcessingScreenState
           ],
           if (widget.canReadDocuments && !job.documentDeleted) ...[
             const SizedBox(height: 12),
-            OutlinedButton.icon(
+            GlacierButton(
+              kind: GlacierButtonKind.secondary,
+              label: 'Open document',
               key: const Key('openJobDocument'),
-              onPressed: () => widget.onOpenDocument(job.documentId),
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Open document'),
+              onPressed: () => performOutsideDetails(
+                () => widget.onOpenDocument(job.documentId),
+              ),
+              icon: Icons.open_in_new,
             ),
           ],
         ],

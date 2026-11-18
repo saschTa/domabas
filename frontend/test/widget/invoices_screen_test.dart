@@ -109,6 +109,12 @@ void main() {
       final originalRow = tester.element(row);
       final pending = Completer<InvoicePage>();
       repository.onSearch = (_, _, _) => pending.future;
+      final reads = repository.queries.length;
+      final sourceBounds = tester.getRect(
+        find.byKey(const Key('invoiceSource')),
+      );
+      await tester.tap(find.byKey(const Key('invoiceFilters')));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('invoiceSearchTerm')),
         'no match',
@@ -116,12 +122,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(row, findsOneWidget);
       expect(tester.element(row), same(originalRow));
-      expect(find.textContaining('Showing previous results'), findsOneWidget);
-      final sourceBounds = tester.getRect(
-        find.byKey(const Key('invoiceSource')),
-      );
-      await _selectInvoiceSource(tester, 'ai');
+      expect(repository.queries.length, reads);
+      final sourceChoice = find.widgetWithText(GlacierChoice, 'AI extracted');
+      await tester.ensureVisible(sourceChoice);
+      await tester.tap(sourceChoice);
       await tester.pump();
+      final apply = find.byKey(const Key('applyInvoiceSearch'));
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await tester.pump();
+      expect(find.textContaining('Showing previous results'), findsOneWidget);
       expect(find.byKey(const Key('refreshInvoices')), findsNothing);
       expect(
         tester.getSize(find.byKey(const Key('invoiceSource'))),
@@ -141,7 +151,7 @@ void main() {
       expect(find.text('No matching invoices'), findsOneWidget);
       expect(row, findsNothing);
       repository.onSearch = null;
-      await tester.tap(find.byKey(const Key('clearInvoiceSearch')));
+      await tester.tap(find.byTooltip('Remove Search: no match'));
       await tester.pumpAndSettle();
       expect(cubit.state.rawTerm, isEmpty);
       expect(cubit.state.source, 'ai');
@@ -172,6 +182,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('invoiceFilters')));
+      await tester.pumpAndSettle();
       final search = find.byKey(const Key('invoiceSearchTerm'));
       await tester.showKeyboard(search);
       tester.testTextInput.updateEditingValue(
@@ -199,7 +211,10 @@ void main() {
       expect(repository.queries, ['', '供应商']);
       await tester.pump(const Duration(milliseconds: 500));
       expect(repository.queries, ['', '供应商']);
+      await tester.tap(find.byKey(const Key('invoiceFilters')));
+      await tester.pumpAndSettle();
       await tester.enterText(search, 'x' * 201);
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
       expect(find.text('Use 200 characters or fewer.'), findsOneWidget);
       expect(tester.takeException(), isNull);

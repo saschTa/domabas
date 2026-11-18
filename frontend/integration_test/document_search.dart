@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
+
 import 'package:domabas/presentation/document/cubits/documents_cubit.dart';
 import 'package:domabas/presentation/document/views/documents_screen.dart';
 import 'package:domabas_api/api.dart' as api;
@@ -115,19 +117,46 @@ Future<void> exerciseDocumentSearch(
   DocumentsState collection() =>
       tester.widget<DocumentsScreen>(find.byType(DocumentsScreen)).cubit.state;
 
+  Future<void> openSearch() async {
+    await reveal(find.byKey(const Key('documentFilters')), 'open search');
+    await tester.tap(find.byKey(const Key('documentFilters')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('documentSearchDialog')), findsOneWidget);
+  }
+
+  Future<void> applySearch() async {
+    final apply = find.byKey(const Key('applyDocumentSearch'));
+    await tester.ensureVisible(apply);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('documentSearchDialog')), findsNothing);
+  }
+
+  Future<void> verifySavedTerm(String term) async {
+    await openSearch();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('documentSearchTerm')))
+          .controller!
+          .text,
+      term,
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('documentSearchDialog')), findsNothing);
+  }
+
   final typoTitle =
       'Maintenance invoice ${DateTime.now().microsecondsSinceEpoch}';
   final typoDocument = (await documents.createDocument(
     api.CreateDocument(title: typoTitle),
   ))!;
-  await reveal(
-    find.byKey(const Key('documentSearchTerm')),
-    'enter misspelling',
-  );
+  await openSearch();
   await tester.enterText(
     find.byKey(const Key('documentSearchTerm')),
     typoTitle.replaceFirst('Maintenance', 'Maintenence'),
   );
+  await applySearch();
   await waitFor(
     () => find
         .byKey(Key('search-document-${typoDocument.id}'))
@@ -137,8 +166,9 @@ Future<void> exerciseDocumentSearch(
   );
   await documents.deleteDocument(typoDocument.id);
 
-  await reveal(find.byKey(const Key('documentSearchTerm')), 'enter term');
+  await openSearch();
   await tester.enterText(find.byKey(const Key('documentSearchTerm')), prefix);
+  await applySearch();
   await waitFor(
     () =>
         collection().criteria?.query == prefix &&
@@ -146,10 +176,12 @@ Future<void> exerciseDocumentSearch(
         collection().results.length == DocumentsCubit.pageSize &&
         collection().nextCursor != null &&
         !collection().totalKnown,
-    'typing searches matching documents and provides continuation without a total',
+    'applied search provides matching documents and continuation without a total',
   );
   await reveal(find.byKey(const Key('documentFilters')), 'open filters');
   await tester.tap(find.byKey(const Key('documentFilters')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Choose tags and people'));
   await tester.pumpAndSettle();
   Finder optionsScroll() => find
       .descendant(
@@ -196,18 +228,14 @@ Future<void> exerciseDocumentSearch(
   }
   await tester.tap(find.byKey(const Key('closeDocumentFilters')));
   await tester.pumpAndSettle();
+  await applySearch();
   await reveal(find.byKey(const Key('documentCount')), 'search result count');
   expect(
     tester.widget<Text>(find.byKey(const Key('documentCount'))).data,
     'Search results',
   );
-  expect(
-    tester
-        .widget<TextField>(find.byKey(const Key('documentSearchTerm')))
-        .controller!
-        .text,
-    prefix,
-  );
+  expect(collection().rawTerm, prefix);
+  await verifySavedTerm(prefix);
   Future<void> selectType(
     String kind,
     int total,
@@ -284,8 +312,6 @@ Future<void> exerciseDocumentSearch(
   );
   await tester.tap(find.byKey(Key('search-document-${ids.last}')));
   await tester.pumpAndSettle();
-  await tester.tap(find.byTooltip('Document details'));
-  await tester.pumpAndSettle();
   await tester.tap(find.text('Edit properties'));
   await tester.pumpAndSettle();
   await tester.ensureVisible(find.byKey(const Key('edit-tags')));
@@ -324,24 +350,16 @@ Future<void> exerciseDocumentSearch(
   expect(collection().results.length, DocumentsCubit.pageSize);
   expect(collection().nextCursor, isNull);
   expect(collection().totalKnown, isFalse);
-  expect(
-    tester
-        .widget<TextField>(find.byKey(const Key('documentSearchTerm')))
-        .controller!
-        .text,
-    prefix,
-  );
+  expect(collection().rawTerm, prefix);
+  await verifySavedTerm(prefix);
   expect(
     find.text('$prefix ${DocumentsCubit.pageSize.toString().padLeft(2, '0')}'),
     findsNothing,
   );
   await reveal(find.text('Page 1'), 'mutation resets cursor page');
   expect(find.text('Page 1'), findsOneWidget);
-  await reveal(
-    find.byKey(const Key('clearDocumentSearch')),
-    'return from pagination to Clear',
-  );
-  await tester.tap(find.byKey(const Key('clearDocumentSearch')));
+  await openSearch();
+  await tester.sendKeyEvent(LogicalKeyboardKey.escape);
   await tester.pumpAndSettle();
   expect(
     tester
@@ -350,5 +368,13 @@ Future<void> exerciseDocumentSearch(
         .text,
     '',
   );
+  expect(
+    collection().rawTerm,
+    prefix,
+    reason: 'Clearing the modal draft does not change results before Apply.',
+  );
+  await applySearch();
+  expect(collection().rawTerm, isEmpty);
+  expect(collection().desiredCriteria.filterCount, 0);
   expect(tester.takeException(), isNull);
 }

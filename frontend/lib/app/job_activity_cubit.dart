@@ -22,11 +22,13 @@ final class JobActivityItem {
     required this.stage,
     required this.createdAt,
     this.batch,
+    this.thumbnailDocumentId,
   });
   final String id, title, status, stage;
   final JobActivityKind kind;
   final DateTime createdAt;
   final DocumentReindexBatch? batch;
+  final String? thumbnailDocumentId;
   bool get active =>
       const {'queued', 'running', 'enumerating'}.contains(status);
   bool get running => status == 'running' || status == 'enumerating';
@@ -42,10 +44,15 @@ final class JobActivityState {
     this.stale = false,
     this.loading = false,
     this.hasMore = false,
-  }) : items = List.unmodifiable(items);
+    Iterable<String> preparingPreviewDocumentIds = const [],
+  }) : items = List.unmodifiable(items),
+       preparingPreviewDocumentIds = Set.unmodifiable(
+         preparingPreviewDocumentIds,
+       );
   final List<JobActivityItem> items;
   final int? runningCount, queuedCount, batchCount;
   final bool discovering, stale, loading, hasMore;
+  final Set<String> preparingPreviewDocumentIds;
 }
 
 final class JobActivityCubit extends Cubit<JobActivityState> {
@@ -166,6 +173,11 @@ final class JobActivityCubit extends Cubit<JobActivityState> {
   void setRealtimeHealthy(bool value) {
     if (isClosed || value == _healthy) return;
     _healthy = value;
+    if (!value) {
+      for (final feed in _feeds) {
+        feed.fresh = false;
+      }
+    }
     _publish();
   }
 
@@ -211,6 +223,14 @@ final class JobActivityCubit extends Cubit<JobActivityState> {
         stale: !_healthy || _feeds.any((feed) => feed.stale),
         loading: _feeds.any((feed) => feed.loading),
         hasMore: _feeds.any((feed) => feed.cursor != null),
+        preparingPreviewDocumentIds: _active && _healthy
+            ? _feeds
+                  .where((feed) => feed.fresh && !feed.stale)
+                  .expand((feed) => feed.items)
+                  .where((item) => item.active)
+                  .map((item) => item.thumbnailDocumentId)
+                  .nonNulls
+            : const <String>[],
       ),
     );
   }
@@ -235,6 +255,10 @@ final class JobActivityCubit extends Cubit<JobActivityState> {
         status: job.status,
         stage: job.stage,
         createdAt: job.createdAt,
+        thumbnailDocumentId:
+            job.isThumbnail && job.isCurrent && !job.documentDeleted
+            ? job.documentId
+            : null,
       );
   static JobActivityItem _batch(DocumentReindexBatch batch) => JobActivityItem(
     id: batch.id,
@@ -289,6 +313,7 @@ final class _JobActivityFeed {
   String? cursor;
   int _pages = 1, _epoch = 0;
   bool _active = false, loading = false, stale = false;
+  bool fresh = false;
   Completer<void>? _cancel;
   late final _refresh = AutomaticRefresh(read: refresh, busy: () => loading);
 
@@ -299,6 +324,7 @@ final class _JobActivityFeed {
     _epoch++;
     if (_cancel case final cancel? when !cancel.isCompleted) cancel.complete();
     loading = false;
+    fresh = false;
     _refresh.setActive(value);
     if (value) unawaited(refresh());
   }
@@ -337,6 +363,7 @@ final class _JobActivityFeed {
       cursor = next;
       _pages = more ? _pages + 1 : pages;
       stale = false;
+      fresh = true;
     } on DocumentProcessingFailure {
       if (current()) stale = true;
     } on EmailFailure {

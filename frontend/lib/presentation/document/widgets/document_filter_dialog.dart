@@ -11,6 +11,8 @@ import '../../../domain/document/models/document_vocabulary.dart';
 import '../../../ui/domabas_ui.dart';
 import '../cubits/document_vocabulary_cubit.dart';
 import '../cubits/documents_cubit.dart';
+import '../models/document_search_draft.dart';
+import '../../../domain/document/models/document_search.dart';
 import 'document_search_widgets.dart';
 
 final class DocumentFilterDialog extends StatefulWidget {
@@ -20,17 +22,22 @@ final class DocumentFilterDialog extends StatefulWidget {
     required this.repository,
     required this.isCurrent,
     required this.onClose,
+    this.initialDraft,
+    this.onDraftChanged,
   });
   final DocumentsCubit documents;
   final DocumentVocabularyRepository repository;
   final bool Function() isCurrent;
   final VoidCallback onClose;
+  final DocumentSearchDraft? initialDraft;
+  final ValueChanged<DocumentSearchDraft>? onDraftChanged;
   @override
   State<DocumentFilterDialog> createState() => _DocumentFilterDialogState();
 }
 
 final class _DocumentFilterDialogState extends State<DocumentFilterDialog>
     with WidgetsBindingObserver {
+  late DocumentSearchDraft? _draft = widget.initialDraft;
   late final _lookup = DocumentVocabularyCubit(widget.repository);
   late final _scroll = _DocumentVocabularyScrollController(_correctLayout);
   final _query = TextEditingController();
@@ -143,7 +150,8 @@ final class _DocumentFilterDialogState extends State<DocumentFilterDialog>
 
   void _select(DocumentVocabularyOption option) {
     if (!_owns) return;
-    final current = widget.documents.state;
+    final current =
+        _draft ?? DocumentSearchDraft.fromState(widget.documents.state);
     if (_lookup.state.field == DocumentVocabularyField.tag &&
         current.desiredCriteria.tags.length >= 20 &&
         !current.selectedTags.any((item) => item.key == option.key)) {
@@ -151,7 +159,50 @@ final class _DocumentFilterDialogState extends State<DocumentFilterDialog>
       return;
     }
     if (_selectionNotice != null) setState(() => _selectionNotice = null);
-    unawaited(widget.documents.selectOption(_lookup.state.field, option));
+    if (_draft case final draft?) {
+      _changeDraft(draft.select(_lookup.state.field, option));
+    } else {
+      unawaited(widget.documents.selectOption(_lookup.state.field, option));
+    }
+  }
+
+  void _changeDraft(DocumentSearchDraft value) {
+    setState(() => _draft = value);
+    widget.onDraftChanged?.call(value);
+  }
+
+  Future<void> _setKinds(Iterable<DocumentKind> kinds) async {
+    if (_draft case final draft?) {
+      _changeDraft(
+        draft.withCriteria(draft.desiredCriteria.copyWith(kinds: kinds)),
+      );
+    } else {
+      await widget.documents.setKinds(kinds);
+    }
+  }
+
+  Future<void> _removeTag(String tag) async {
+    if (_draft case final draft?) {
+      _changeDraft(draft.removeTag(tag));
+    } else {
+      await widget.documents.removeTag(tag);
+    }
+  }
+
+  Future<void> _clearAddress(DocumentVocabularyField field) async {
+    if (_draft case final draft?) {
+      _changeDraft(draft.clearAddress(field));
+    } else {
+      await widget.documents.clearAddress(field);
+    }
+  }
+
+  Future<void> _resetFilters() async {
+    if (_draft case final draft?) {
+      _changeDraft(draft.resetFilters());
+    } else {
+      await widget.documents.resetFilters();
+    }
   }
 
   @override
@@ -198,17 +249,18 @@ final class _DocumentFilterDialogState extends State<DocumentFilterDialog>
             _rowExtent = extent;
           }
           _layoutDone();
-          final criteria = documents.desiredCriteria;
+          final selection = _draft ?? DocumentSearchDraft.fromState(documents);
+          final criteria = selection.desiredCriteria;
           final selectedKeys = switch (state.field) {
             DocumentVocabularyField.tag =>
-              documents.selectedTags.map((option) => option.key).toSet(),
+              selection.selectedTags.map((option) => option.key).toSet(),
             DocumentVocabularyField.sender => {
-              if (documents.selectedSender != null)
-                documents.selectedSender!.key,
+              if (selection.selectedSender != null)
+                selection.selectedSender!.key,
             },
             DocumentVocabularyField.recipient => {
-              if (documents.selectedRecipient != null)
-                documents.selectedRecipient!.key,
+              if (selection.selectedRecipient != null)
+                selection.selectedRecipient!.key,
             },
           };
           final selectionNotice = criteria.tags.length >= 20
@@ -234,391 +286,408 @@ final class _DocumentFilterDialogState extends State<DocumentFilterDialog>
                   ? 'All matching options are shown'
                   : 'Scroll for more options');
           return Dialog(
+            backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.all(12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 48,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: selectionNotice == null
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: const EdgeInsets.only(left: 12),
-                                  child: Tooltip(
-                                    message: selectionNotice,
-                                    child: Semantics(
-                                      key: const Key(
-                                        'documentFilterSelectionNotice',
+            child: GlacierSurface(
+              padding: EdgeInsets.zero,
+              radius: 20,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 48,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: selectionNotice == null
+                                ? const SizedBox.shrink()
+                                : Padding(
+                                    padding: const EdgeInsets.only(left: 12),
+                                    child: Tooltip(
+                                      message: selectionNotice,
+                                      child: Semantics(
+                                        key: const Key(
+                                          'documentFilterSelectionNotice',
+                                        ),
+                                        liveRegion: true,
+                                        label: selectionNotice,
+                                        excludeSemantics: true,
+                                        child: Text(
+                                          '20 tags max',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
+                                        ),
                                       ),
-                                      liveRegion: true,
-                                      label: selectionNotice,
-                                      excludeSemantics: true,
+                                    ),
+                                  ),
+                          ),
+                          GlacierButton(
+                            kind: GlacierButtonKind.quiet,
+                            key: const Key('closeDocumentFilters'),
+                            onPressed: () {
+                              if (_owns) widget.onClose();
+                            },
+                            icon: Icons.check,
+                            label: 'Done',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: CustomScrollView(
+                        key: const Key('documentVocabularyScroll'),
+                        controller: _scroll,
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _DocumentVocabularyHeader(
+                              onExtent: (extent) => _headerExtent = extent,
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Focus(
+                                    focusNode: _headingFocus,
+                                    child: Semantics(
+                                      header: true,
                                       child: Text(
-                                        '20 tags max',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                        'Filter documents',
                                         style: Theme.of(context)
                                             .textTheme
-                                            .labelSmall,
+                                            .headlineSmall,
                                       ),
                                     ),
                                   ),
-                                ),
-                        ),
-                        TextButton.icon(
-                          key: const Key('closeDocumentFilters'),
-                          onPressed: () {
-                            if (_owns) widget.onClose();
-                          },
-                          icon: const Icon(Icons.close),
-                          label: const Text('Done'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: CustomScrollView(
-                      key: const Key('documentVocabularyScroll'),
-                      controller: _scroll,
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: _DocumentVocabularyHeader(
-                            onExtent: (extent) => _headerExtent = extent,
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Focus(
-                                  focusNode: _headingFocus,
-                                  child: Semantics(
-                                    header: true,
-                                    child: Text(
-                                      'Filter documents',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Changes apply immediately.',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                const SizedBox(height: 12),
-                                DocumentKindFilters(
-                                  kinds: criteria.kinds,
-                                  keyPrefix: 'documentFilterType',
-                                  onChanged: (kinds) async {
-                                    if (_owns) {
-                                      await widget.documents.setKinds(kinds);
-                                    }
-                                  },
-                                ),
-                                if (criteria.filterCount > 0) ...[
-                                  const SizedBox(height: 8),
-                                  DocumentActiveFilters(
-                                    criteria: criteria,
-                                    onRemoveTag: (tag) async {
-                                      if (_owns) {
-                                        await widget.documents.removeTag(tag);
-                                      }
-                                    },
-                                    onClearAddress: (field) async {
-                                      if (_owns) {
-                                        await widget.documents.clearAddress(
-                                          field,
-                                        );
-                                      }
-                                    },
-                                    onClearKinds: () async {
-                                      if (_owns) {
-                                        await widget.documents.clearKinds();
-                                      }
-                                    },
-                                    onReset: () async {
-                                      if (_owns) {
-                                        await widget.documents.resetFilters();
-                                      }
-                                    },
-                                  ),
-                                ],
-                                const AppStripedDivider(height: 24),
-                                Semantics(
-                                  header: true,
-                                  child: Text(
-                                    'Tags and people',
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _draft == null
+                                        ? 'Changes apply immediately.'
+                                        : 'Selections stay in your search draft until you apply it.',
                                     style: Theme.of(context)
                                         .textTheme
-                                        .titleMedium,
+                                        .bodySmall,
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    for (final field
-                                        in DocumentVocabularyField.values)
-                                      ChoiceChip(
-                                        key: Key(
-                                          'documentFilter-${field.name}',
-                                        ),
-                                        label: Text(switch (field) {
-                                          DocumentVocabularyField.tag => 'Tags',
-                                          DocumentVocabularyField.sender =>
-                                            'Sender',
-                                          DocumentVocabularyField.recipient =>
-                                            'Recipient',
-                                        }),
-                                        selected: state.field == field,
-                                        materialTapTargetSize:
-                                            MaterialTapTargetSize.padded,
-                                        onSelected: (_) => _field(field),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  switch (state.field) {
-                                    DocumentVocabularyField.tag => 'Matches documents with every selected tag',
-                                    DocumentVocabularyField.sender =>
-                                      'Matches the selected sender',
-                                    DocumentVocabularyField.recipient =>
-                                      'Includes To, CC and BCC',
-                                  },
-                                  key: const Key('documentFilterHelp'),
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                const SizedBox(height: 12),
-                                TextField(
-                                  key: const Key('documentVocabularyQuery'),
-                                  controller: _query,
-                                  textInputAction: TextInputAction.search,
-                                  onSubmitted: (_) {
-                                    if (_owns) unawaited(_lookup.submit());
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText:
-                                        'Search existing ${state.field == DocumentVocabularyField.tag ? 'tags' : '${state.field.name}s'}',
-                                    errorText: state.validation,
-                                    prefixIcon: const Icon(Icons.search),
-                                    suffixIcon: IconButton(
-                                      tooltip: 'Clear lookup',
-                                      onPressed: () {
-                                        if (_owns) _query.clear();
-                                      },
-                                      icon: const Icon(Icons.close),
-                                    ),
+                                  const SizedBox(height: 12),
+                                  DocumentKindFilters(
+                                    kinds: criteria.kinds,
+                                    keyPrefix: 'documentFilterType',
+                                    onChanged: (kinds) async {
+                                      if (_owns) {
+                                        await _setKinds(kinds);
+                                      }
+                                    },
                                   ),
-                                ),
-                                if (state.field != DocumentVocabularyField.tag)
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: TextButton(
-                                      key: const Key('anyDocumentAddress'),
-                                      onPressed: () {
+                                  if (criteria.filterCount > 0) ...[
+                                    const SizedBox(height: 8),
+                                    DocumentActiveFilters(
+                                      criteria: criteria,
+                                      onRemoveTag: (tag) async {
                                         if (_owns) {
-                                          unawaited(
-                                            widget.documents.clearAddress(
-                                              state.field,
-                                            ),
-                                          );
+                                          await _removeTag(tag);
                                         }
                                       },
-                                      child: Text('Any ${state.field.name}'),
+                                      onClearAddress: (field) async {
+                                        if (_owns) {
+                                          await _clearAddress(field);
+                                        }
+                                      },
+                                      onClearKinds: () async {
+                                        if (_owns) {
+                                          await _setKinds(const []);
+                                        }
+                                      },
+                                      onReset: () async {
+                                        if (_owns) {
+                                          await _resetFilters();
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                  const AppStripedDivider(height: 24),
+                                  Semantics(
+                                    header: true,
+                                    child: Text(
+                                      'Tags and people',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
                                     ),
                                   ),
-                                SizedBox(
-                                  height:
-                                      MediaQuery.textScalerOf(context)
-                                              .scale(16) *
-                                          3 +
-                                      56,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      Semantics(
-                                        liveRegion: true,
-                                        child: Text(status, maxLines: 3),
-                                      ),
-                                      Expanded(
-                                        child: Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Row(
-                                            children: [
-                                              if (state.error != null)
-                                                TextButton(
-                                                  onPressed: () {
-                                                    if (_owns) {
-                                                      unawaited(
-                                                        _lookup.retry(),
-                                                      );
-                                                    }
-                                                  },
-                                                  child: const Text('Retry'),
-                                                ),
-                                              if (state.released ||
-                                                  state.error != null)
-                                                TextButton(
-                                                  onPressed: () {
-                                                    if (_owns) {
-                                                      unawaited(
-                                                        _lookup.restart(),
-                                                      );
-                                                    }
-                                                  },
-                                                  child: const Text(
-                                                    'Restart list',
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        height: 2,
-                                        child: state.loading
-                                            ? AppStripedProgressIndicator(
-                                                minHeight: 2,
-                                                animate:
-                                                    !(MediaQuery.disableAnimationsOf(
-                                                          context,
-                                                        ) ||
-                                                        View.of(context)
-                                                            .platformDispatcher
-                                                            .accessibilityFeatures
-                                                            .reduceMotion),
-                                              )
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SliverFixedExtentList(
-                          itemExtent: _rowExtent,
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final option = state.items[index];
-                              final selected = selectedKeys.contains(
-                                option.key,
-                              );
-                              final focus = _rowFocus.putIfAbsent(
-                                option.key,
-                                FocusNode.new,
-                              );
-                              return Tooltip(
-                                key: ValueKey(option.key),
-                                message: option.value,
-                                child: Semantics(
-                                  label: option.value,
-                                  checked: selected,
-                                  inMutuallyExclusiveGroup:
-                                      state.field !=
-                                      DocumentVocabularyField.tag,
-                                  focusable: true,
-                                  focused: focus.hasFocus,
-                                  onTap: () => _select(option),
-                                  excludeSemantics: true,
-                                  child: InkWell(
-                                    focusNode: focus,
-                                    onFocusChange: (_) {
-                                      if (mounted) setState(() {});
-                                    },
-                                    onTap: () => _select(option),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 8,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          ExcludeSemantics(
-                                            child: Icon(
-                                              state.field ==
-                                                      DocumentVocabularyField
-                                                          .tag
-                                                  ? selected
-                                                        ? Icons.check_box
-                                                        : Icons
-                                                              .check_box_outline_blank
-                                                  : selected
-                                                  ? Icons.radio_button_checked
-                                                  : Icons
-                                                        .radio_button_unchecked,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Text(
-                                              option.value,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: style,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            childCount: state.items.length,
-                            findChildIndexCallback: (key) =>
-                                key is ValueKey<String>
-                                ? _indexOf(state.items, key.value)
-                                : null,
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Semantics(
-                                  liveRegion: true,
-                                  child: Text(status),
-                                ),
-                                if (state.error != null)
+                                  const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 8,
+                                    runSpacing: 8,
                                     children: [
-                                      TextButton(
-                                        onPressed: () {
-                                          if (_owns) unawaited(_lookup.retry());
-                                        },
-                                        child: const Text('Retry'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          if (_owns) {
-                                            unawaited(_lookup.restart());
-                                          }
-                                        },
-                                        child: const Text('Restart list'),
-                                      ),
+                                      for (final field
+                                          in DocumentVocabularyField.values)
+                                        ChoiceChip(
+                                          key: Key(
+                                            'documentFilter-${field.name}',
+                                          ),
+                                          label: Text(switch (field) {
+                                            DocumentVocabularyField.tag =>
+                                              'Tags',
+                                            DocumentVocabularyField.sender =>
+                                              'Sender',
+                                            DocumentVocabularyField.recipient =>
+                                              'Recipient',
+                                          }),
+                                          selected: state.field == field,
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.padded,
+                                          onSelected: (_) => _field(field),
+                                        ),
                                     ],
                                   ),
-                              ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    switch (state.field) {
+                                      DocumentVocabularyField.tag => 'Matches documents with every selected tag',
+                                      DocumentVocabularyField.sender =>
+                                        'Matches the selected sender',
+                                      DocumentVocabularyField.recipient =>
+                                        'Includes To, CC and BCC',
+                                    },
+                                    key: const Key('documentFilterHelp'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    key: const Key('documentVocabularyQuery'),
+                                    controller: _query,
+                                    textInputAction: TextInputAction.search,
+                                    onSubmitted: (_) {
+                                      if (_owns) unawaited(_lookup.submit());
+                                    },
+                                    decoration: InputDecoration(
+                                      labelText:
+                                          'Search existing ${state.field == DocumentVocabularyField.tag ? 'tags' : '${state.field.name}s'}',
+                                      errorText: state.validation,
+                                      prefixIcon: const Icon(Icons.search),
+                                      suffixIcon: IconButton(
+                                        tooltip: 'Clear lookup',
+                                        onPressed: () {
+                                          if (_owns) _query.clear();
+                                        },
+                                        icon: const Icon(Icons.close),
+                                      ),
+                                    ),
+                                  ),
+                                  if (state.field !=
+                                      DocumentVocabularyField.tag)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: GlacierButton(
+                                        key: const Key('anyDocumentAddress'),
+                                        label: 'Any ${state.field.name}',
+                                        kind: GlacierButtonKind.quiet,
+                                        onPressed: () {
+                                          if (_owns) {
+                                            unawaited(
+                                              _clearAddress(state.field),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  SizedBox(
+                                    height:
+                                        MediaQuery.textScalerOf(context)
+                                                .scale(16) *
+                                            3 +
+                                        56,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Semantics(
+                                          liveRegion: true,
+                                          child: Text(status, maxLines: 3),
+                                        ),
+                                        Expanded(
+                                          child: Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Row(
+                                              children: [
+                                                if (state.error != null)
+                                                  GlacierButton(
+                                                    label: 'Retry',
+                                                    kind:
+                                                        GlacierButtonKind.quiet,
+                                                    onPressed: () {
+                                                      if (_owns) {
+                                                        unawaited(
+                                                          _lookup.retry(),
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
+                                                if (state.released ||
+                                                    state.error != null)
+                                                  GlacierButton(
+                                                    label: 'Restart list',
+                                                    kind:
+                                                        GlacierButtonKind.quiet,
+                                                    onPressed: () {
+                                                      if (_owns) {
+                                                        unawaited(
+                                                          _lookup.restart(),
+                                                        );
+                                                      }
+                                                    },
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          height: 2,
+                                          child: state.loading
+                                              ? AppStripedProgressIndicator(
+                                                  minHeight: 2,
+                                                  animate:
+                                                      !(MediaQuery.disableAnimationsOf(
+                                                            context,
+                                                          ) ||
+                                                          View.of(context)
+                                                              .platformDispatcher
+                                                              .accessibilityFeatures
+                                                              .reduceMotion),
+                                                )
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          SliverFixedExtentList(
+                            itemExtent: _rowExtent,
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final option = state.items[index];
+                                final selected = selectedKeys.contains(
+                                  option.key,
+                                );
+                                final focus = _rowFocus.putIfAbsent(
+                                  option.key,
+                                  FocusNode.new,
+                                );
+                                return Tooltip(
+                                  key: ValueKey(option.key),
+                                  message: option.value,
+                                  child: Semantics(
+                                    label: option.value,
+                                    checked: selected,
+                                    inMutuallyExclusiveGroup:
+                                        state.field !=
+                                        DocumentVocabularyField.tag,
+                                    focusable: true,
+                                    focused: focus.hasFocus,
+                                    onTap: () => _select(option),
+                                    excludeSemantics: true,
+                                    child: InkWell(
+                                      focusNode: focus,
+                                      onFocusChange: (_) {
+                                        if (mounted) setState(() {});
+                                      },
+                                      onTap: () => _select(option),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            ExcludeSemantics(
+                                              child: Icon(
+                                                state.field ==
+                                                        DocumentVocabularyField
+                                                            .tag
+                                                    ? selected
+                                                          ? Icons.check_box
+                                                          : Icons
+                                                                .check_box_outline_blank
+                                                    : selected
+                                                    ? Icons.radio_button_checked
+                                                    : Icons
+                                                          .radio_button_unchecked,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                option.value,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: style,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              childCount: state.items.length,
+                              findChildIndexCallback: (key) =>
+                                  key is ValueKey<String>
+                                  ? _indexOf(state.items, key.value)
+                                  : null,
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Semantics(
+                                    liveRegion: true,
+                                    child: Text(status),
+                                  ),
+                                  if (state.error != null)
+                                    Wrap(
+                                      spacing: 8,
+                                      children: [
+                                        GlacierButton(
+                                          label: 'Retry',
+                                          kind: GlacierButtonKind.quiet,
+                                          onPressed: () {
+                                            if (_owns) {
+                                              unawaited(_lookup.retry());
+                                            }
+                                          },
+                                        ),
+                                        GlacierButton(
+                                          label: 'Restart list',
+                                          kind: GlacierButtonKind.quiet,
+                                          onPressed: () {
+                                            if (_owns) {
+                                              unawaited(_lookup.restart());
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

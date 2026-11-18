@@ -32,11 +32,12 @@ final class DocumentDetailDialog extends StatefulWidget {
     required DocumentsCubit cubit,
     Widget? appearanceAction,
   }) => Navigator.of(context).push<void>(
-    DialogRoute<void>(
+    createGlacierDialogRoute<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => Dialog(
         key: const Key('documentWindow'),
+        backgroundColor: Colors.transparent,
         insetPadding: EdgeInsets.all(
           MediaQuery.sizeOf(context).width < 600 ? 8 : 24,
         ),
@@ -65,7 +66,7 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
     widget.documentId,
   );
   bool _inspector = true;
-  int _tab = 0;
+  bool _textSelected = false;
   bool _leaving = false;
   bool _inspectorRoute = false;
   bool _childRoute = false;
@@ -110,21 +111,23 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
   Future<bool> _discard({bool? dirty}) async {
     if (_document.state.saving) return false;
     if (!(dirty ?? _document.state.dirty)) return true;
-    return await showDialog<bool>(
+    return await showGlacierDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Discard unsaved changes?'),
-            content: const Text('Your changes have not been saved.'),
+          builder: (context) => GlacierDialog(
+            title: 'Discard unsaved changes?',
             actions: [
-              TextButton(
+              GlacierButton(
+                label: 'Keep editing',
+                kind: GlacierButtonKind.quiet,
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Keep editing'),
               ),
-              FilledButton(
+              GlacierButton(
+                label: 'Discard',
+                kind: GlacierButtonKind.danger,
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Discard'),
               ),
             ],
+            child: const Text('Your changes have not been saved.'),
           ),
         ) ??
         false;
@@ -173,21 +176,24 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
       DocumentEmailLinksPanel(cubit: _links, onOpen: _openLinkedDocument);
 
   Future<void> _showDetails({int tab = 0}) async {
+    if (tab == 1 && _document.capabilities.readOcr) {
+      setState(() => _textSelected = true);
+      return;
+    }
     if (MediaQuery.sizeOf(context).width >= 1100) {
       setState(() {
         _inspector = true;
-        _tab = tab;
       });
       return;
     }
     _inspectorRoute = true;
     try {
-      await showDialog<void>(
+      await showGlacierDialog<void>(
         context: context,
-        useSafeArea: true,
         barrierDismissible: false,
         builder: (detailsContext) => Dialog(
           key: const Key('documentInspectorWindow'),
+          backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(12),
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 900),
           clipBehavior: Clip.antiAlias,
@@ -228,100 +234,78 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
   Widget _inspectorContents(
     BuildContext context, {
     required VoidCallback onClose,
-    required int initialTab,
-  }) => DefaultTabController(
-    key: ValueKey('inspector-$initialTab'),
-    length: _document.capabilities.readOcr ? 2 : 1,
-    initialIndex: _document.capabilities.readOcr ? initialTab : 0,
+    int initialTab = 0,
+  }) => GlacierSurface(
+    radius: 16,
+    padding: EdgeInsets.zero,
     child: Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+          padding: const EdgeInsets.fromLTRB(20, 12, 8, 8),
           child: Row(
             children: [
               Expanded(
                 child: Text(
-                  'Document details',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  'Properties',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              ?widget.appearanceAction,
-              IconButton(
-                tooltip: 'Close details',
+              if (_document.capabilities.update &&
+                  !_document.state.editingMetadata)
+                GlacierIconButton(
+                  label: 'Edit properties',
+                  icon: Icons.edit_outlined,
+                  onPressed:
+                      _document.state.saving ||
+                          _document.state.reconcileRequired
+                      ? null
+                      : _document.editMetadata,
+                ),
+              GlacierIconButton(
+                label: 'Close details',
+                icon: Icons.close,
                 onPressed: _document.state.saving ? null : onClose,
-                icon: const Icon(Icons.close),
               ),
             ],
           ),
         ),
-        TabBar(
-          tabs: [
-            const Tab(text: 'Properties'),
-            if (_document.capabilities.readOcr)
-              const Tab(text: 'Extracted text'),
-          ],
-        ),
-        if (_document.state.error case final error?)
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Semantics(
-              liveRegion: true,
-              child: Text(
-                error,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          ),
-        if (_document.state.notice case final notice?)
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Semantics(liveRegion: true, child: Text(notice)),
-          ),
-        if (_document.state.reconcileRequired)
-          TextButton(
-            onPressed: _document.state.saving || _document.state.loading
-                ? null
-                : _document.load,
-            child: const Text('Reload document'),
-          ),
         Expanded(
-          child: TabBarView(
-            children: [
-              DocumentPropertiesPanel(
-                emailLinks: _emailLinks(),
-                cubit: _document,
-                onCancel: _cancelMetadata,
-              ),
-              if (_document.capabilities.readOcr)
-                DocumentOcrPanel(cubit: _document, onCancel: _cancelOcr),
-            ],
+          child: DocumentPropertiesPanel(
+            emailLinks: _emailLinks(),
+            cubit: _document,
+            onCancel: _cancelMetadata,
+            showEditAction: false,
           ),
         ),
       ],
     ),
   );
+
+  Future<void> _editProperties() async {
+    _document.editMetadata();
+    await _showDetails();
+  }
+
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlacierDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete document?'),
-        content: Text(
-          '“${_document.state.document?.title ?? 'This document'}” will be permanently removed from this library. This cannot be undone.',
-        ),
+      builder: (context) => GlacierDialog(
+        title: 'Delete document?',
         actions: [
-          TextButton(
+          GlacierButton(
+            label: 'Keep document',
+            kind: GlacierButtonKind.quiet,
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep document'),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
+          GlacierButton(
+            label: 'Delete document',
+            kind: GlacierButtonKind.danger,
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete document'),
           ),
         ],
+        child: Text(
+          '“${_document.state.document?.title ?? 'This document'}” will be permanently removed from this library. This cannot be undone.',
+        ),
       ),
     );
     if (confirmed == true && mounted) {
@@ -336,190 +320,214 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
   }
 
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<DocumentCubit, DocumentState>(
-        bloc: _document,
-        builder: (context, state) => PopScope(
-          canPop: _leaving || (!state.dirty && !state.saving),
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) unawaited(_leave());
-          },
-          child: Scaffold(
-            key: const Key('documentDetails'),
-            backgroundColor: AppSemanticColors.of(context).documentCanvas,
-            body: SafeArea(
-              child: Column(
-                children: [
-                  Material(
-                    color: Theme.of(context).colorScheme.surface,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 8,
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<DocumentCubit, DocumentState>(
+    bloc: _document,
+    builder: (context, state) {
+      final available =
+          state.document != null && !state.remotelyDeleted && !state.deleted;
+      final editable = available && !state.saving && !state.reconcileRequired;
+      final processing = state.document?.processing;
+      final canRetry =
+          _document.capabilities.retry &&
+          available &&
+          processing?.failureCode != 'encrypted_pdf' &&
+          (processing?.state == 'failed' ||
+              state.ocr?.reason == 'legacy_text_missing');
+      final canRetryAI =
+          _document.capabilities.retry &&
+          available &&
+          processing?.state == 'ready' &&
+          (processing?.ai?.canRetry == true || state.pendingAIRetry != null);
+      final canDownload =
+          _document.capabilities.download &&
+          available &&
+          state.document?.file != null;
+      final canDelete = _document.capabilities.delete && available;
+      final compact = MediaQuery.sizeOf(context).width < 600;
+      final close = GlacierIconButton(
+        key: const Key('closeDocument'),
+        label: 'Back to documents',
+        icon: Icons.close,
+        onPressed: state.saving ? null : _leave,
+      );
+      final actions = compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GlacierMobileReaderToolbar(
+                  onProperties: available ? _showDetails : null,
+                  onResync: !editable
+                      ? null
+                      : canRetry
+                      ? _document.retryProcessing
+                      : _document.retryAIProcessing,
+                  resyncLabel: canRetry ? 'Retry' : 'Retry AI',
+                  showResync: canRetry || canRetryAI,
+                  showDownload: canDownload,
+                  showDelete: canDelete,
+                  onDownload: _document.canDownloadOriginal
+                      ? _document.downloadOriginal
+                      : null,
+                  onDelete: editable ? _delete : null,
+                  downloadKey: const Key('downloadDocument'),
+                  deleteKey: const Key('deleteDocument'),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  children: [
+                    if (_document.capabilities.update)
+                      GlacierButton(
+                        label: 'Edit',
+                        icon: Icons.edit_outlined,
+                        onPressed: editable ? _editProperties : null,
                       ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            key: const Key('closeDocument'),
-                            tooltip: 'Back to documents',
-                            onPressed: state.saving ? null : _leave,
-                            icon: const Icon(Icons.arrow_back),
-                          ),
-                          Expanded(
-                            child: Text(
-                              state.document?.title ?? 'Opening document…',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          if (_document.capabilities.download &&
-                              state.document?.file != null &&
-                              !state.remotelyDeleted &&
-                              !state.deleted)
-                            IconButton.filledTonal(
-                              key: const Key('downloadDocument'),
-                              tooltip: state.downloading
-                                  ? 'Downloading original…'
-                                  : 'Download original',
-                              style: IconButton.styleFrom(
-                                minimumSize: const Size(48, 48),
-                                shape: const CircleBorder(),
-                              ),
-                              onPressed: _document.canDownloadOriginal
-                                  ? _document.downloadOriginal
-                                  : null,
-                              icon: state.downloading
-                                  ? const SizedBox.square(
-                                      dimension: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.download_rounded),
-                            ),
-                          IconButton(
-                            tooltip: 'Document details',
-                            onPressed:
-                                state.document == null || state.remotelyDeleted
-                                ? null
-                                : () => _showDetails(),
-                            icon: const Icon(Icons.info_outline),
-                          ),
-                          ?widget.appearanceAction,
-                          PopupMenuButton<String>(
-                            tooltip: 'Document actions',
-                            onSelected: (value) {
-                              if (value == 'delete') unawaited(_delete());
-                              if (value == 'licenses') {
-                                showLicensePage(
-                                  context: context,
-                                  applicationName: 'Domabas',
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              if (_document.capabilities.delete)
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  enabled:
-                                      !state.saving &&
-                                      !state.remotelyDeleted &&
-                                      !state.reconcileRequired &&
-                                      state.document != null,
-                                  child: const Text('Delete document'),
-                                ),
-                              const PopupMenuItem(
-                                value: 'licenses',
-                                child: Text('Licenses'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    close,
+                  ],
+                ),
+              ],
+            )
+          : Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (_document.capabilities.update)
+                  GlacierButton(
+                    label: 'Edit properties',
+                    icon: Icons.edit_outlined,
+                    onPressed: editable ? _editProperties : null,
                   ),
-                  AppProgressSlot(active: state.loading || state.saving),
-                  if (state.downloadError case final error?
-                      when !state.remotelyDeleted && !state.deleted)
-                    AppNotice(
-                      message: error,
-                      action: TextButton(
-                        onPressed: _document.canDownloadOriginal
-                            ? _document.downloadOriginal
-                            : null,
-                        child: const Text('Retry download'),
-                      ),
-                    ),
-                  if (state.error case final error?
-                      when !(_inspector &&
-                          MediaQuery.sizeOf(context).width >= 1100))
-                    AppNotice(
-                      message: error,
-                      action: TextButton(
-                        onPressed: state.loading || state.saving
-                            ? null
-                            : _document.load,
-                        child: const Text('Reload'),
-                      ),
-                    ),
-                  if (state.notice case final notice?
-                      when !(_inspector &&
-                          MediaQuery.sizeOf(context).width >= 1100))
-                    Semantics(
-                      liveRegion: true,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(notice),
-                      ),
-                    ),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Focus(
-                            focusNode: _canvasFocus,
-                            child: _canvas(state),
-                          ),
-                        ),
-                        if (_inspector &&
-                            !state.remotelyDeleted &&
-                            MediaQuery.sizeOf(context).width >= 1100)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
-                            child: SizedBox(
-                              width: 360,
-                              child: Material(
-                                key: const Key('documentInspectorPanel'),
-                                color: Theme.of(context).colorScheme.surface,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: _inspectorContents(
-                                  context,
-                                  initialTab: _tab,
-                                  onClose: () async {
-                                    if (await _discard() && mounted) {
-                                      _document.discardDrafts();
-                                      setState(() => _inspector = false);
-                                      _canvasFocus.requestFocus();
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                if (canRetry)
+                  GlacierButton(
+                    label: 'Retry processing',
+                    icon: Icons.sync,
+                    onPressed: editable ? _document.retryProcessing : null,
                   ),
-                ],
+                if (canRetryAI)
+                  GlacierButton(
+                    label: 'Retry AI processing',
+                    icon: Icons.auto_awesome_outlined,
+                    onPressed: editable ? _document.retryAIProcessing : null,
+                  ),
+                if (canDownload)
+                  GlacierIconButton(
+                    key: const Key('downloadDocument'),
+                    label: state.downloading
+                        ? 'Downloading original…'
+                        : 'Download original',
+                    icon: Icons.file_download_outlined,
+                    onPressed: _document.canDownloadOriginal
+                        ? _document.downloadOriginal
+                        : null,
+                  ),
+                if (canDelete)
+                  GlacierIconButton(
+                    key: const Key('deleteDocument'),
+                    label: 'Delete document',
+                    icon: Icons.delete_outline,
+                    onPressed: editable ? _delete : null,
+                  ),
+                GlacierIconButton(
+                  label: 'Document details',
+                  icon: Icons.info_outline,
+                  onPressed: available ? _showDetails : null,
+                ),
+                ?widget.appearanceAction,
+                GlacierIconButton(
+                  label: 'Licenses',
+                  icon: Icons.policy_outlined,
+                  onPressed: () => showLicensePage(
+                    context: context,
+                    applicationName: 'Domabas',
+                  ),
+                ),
+                close,
+              ],
+            );
+      Widget notices(Widget child) => Column(
+        children: [
+          AppProgressSlot(active: state.loading || state.saving),
+          if (state.downloadError case final error? when available)
+            AppNotice(
+              message: error,
+              action: GlacierButton(
+                kind: GlacierButtonKind.quiet,
+                onPressed: _document.canDownloadOriginal
+                    ? _document.downloadOriginal
+                    : null,
+                label: 'Retry download',
+              ),
+            ),
+          if (state.error case final error?)
+            AppNotice(
+              message: error,
+              action: GlacierButton(
+                kind: GlacierButtonKind.quiet,
+                onPressed: state.loading || state.saving
+                    ? null
+                    : _document.load,
+                label: 'Reload',
+              ),
+            ),
+          if (state.notice case final notice?)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Semantics(liveRegion: true, child: Text(notice)),
+            ),
+          Expanded(child: child),
+        ],
+      );
+      return PopScope(
+        canPop: _leaving || (!state.dirty && !state.saving),
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(_leave());
+        },
+        child: SizedBox.expand(
+          key: const Key('documentDetails'),
+          child: GlacierReader(
+            title: state.document?.title ?? 'Opening document…',
+            contextLabel:
+                state.document?.file?.originalFilename ?? 'Document properties',
+            headerActions: actions,
+            boundedHeader: true,
+            showInspector: _inspector && !state.remotelyDeleted,
+            inspectorBreakpoint: 1100,
+            compactInspectorBelow: false,
+            inspectorScrolls: false,
+            inspectorPadding: EdgeInsets.zero,
+            original: notices(
+              Focus(focusNode: _canvasFocus, child: _canvas(state)),
+            ),
+            text: _document.capabilities.readOcr
+                ? notices(
+                    DocumentOcrPanel(cubit: _document, onCancel: _cancelOcr),
+                  )
+                : null,
+            textSelected: _textSelected,
+            onViewChanged: (value) => setState(() => _textSelected = value),
+            toolbar: const SizedBox.shrink(),
+            inspector: KeyedSubtree(
+              key: const Key('documentInspectorPanel'),
+              child: _inspectorContents(
+                context,
+                onClose: () async {
+                  if (await _discard() && mounted) {
+                    _document.discardDrafts();
+                    setState(() => _inspector = false);
+                    _canvasFocus.requestFocus();
+                  }
+                },
               ),
             ),
           ),
         ),
       );
+    },
+  );
+
   Widget _canvas(DocumentState state) {
     if (state.remotelyDeleted) {
       return ListView(
@@ -565,9 +573,10 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              OutlinedButton(
+              GlacierButton(
+                kind: GlacierButtonKind.quiet,
                 onPressed: () => _showDetails(),
-                child: const Text('View properties'),
+                label: 'View properties',
               ),
             ],
           ),
@@ -654,9 +663,10 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(state.fileError!, textAlign: TextAlign.center),
-              TextButton(
+              GlacierButton(
+                kind: GlacierButtonKind.quiet,
                 onPressed: _document.loadOriginal,
-                child: const Text('Retry original'),
+                label: 'Retry original',
               ),
             ],
           ),

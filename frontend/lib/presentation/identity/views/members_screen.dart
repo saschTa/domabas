@@ -21,7 +21,7 @@ final class MembersScreen extends StatelessWidget {
   Widget build(BuildContext context) => BlocBuilder<AccountCubit, AccountState>(
     bloc: cubit,
     builder: (context, _) => AppPage(
-      eyebrow: 'User settings',
+      glacier: true,
       title: invitations ? 'Invitations' : 'Library members',
       insetBody: false,
       description: invitations
@@ -33,7 +33,7 @@ final class MembersScreen extends StatelessWidget {
           ? () => cubit.loadInvitations()
           : () => cubit.load(),
       actions: [
-        FilledButton.icon(
+        GlacierButton(
           key: const Key('inviteMember'),
           onPressed:
               cubit.saving ||
@@ -42,8 +42,9 @@ final class MembersScreen extends StatelessWidget {
                   cubit.error != null
               ? null
               : () => _edit(context),
-          icon: const Icon(Icons.person_add_outlined),
-          label: const Text('Invite member'),
+          label: 'Invite member',
+          icon: Icons.person_add_outlined,
+          kind: GlacierButtonKind.primary,
         ),
       ],
       child: invitations ? _invitations(context) : _members(context),
@@ -61,7 +62,7 @@ final class MembersScreen extends StatelessWidget {
         ),
       Expanded(
         child: ListView.separated(
-          padding: AppLayout.cardListPadding(context),
+          padding: GlacierSettingsPage.scrollPadding(context),
           itemCount: cubit.members.isEmpty
               ? 1
               : cubit.members.length + (cubit.canLoadMore ? 1 : 0),
@@ -70,20 +71,27 @@ final class MembersScreen extends StatelessWidget {
             if (cubit.members.isEmpty) {
               return cubit.loading
                   ? const SizedBox.shrink()
-                  : const AppEmptyState(
-                      icon: Icons.people_outline,
-                      title: 'No members to display',
-                      message: 'Pull down to refresh this library’s members.',
+                  : const GlacierSettingsSection(
+                      child: AppEmptyState(
+                        icon: Icons.people_outline,
+                        title: 'No members to display',
+                        message: 'Pull down to refresh this library’s members.',
+                      ),
                     );
             }
             if (index == cubit.members.length) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextButton(
-                  onPressed: cubit.loading
-                      ? null
-                      : () => cubit.load(more: true),
-                  child: const Text('Load more members'),
+              return GlacierWorkspaceGeometry.measureEndActions(
+                context,
+                followingExtent: 24,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GlacierButton(
+                    onPressed: cubit.loading
+                        ? null
+                        : () => cubit.load(more: true),
+                    label: 'Load more members',
+                    kind: GlacierButtonKind.quiet,
+                  ),
                 ),
               );
             }
@@ -91,33 +99,31 @@ final class MembersScreen extends StatelessWidget {
             final additional = member.claims
                 .difference(cubit.roleClaims(member.role))
                 .length;
-            return AppSurface(
-              padding: EdgeInsets.zero,
-              child: AppRecordRow(
-                key: Key('member-${member.id}'),
-                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-                title: member.email,
-                subtitle: Text(
-                  member.isOwner
-                      ? 'Owns this library'
-                      : additional == 0
-                      ? '${_roleLabel(member.role)} permissions'
-                      : '${_roleLabel(member.role)} with $additional additional permissions',
-                ),
-                metadata: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    AppStatusBadge(
-                      label: member.isOwner ? 'Owner' : _roleLabel(member.role),
-                    ),
-                    AppStatusBadge(
-                      label: member.enabled ? 'Active' : 'Disabled',
-                      tone: member.enabled ? AppTone.success : AppTone.neutral,
-                    ),
-                  ],
-                ),
-                trailing: member.isOwner
+            return GlacierSettingsRecord(
+              card: true,
+              key: Key('member-${member.id}'),
+              title: member.email,
+              detail: member.isOwner
+                  ? 'Owns this library'
+                  : additional == 0
+                  ? '${_roleLabel(member.role)} permissions'
+                  : '${_roleLabel(member.role)} with $additional additional permissions',
+              icon: Icons.person_outline,
+              status: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  AppStatusBadge(
+                    label: member.isOwner ? 'Owner' : _roleLabel(member.role),
+                  ),
+                  AppStatusBadge(
+                    label: member.enabled ? 'Active' : 'Disabled',
+                    tone: member.enabled ? AppTone.success : AppTone.neutral,
+                  ),
+                ],
+              ),
+              actions: [
+                ?(member.isOwner
                     ? null
                     : IconButton(
                         tooltip: 'Edit ${member.email}',
@@ -128,8 +134,8 @@ final class MembersScreen extends StatelessWidget {
                                 cubit.loadingInvitations
                             ? null
                             : () => _edit(context, member),
-                      ),
-              ),
+                      )),
+              ],
             );
           },
         ),
@@ -153,7 +159,7 @@ final class MembersScreen extends StatelessWidget {
         ),
       Expanded(
         child: ListView.separated(
-          padding: AppLayout.cardListPadding(context),
+          padding: GlacierSettingsPage.scrollPadding(context),
           itemCount: cubit.invitations.isEmpty
               ? 1
               : cubit.invitations.length +
@@ -163,56 +169,64 @@ final class MembersScreen extends StatelessWidget {
             if (cubit.invitations.isEmpty) {
               return cubit.loadingInvitations
                   ? const SizedBox.shrink()
-                  : const AppEmptyState(
-                      icon: Icons.mark_email_unread_outlined,
-                      title: 'No invitations yet',
-                      message: 'Invite someone and share their code to give them access to this library.',
+                  : const GlacierSettingsSection(
+                      child: AppEmptyState(
+                        icon: Icons.mark_email_unread_outlined,
+                        title: 'No invitations yet',
+                        message: 'Invite someone and share their code to give them access to this library.',
+                      ),
                     );
             }
             if (index == cubit.invitations.length) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextButton(
-                  onPressed: cubit.loadingInvitations
-                      ? null
-                      : () => cubit.loadInvitations(more: true),
-                  child: const Text('Load more invitations'),
+              return GlacierWorkspaceGeometry.measureEndActions(
+                context,
+                followingExtent: 24,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GlacierButton(
+                    onPressed: cubit.loadingInvitations
+                        ? null
+                        : () => cubit.loadInvitations(more: true),
+                    label: 'Load more invitations',
+                    kind: GlacierButtonKind.quiet,
+                  ),
                 ),
               );
             }
             final invite = cubit.invitations[index];
-            return AppSurface(
-              padding: EdgeInsets.zero,
-              child: AppRecordRow(
-                key: Key('invitation-${invite.id}'),
-                leading: const CircleAvatar(child: Icon(Icons.mail_outline)),
-                title: invite.email,
-                subtitle: Text('Expires ${_date(invite.expiresAt)}'),
-                metadata: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    AppStatusBadge(label: _roleLabel(invite.role)),
-                    AppStatusBadge(
-                      label: _statusLabel(invite.status),
-                      tone: invite.status == InvitationStatus.pending
-                          ? AppTone.warning
-                          : invite.status == InvitationStatus.accepted
-                          ? AppTone.success
-                          : AppTone.neutral,
-                    ),
-                  ],
-                ),
-                trailing: invite.status == InvitationStatus.pending
-                    ? TextButton(
+            return GlacierSettingsRecord(
+              card: true,
+              key: Key('invitation-${invite.id}'),
+              title: invite.email,
+              detail: 'Expires ${_date(invite.expiresAt)}',
+              icon: Icons.mail_outline,
+              status: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  AppStatusBadge(label: _roleLabel(invite.role)),
+                  AppStatusBadge(
+                    label: _statusLabel(invite.status),
+                    tone: invite.status == InvitationStatus.pending
+                        ? AppTone.warning
+                        : invite.status == InvitationStatus.accepted
+                        ? AppTone.success
+                        : AppTone.neutral,
+                  ),
+                ],
+              ),
+              actions: [
+                ?(invite.status == InvitationStatus.pending
+                    ? GlacierButton(
                         key: Key('revoke-${invite.id}'),
                         onPressed: cubit.saving || cubit.loadingInvitations
                             ? null
                             : () => _revoke(context, invite),
-                        child: const Text('Revoke'),
+                        label: 'Revoke',
+                        kind: GlacierButtonKind.quiet,
                       )
-                    : null,
-              ),
+                    : null),
+              ],
             );
           },
         ),
@@ -222,25 +236,29 @@ final class MembersScreen extends StatelessWidget {
 
   Widget _error(String message, VoidCallback retry) => AppNotice(
     message: message,
-    action: TextButton(
+    action: GlacierButton(
       onPressed: cubit.saving ? null : retry,
-      child: const Text('Retry'),
+      label: 'Retry',
+      kind: GlacierButtonKind.quiet,
     ),
   );
 
   Future<void> _revoke(BuildContext context, Invitation invitation) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlacierDialog<bool>(
       context: context,
       builder: (context) => AppDialog(
+        glacier: true,
         title: 'Revoke invitation?',
         actions: [
-          TextButton(
+          GlacierButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            label: 'Cancel',
+            kind: GlacierButtonKind.quiet,
           ),
-          FilledButton(
+          GlacierButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Revoke'),
+            label: 'Revoke',
+            kind: GlacierButtonKind.primary,
           ),
         ],
         child: Text(
@@ -255,13 +273,13 @@ final class MembersScreen extends StatelessWidget {
 
   Future<void> _edit(BuildContext context, [AccountMember? member]) async {
     cubit.clearSaveError();
-    final issued = await showDialog<IssuedInvitation>(
+    final issued = await showGlacierDialog<IssuedInvitation>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _MemberDialog(cubit: cubit, member: member),
     );
     if (issued == null || !context.mounted) return;
-    await showDialog<void>(
+    await showGlacierDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) =>
@@ -332,6 +350,7 @@ final class _MemberDialogState extends State<_MemberDialog> {
       return PopScope(
         canPop: !model.saving,
         child: AppDialog(
+          glacier: true,
           width: 860,
           title: widget.member == null
               ? 'Invite to this library'
@@ -340,22 +359,22 @@ final class _MemberDialogState extends State<_MemberDialog> {
               ? 'Choose a role, then add any extra access this person needs.'
               : widget.member!.email,
           actions: [
-            TextButton(
+            GlacierButton(
               onPressed: model.saving ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              label: 'Cancel',
+              kind: GlacierButtonKind.quiet,
             ),
-            FilledButton(
+            GlacierButton(
               key: const Key('saveMember'),
               onPressed: model.saving || !model.canAssignRole(_role)
                   ? null
                   : _save,
-              child: Text(
-                model.saving
-                    ? 'Saving…'
-                    : widget.member == null
-                    ? 'Create invitation'
-                    : 'Save member',
-              ),
+              label: model.saving
+                  ? 'Saving…'
+                  : widget.member == null
+                  ? 'Create invitation'
+                  : 'Save member',
+              kind: GlacierButtonKind.primary,
             ),
           ],
           child: Form(
@@ -487,14 +506,11 @@ final class _MemberDialogState extends State<_MemberDialog> {
                   const SizedBox(height: 12),
                 ],
                 if (widget.member != null)
-                  SwitchListTile(
+                  GlacierSwitchRow(
                     key: const Key('memberEnabled'),
-                    title: const Text('Library access enabled'),
-                    subtitle: const Text(
-                      'Disabled members cannot open this library.',
-                    ),
+                    label: 'Library access enabled',
+                    description: 'Disabled members cannot open this library.',
                     value: _enabled,
-                    contentPadding: EdgeInsets.zero,
                     onChanged: model.saving
                         ? null
                         : (value) => setState(() => _enabled = value),
@@ -514,32 +530,15 @@ final class _MemberDialogState extends State<_MemberDialog> {
 
   Widget _claim(String id, String label, bool inherited) {
     final selected = _claims.contains(id);
-    return CheckboxListTile(
+    return GlacierChoice(
       key: Key('claim-$id'),
-      contentPadding: EdgeInsets.zero,
-      controlAffinity: ListTileControlAffinity.leading,
-      title: Text(
-        label,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-      ),
-      subtitle: inherited
-          ? Text(
-              'Included in role',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            )
+      label: label,
+      description: inherited
+          ? 'Included in role'
           : selected
-          ? const Text('Additional permission')
+          ? 'Additional permission'
           : null,
-      secondary: inherited
-          ? const ExcludeSemantics(child: Icon(Icons.lock_outline, size: 18))
-          : null,
-      fillColor: inherited
-          ? WidgetStatePropertyAll(Theme.of(context).colorScheme.primary)
-          : null,
-      checkColor: inherited ? Theme.of(context).colorScheme.onPrimary : null,
-      value: inherited || selected,
+      selected: inherited || selected,
       onChanged:
           widget.cubit.saving ||
               inherited ||
@@ -589,19 +588,22 @@ final class _InvitationCodeDialogState extends State<_InvitationCodeDialog> {
   String? _message;
   @override
   Widget build(BuildContext context) => AppDialog(
+    glacier: true,
     width: 720,
     title: 'Share this invitation code',
     description: 'Send it directly to ${widget.issued.invitation.email}.',
     actions: [
-      TextButton(
+      GlacierButton(
         key: const Key('copyInvitation'),
         onPressed: _copy,
-        child: const Text('Copy code'),
+        label: 'Copy code',
+        kind: GlacierButtonKind.quiet,
       ),
-      FilledButton(
+      GlacierButton(
         key: const Key('closeInvitationCode'),
         onPressed: () => Navigator.pop(context),
-        child: const Text('Done'),
+        label: 'Done',
+        kind: GlacierButtonKind.primary,
       ),
     ],
     child: Column(

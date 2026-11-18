@@ -108,11 +108,8 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('submitAuth')));
         await tester.pumpAndSettle();
-        await waitForWorkspaceWidget(
-          tester,
-          find.byKey(const Key('currentAccount')),
-        );
-        expect(find.byKey(const Key('currentAccount')), findsOneWidget);
+        await waitForWorkspaceWidget(tester, find.byType(AppWorkspaceShell));
+        expect(find.byType(AppWorkspaceShell), findsOneWidget);
         await waitForDocumentCollection();
       }
 
@@ -133,13 +130,14 @@ void main() {
         final retiringDocuments = pendingSearch
             ? tester.widget<DocumentsScreen>(find.byType(DocumentsScreen)).cubit
             : null;
-        await tester.tap(find.byKey(const Key('librarySwitcher')));
+        await revealWorkspaceAction(tester, 'librarySwitcher');
+        await tester.tap(find.byKey(const Key('librarySwitcher')).last);
         await tester.pumpAndSettle();
         final row = find.descendant(
           of: find.byType(AppDialog),
           matching: find.ancestor(
             of: find.text(name),
-            matching: find.byType(AppRecordRow),
+            matching: find.byType(GlacierSettingsRecord),
           ),
         );
         await tester.ensureVisible(row);
@@ -156,14 +154,14 @@ void main() {
           tester,
           find.byWidgetPredicate(
             (widget) =>
-                widget is Text &&
-                widget.key == const Key('currentAccount') &&
-                widget.data == name,
+                widget is AppWorkspaceShell && widget.libraryLabel == name,
           ),
         );
         expect(find.text('Switch library'), findsNothing);
         expect(
-          tester.widget<Text>(find.byKey(const Key('currentAccount'))).data,
+          tester
+              .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
+              .libraryLabel,
           name,
         );
         await waitForDocumentCollection();
@@ -188,16 +186,22 @@ void main() {
         for (final width in [360.0, 390.0]) {
           tester.view.physicalSize = Size(width, 844);
           await tester.pumpAndSettle();
-          final surface = find.byKey(const Key('workspaceNotchedNavigation'));
-          final circle = find.byKey(const Key('navigationDocumentsCircle'));
+          final surface = find.byKey(const Key('workspaceBottomNavigation'));
+          final documents = find.byKey(const Key('documentsNavigation'));
           expect(surface, findsOneWidget);
-          expect(tester.getSize(circle), const Size(56, 56));
-          expect(tester.getCenter(circle).dx, closeTo(width / 2, .01));
+          expect(documents.hitTestable(), findsOneWidget);
+          final navigationBounds = tester.getRect(surface);
+          final documentBounds = tester.getRect(documents);
+          expect(navigationBounds.left, greaterThanOrEqualTo(0));
+          expect(navigationBounds.right, lessThanOrEqualTo(width));
+          expect(navigationBounds.bottom, lessThanOrEqualTo(844));
+          expect(documentBounds.width, greaterThanOrEqualTo(48));
+          expect(documentBounds.height, greaterThanOrEqualTo(48));
+          expect(navigationBounds.contains(documentBounds.center), isTrue);
           expect(
-            tester.getCenter(circle).dy - tester.getTopLeft(surface).dy,
-            closeTo(30, .01),
+            tester.widget<Semantics>(documents).properties.selected,
+            isTrue,
           );
-          expect(tester.getSize(surface).height, 92);
         }
         expect(
           find.byKey(const Key('workspaceBottomNavigation')),
@@ -206,6 +210,12 @@ void main() {
         expect(find.byKey(const Key('openNavigation')), findsNothing);
         expect(find.byKey(const Key('navigation-more')), findsOneWidget);
         await tester.tap(find.byKey(const Key('navigation-more')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('navigation-admin-settings')),
+          administerSystem ? findsOneWidget : findsNothing,
+        );
+        await tester.tap(find.byKey(const Key('navigation-user-settings')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('changePassword')), findsOneWidget);
         expect(
@@ -216,16 +226,15 @@ void main() {
           find.byKey(const Key('manageInvitations')),
           manageMembers ? findsOneWidget : findsNothing,
         );
-        expect(
-          find.byKey(const Key('manageWorkloads')),
-          administerSystem ? findsOneWidget : findsNothing,
-        );
         await tester.tap(find.byKey(const Key('manageLibraries')));
         await tester.pumpAndSettle();
         expect(find.byKey(const Key('acceptInvitationCode')), findsOneWidget);
         if (administerSystem) {
           await tester.tap(find.byKey(const Key('navigation-more')));
           await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('navigation-admin-settings')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('manageWorkloads')), findsOneWidget);
           await tester.tap(find.byKey(const Key('manageSystemUsers')));
           await tester.pumpAndSettle();
           expect(
@@ -272,8 +281,7 @@ void main() {
       );
       await authenticate(email, accountName: 'Browser account A');
       expect(
-        Theme.of(tester.element(find.byKey(const Key('currentAccount'))))
-            .brightness,
+        Theme.of(tester.element(find.byType(AppWorkspaceShell))).brightness,
         Brightness.dark,
       );
       await verifyMobileNavigation(manageMembers: true, administerSystem: true);
@@ -336,10 +344,9 @@ void main() {
       await mount();
       expect(find.byKey(const Key('authEmail')), findsNothing);
       await waitForDocumentCollection();
-      expect(find.byKey(const Key('currentAccount')), findsOneWidget);
+      expect(find.byType(AppWorkspaceShell), findsOneWidget);
       expect(
-        Theme.of(tester.element(find.byKey(const Key('currentAccount'))))
-            .brightness,
+        Theme.of(tester.element(find.byType(AppWorkspaceShell))).brightness,
         Brightness.dark,
       );
       await waitForWorkspaceWidget(tester, find.text(title));
@@ -420,7 +427,9 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester.widget<Text>(find.byKey(const Key('currentAccount'))).data,
+        tester
+            .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
+            .libraryLabel,
         'Browser account B',
       );
       await openLibrary('Browser account A');
@@ -430,7 +439,9 @@ void main() {
       await mount();
       await waitForDocumentCollection();
       expect(
-        tester.widget<Text>(find.byKey(const Key('currentAccount'))).data,
+        tester
+            .widget<AppWorkspaceShell>(find.byType(AppWorkspaceShell))
+            .libraryLabel,
         'Browser account A',
       );
       expect(find.text(title), findsOneWidget);
@@ -484,13 +495,13 @@ void main() {
       await tester.pumpAndSettle();
       final systemRow = find.ancestor(
         of: find.text(otherEmail),
-        matching: find.byType(AppRecordRow),
+        matching: find.byType(GlacierSettingsRecord),
       );
       Future<void> changeSystemRole(String action, String role) async {
         final enabledAction = find.ancestor(
           of: find.descendant(of: systemRow, matching: find.text(action)),
           matching: find.byWidgetPredicate(
-            (widget) => widget is TextButton && widget.enabled,
+            (widget) => widget is GlacierButton && widget.onPressed != null,
           ),
         );
         await waitForWorkspaceWidget(tester, enabledAction);
@@ -746,16 +757,40 @@ Future<void> navigateWorkspace(
     await tester.tap(trigger);
     await tester.pumpAndSettle();
   } else if (destination.evaluate().isEmpty) {
-    await tester.tap(find.byTooltip(group));
+    final trigger = find.byKey(
+      Key(
+        group == 'Admin settings'
+            ? 'navigation-admin-settings'
+            : 'navigation-user-settings',
+      ),
+    );
+    await tester.tap(
+      trigger.evaluate().isNotEmpty ? trigger : find.byTooltip(group),
+    );
     await tester.pumpAndSettle();
   }
-  await tester.ensureVisible(destination);
+  if (destination.evaluate().isEmpty) {
+    final overview = find.byKey(
+      Key(
+        group == 'Admin settings'
+            ? 'navigation-admin-settings'
+            : 'navigation-user-settings',
+      ),
+    );
+    await tester.ensureVisible(overview);
+    await tester.tap(overview);
+    await tester.pumpAndSettle();
+  }
+  final target = tester.widget(destination) is InkWell
+      ? find.descendant(of: destination, matching: find.byType(Text)).first
+      : destination;
+  await tester.ensureVisible(target);
   await tester.pumpAndSettle();
   expect(
-    destination.hitTestable(),
+    target.hitTestable(),
     findsOneWidget,
     reason: '$key is visible before navigation.',
   );
-  await tester.tap(destination);
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }

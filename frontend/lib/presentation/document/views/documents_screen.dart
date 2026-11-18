@@ -12,6 +12,7 @@ import '../../../domain/document/interfaces/document_vocabulary_repository.dart'
 import '../widgets/document_detail_dialog.dart';
 import '../widgets/document_editor_dialog.dart';
 import '../widgets/documents_workspace_toolbar.dart';
+import '../widgets/document_search_widgets.dart';
 import '../cubits/documents_cubit.dart';
 import '../cubits/document_preview_cubit.dart';
 
@@ -23,12 +24,14 @@ final class DocumentsScreen extends StatefulWidget {
     this.vocabulary,
     this.appearanceAction,
     this.shellToolbar = false,
+    this.preparingPreviewDocumentIds = const {},
   });
   final DocumentsCubit cubit;
   final bool canCreate;
   final DocumentVocabularyRepository? vocabulary;
   final Widget? appearanceAction;
   final bool shellToolbar;
+  final Set<String> preparingPreviewDocumentIds;
   @override
   State<DocumentsScreen> createState() => _DocumentsScreenState();
 }
@@ -70,6 +73,7 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
     },
     builder: (context, state) => AppPage(
       title: 'Documents',
+      glacier: true,
       insetBody: false,
       onRefresh: state.isSaving || state.intentBlocked
           ? null
@@ -80,9 +84,14 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
           final inset =
               AppLayout.pageInset(screenWidth) - (screenWidth < 600 ? 8 : 16);
           final width = constraints.maxWidth - inset * 2;
+          final compact = screenWidth < 600;
           final columns = state.layout == DocumentLayout.list
               ? 1
-              : math.max(1, ((width + 16) / 256).floor());
+              : compact
+              ? (width >= 340 && MediaQuery.textScalerOf(context).scale(14) < 22
+                    ? 2
+                    : 1)
+              : math.max(1, ((width + 16) / 281).floor());
           final items = state.searching
               ? state.results.map(DocumentCollectionItem.fromSearch).toList()
               : state.documents
@@ -138,8 +147,41 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
                                 DocumentsWorkspaceToolbar(
                                   cubit: widget.cubit,
                                   vocabulary: widget.vocabulary,
+                                  showSearchButton: true,
                                 ),
                                 const SizedBox(height: 8),
+                              ],
+                              if (widget.cubit.capabilities.read &&
+                                  widget.cubit.capabilities.search &&
+                                  (state.desiredCriteria.filterCount > 0 ||
+                                      state.rawTerm.isNotEmpty)) ...[
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 6,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    if (state.rawTerm.isNotEmpty)
+                                      GlacierTag(
+                                        label: 'Search: ${state.rawTerm}',
+                                        onDeleted: () =>
+                                            widget.cubit.applySearch(
+                                              state.desiredCriteria.copyWith(
+                                                query: '',
+                                              ),
+                                            ),
+                                      ),
+                                    DocumentActiveFilters(
+                                      criteria: state.desiredCriteria,
+                                      onRemoveTag: widget.cubit.removeTag,
+                                      onClearAddress: widget.cubit.clearAddress,
+                                      onClearKinds: widget.cubit.clearKinds,
+                                      onReset: widget.cubit.resetFilters,
+                                      compact: true,
+                                      resetLabel: 'Clear filters',
+                                    ),
+                                  ],
+                                ),
                               ],
                               SizedBox(
                                 height: 2,
@@ -207,6 +249,13 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
                                       child:
                                           row * columns + column < items.length
                                           ? DocumentCollectionCard(
+                                              preparingPreview: widget
+                                                  .preparingPreviewDocumentIds
+                                                  .contains(
+                                                    items[row * columns +
+                                                            column]
+                                                        .id,
+                                                  ),
                                               appearanceAction:
                                                   widget.appearanceAction,
                                               key: ValueKey(
@@ -236,97 +285,116 @@ final class _DocumentsScreenState extends State<DocumentsScreen>
                           16 + (status.isEmpty ? bottomClearance : 0),
                         ),
                         sliver: SliverToBoxAdapter(
-                          child: Column(
-                            key: const Key('documentCollectionFooter'),
-                            children: [
-                              Semantics(
-                                liveRegion: !state.isLoading,
-                                child: Text(
-                                  count,
-                                  key: const Key('documentCount'),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
+                          child: GlacierWorkspaceGeometry.measureEndActions(
+                            context,
+                            followingExtent:
+                                16 + (status.isEmpty ? bottomClearance : 0),
+                            child: Column(
+                              key: const Key('documentCollectionFooter'),
+                              children: [
+                                Semantics(
+                                  liveRegion: !state.isLoading,
+                                  child: Text(
+                                    count,
+                                    key: const Key('documentCount'),
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
                                 ),
-                              ),
-                              if (state.searching ||
-                                  state.total > DocumentsCubit.pageSize)
-                                const SizedBox(height: 8),
-                              if (state.searching)
-                                Wrap(
-                                  alignment: WrapAlignment.center,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    if (state.ordinal > 1)
-                                      TextButton(
-                                        onPressed: !state.canPaginate
+                                if (state.searching ||
+                                    state.total > DocumentsCubit.pageSize)
+                                  const SizedBox(height: 8),
+                                if (state.searching)
+                                  Wrap(
+                                    alignment: WrapAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (state.ordinal > 1)
+                                        TextButton(
+                                          onPressed: !state.canPaginate
+                                              ? null
+                                              : widget.cubit.firstSearchPage,
+                                          child: const Text('First page'),
+                                        ),
+                                      TextButton.icon(
+                                        onPressed:
+                                            !state.canPaginate ||
+                                                (state
+                                                        .searchRequest
+                                                        ?.history
+                                                        .isEmpty ??
+                                                    true)
                                             ? null
-                                            : widget.cubit.firstSearchPage,
-                                        child: const Text('First page'),
+                                            : widget.cubit.previousSearchPage,
+                                        icon: const Icon(Icons.chevron_left),
+                                        label: const Text('Previous'),
                                       ),
-                                    TextButton.icon(
-                                      onPressed:
-                                          !state.canPaginate ||
-                                              (state
-                                                      .searchRequest
-                                                      ?.history
-                                                      .isEmpty ??
-                                                  true)
-                                          ? null
-                                          : widget.cubit.previousSearchPage,
-                                      icon: const Icon(Icons.chevron_left),
-                                      label: const Text('Previous'),
-                                    ),
-                                    Text('Page ${state.ordinal}'),
-                                    TextButton.icon(
-                                      onPressed:
-                                          !state.canPaginate ||
-                                              state.nextCursor == null
-                                          ? null
-                                          : widget.cubit.nextSearchPage,
-                                      icon: const Icon(Icons.chevron_right),
-                                      label: const Text('Next'),
-                                    ),
-                                  ],
-                                )
-                              else if (state.total > DocumentsCubit.pageSize)
-                                Wrap(
-                                  alignment: WrapAlignment.center,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 8,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Previous page',
-                                      onPressed:
-                                          state.page == 0 || !state.canPaginate
-                                          ? null
-                                          : () => widget.cubit.load(
-                                              page: state.page - 1,
-                                            ),
-                                      icon: const Icon(Icons.chevron_left),
-                                    ),
-                                    Text(
-                                      'Page ${state.page + 1} of ${state.pages}',
-                                    ),
-                                    IconButton(
-                                      key: const Key('loadMoreDocuments'),
-                                      tooltip: 'Next page',
-                                      onPressed:
-                                          !widget.cubit.canLoadMore ||
-                                              state.showLoading
-                                          ? null
-                                          : () => widget.cubit.load(more: true),
-                                      icon: const Icon(Icons.chevron_right),
-                                    ),
-                                  ],
-                                ),
-                            ],
+                                      Text('Page ${state.ordinal}'),
+                                      TextButton.icon(
+                                        onPressed:
+                                            !state.canPaginate ||
+                                                state.nextCursor == null
+                                            ? null
+                                            : widget.cubit.nextSearchPage,
+                                        icon: const Icon(Icons.chevron_right),
+                                        label: const Text('Next'),
+                                      ),
+                                    ],
+                                  )
+                                else if (state.total > DocumentsCubit.pageSize)
+                                  Wrap(
+                                    alignment: WrapAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Previous page',
+                                        onPressed:
+                                            state.page == 0 ||
+                                                !state.canPaginate
+                                            ? null
+                                            : () => widget.cubit.load(
+                                                page: state.page - 1,
+                                              ),
+                                        icon: const Icon(Icons.chevron_left),
+                                      ),
+                                      Text(
+                                        'Page ${state.page + 1} of ${state.pages}',
+                                      ),
+                                      IconButton(
+                                        key: const Key('loadMoreDocuments'),
+                                        tooltip: 'Next page',
+                                        onPressed:
+                                            !widget.cubit.canLoadMore ||
+                                                state.showLoading
+                                            ? null
+                                            : () =>
+                                                  widget.cubit.load(more: true),
+                                        icon: const Icon(Icons.chevron_right),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: GlacierWorkspaceGeometry.trailingOf(
+                            context,
+                            existingBottom: 16,
                           ),
                         ),
                       ),
@@ -384,7 +452,7 @@ final class DocumentCreateAction extends StatelessWidget {
 
   static Future<void> open(BuildContext context, DocumentsCubit cubit) async {
     cubit.clearSaveError();
-    await showDialog<void>(
+    await showGlacierDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => DocumentEditorDialog(cubit: cubit),
@@ -399,11 +467,13 @@ final class DocumentCollectionCard extends StatefulWidget {
     required this.cubit,
     this.appearanceAction,
     required this.list,
+    this.preparingPreview = false,
   });
   final DocumentCollectionItem document;
   final DocumentsCubit cubit;
   final Widget? appearanceAction;
   final bool list;
+  final bool preparingPreview;
   @override
   State<DocumentCollectionCard> createState() => _DocumentCollectionCardState();
 }
@@ -414,6 +484,37 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _createPreview();
+  }
+
+  late DocumentPreviewCubit _preview;
+  late int _previewEpoch;
+
+  void _createPreview() {
+    _preview = DocumentPreviewCubit(
+      widget.cubit.previews,
+      widget.document.thumbnail,
+    );
+    _previewEpoch = widget.cubit.state.previewEpoch;
+    if (widget.document.thumbnail != null &&
+        widget.cubit.capabilities.preview) {
+      unawaited(_preview.load());
+    }
+  }
+
+  @override
+  void didUpdateWidget(DocumentCollectionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cubit != widget.cubit ||
+        oldWidget.document.id != widget.document.id ||
+        oldWidget.document.thumbnail?.identity !=
+            widget.document.thumbnail?.identity) {
+      unawaited(_preview.close());
+      _createPreview();
+    } else if (_previewEpoch != widget.cubit.state.previewEpoch) {
+      _previewEpoch = widget.cubit.state.previewEpoch;
+      unawaited(_preview.resume());
+    }
   }
 
   @override
@@ -428,6 +529,7 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _focus.dispose();
+    unawaited(_preview.close());
     super.dispose();
   }
 
@@ -442,227 +544,213 @@ final class _DocumentCollectionCardState extends State<DocumentCollectionCard>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      BlocBuilder<DocumentPreviewCubit, DocumentPreviewState>(
+        bloc: _preview,
+        builder: _buildCard,
+      );
+
+  Widget _buildCard(BuildContext context, DocumentPreviewState previewState) {
     final document = widget.document;
-    final theme = Theme.of(context);
-    final highlighted = _hovered || _focused;
-    final reduced =
-        MediaQuery.disableAnimationsOf(context) ||
-        View.of(context).platformDispatcher.accessibilityFeatures.reduceMotion;
-    final metadata = DocumentCardMetadata(
-      document: document,
-      list: widget.list,
+    final original = document.original?.original;
+    final details = documentSupplementalDetails(context, document);
+    final value = GlacierDocumentValue(
+      id: document.id,
+      title: document.title,
+      type: switch (original?.mediaType) {
+        'application/pdf' => 'PDF',
+        'image/png' => 'PNG',
+        'image/jpeg' => 'JPEG',
+        'message/rfc822' => 'EML',
+        _ =>
+          document.kind == 'email'
+              ? 'EML'
+              : document.knownNoOriginal
+              ? 'Metadata'
+              : 'Document',
+      },
+      date: document.documentDate.isNotEmpty
+          ? document.documentDate
+          : MaterialLocalizations.of(context)
+                .formatShortDate(document.createdAt.toLocal()),
+      tags: document.tags,
+      status: document.status,
+      snippet: widget.cubit.state.searching ? document.snippet ?? '' : null,
+      busy:
+          widget.cubit.state.retryingIds.contains(document.id) ||
+          {'queued', 'processing'}.contains(document.processingState),
+      failed:
+          document.processingState == 'failed' &&
+          !widget.cubit.state.retryingIds.contains(document.id) &&
+          !document.requiresPassword &&
+          widget.cubit.capabilities.retry,
     );
     final preview = _DocumentPreview(
       key: ValueKey('${document.id}/${document.thumbnail?.identity}'),
       document: document,
       cubit: widget.cubit,
-      resumeRevision: widget.cubit.state.previewEpoch,
+      state: previewState,
+      preparing: widget.preparingPreview,
     );
-    final radius = BorderRadius.circular(16);
-    final details = documentSupplementalDetails(context, document);
+    final onRetry =
+        value.failed && !widget.cubit.state.retryingIds.contains(document.id)
+        ? () => unawaited(widget.cubit.retryDocument(document.id))
+        : null;
+    final onRetryPreview =
+        previewState.failed &&
+            previewState.image == null &&
+            !previewState.loading &&
+            document.thumbnail != null &&
+            widget.cubit.capabilities.preview &&
+            document.kind != 'email' &&
+            document.original?.original.isEmail != true
+        ? _preview.load
+        : null;
+    final semanticLabel = 'Open document: ${document.title}';
+    final Widget card;
+    if (widget.list) {
+      card = GlacierDocumentRow(
+        key: Key('document-${document.id}'),
+        document: value,
+        preview: preview,
+        focusNode: _focus,
+        onOpen: _open,
+        onRetry: onRetry,
+        onRetryPreview: onRetryPreview,
+      );
+    } else if (MediaQuery.sizeOf(context).width < 600) {
+      card = GlacierMobileDocumentCard(
+        key: Key('document-${document.id}'),
+        document: value,
+        preview: preview,
+        focusNode: _focus,
+        semanticLabel: semanticLabel,
+        titleLines: 2,
+        onOpen: _open,
+        onRetry: onRetry,
+        onRetryPreview: onRetryPreview,
+      );
+    } else {
+      card = GlacierDocumentCard(
+        key: Key('document-${document.id}'),
+        document: value,
+        preview: preview,
+        focusNode: _focus,
+        semanticLabel: semanticLabel,
+        titleLines: 2,
+        previewOverlay: DocumentCardDetailsPill(
+          pillKey: Key('document-hover-details-${document.id}'),
+          details: details,
+          visible: _hovered || _focused,
+          reduceMotion:
+              MediaQuery.disableAnimationsOf(context) ||
+              View.of(context)
+                  .platformDispatcher
+                  .accessibilityFeatures
+                  .reduceMotion,
+        ),
+        onOpen: _open,
+        onRetry: onRetry,
+        onRetryPreview: onRetryPreview,
+      );
+    }
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      child: Material(
-        color: _focused
-            ? theme.colorScheme.primaryContainer
-            : _hovered
-            ? theme.colorScheme.surfaceContainerLow
-            : theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: radius),
-        clipBehavior: Clip.antiAlias,
-        child: Semantics(
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (focused) => setState(() => _focused = focused),
+        child: KeyedSubtree(
           key: document.snippet == null
               ? null
               : Key('search-document-${document.id}'),
-          container: true,
-          explicitChildNodes: true,
-          label: 'Open document: ${document.title}',
-          button: true,
-          onTap: _open,
-          child: InkWell(
-            excludeFromSemantics: true,
-            key: Key('document-${document.id}'),
-            focusNode: _focus,
-            onTap: _open,
-            onFocusChange: (value) => setState(() => _focused = value),
-            child: widget.list
-                ? Tooltip(
-                    message: details,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: SizedBox(
-                              width: 56,
-                              height: 72,
-                              child: preview,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: metadata),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.chevron_right,
-                            size: 18,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AspectRatio(
-                        aspectRatio: 1.4,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            preview,
-                            DocumentCardDetailsPill(
-                              pillKey: Key(
-                                'document-hover-details-${document.id}',
-                              ),
-                              details: details,
-                              visible: highlighted,
-                              reduceMotion: reduced,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                        child: metadata,
-                      ),
-                    ],
-                  ),
-          ),
+          child: card,
         ),
       ),
     );
   }
 }
 
-final class _DocumentPreview extends StatefulWidget {
+final class _DocumentPreview extends StatelessWidget {
   const _DocumentPreview({
     super.key,
     required this.document,
     required this.cubit,
-    required this.resumeRevision,
+    required this.state,
+    required this.preparing,
   });
   final DocumentCollectionItem document;
   final DocumentsCubit cubit;
-  final int resumeRevision;
-  @override
-  State<_DocumentPreview> createState() => _DocumentPreviewState();
-}
-
-final class _DocumentPreviewState extends State<_DocumentPreview> {
-  late final DocumentPreviewCubit _preview = DocumentPreviewCubit(
-    widget.cubit.previews,
-    widget.document.thumbnail,
-  );
-  @override
-  void initState() {
-    super.initState();
-    if (widget.document.thumbnail != null &&
-        widget.cubit.capabilities.preview) {
-      unawaited(_preview.load());
-    }
-  }
-
-  @override
-  void didUpdateWidget(_DocumentPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.resumeRevision != widget.resumeRevision) {
-      unawaited(_preview.resume());
-    }
-  }
-
-  @override
-  void dispose() {
-    unawaited(_preview.close());
-    super.dispose();
-  }
-
+  final DocumentPreviewState state;
+  final bool preparing;
   @override
   Widget build(BuildContext context) => ColoredBox(
     color: Theme.of(context).colorScheme.surfaceContainerHigh,
-    child: BlocBuilder<DocumentPreviewCubit, DocumentPreviewState>(
-      bloc: _preview,
-      builder: (context, state) {
-        if (widget.document.original?.original.isEmail == true ||
-            widget.document.kind == 'email') {
-          return Center(
-            child: Icon(
-              Icons.mail_outline,
-              size: 36,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              semanticLabel: 'Email',
-            ),
-          );
-        }
-        if (state.image != null) {
-          return TweenAnimationBuilder<double>(
-            key: ValueKey(state.image),
-            tween: Tween(begin: 0, end: 1),
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 180),
-            builder: (context, value, child) =>
-                Opacity(opacity: value, child: child),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: RawImage(image: state.image, fit: BoxFit.contain),
-            ),
-          );
-        }
-        if (state.loading) {
-          return const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        }
-        if (widget.document.thumbnail == null ||
-            !widget.cubit.capabilities.preview) {
-          return Center(
-            child: Icon(
-              Icons.description_outlined,
-              size: 36,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          );
-        }
-        return Center(
-          child: LayoutBuilder(
-            builder: (context, constraints) => constraints.maxWidth < 100
-                ? IconButton(
-                    tooltip: 'Preview unavailable. Retry preview',
-                    onPressed: _preview.load,
-                    icon: const Icon(Icons.refresh),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.broken_image_outlined),
-                      const Text('Preview unavailable'),
-                      TextButton(
-                        onPressed: _preview.load,
-                        child: const Text('Retry preview'),
-                      ),
-                    ],
-                  ),
-          ),
-        );
-      },
-    ),
+    child: _buildContent(context),
   );
+
+  Widget _buildContent(BuildContext context) {
+    if (document.original?.original.isEmail == true ||
+        document.kind == 'email') {
+      return Center(
+        child: Icon(
+          Icons.mail_outline,
+          size: 36,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          semanticLabel: 'Email',
+        ),
+      );
+    }
+    if (state.image != null) {
+      return TweenAnimationBuilder<double>(
+        key: ValueKey(state.image),
+        tween: Tween(begin: 0, end: 1),
+        duration:
+            MediaQuery.disableAnimationsOf(context) ||
+                View.of(context)
+                    .platformDispatcher
+                    .accessibilityFeatures
+                    .reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
+        builder: (context, value, child) =>
+            Opacity(opacity: value, child: child),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: RawImage(image: state.image, fit: BoxFit.contain),
+        ),
+      );
+    }
+    if (state.loading) {
+      return const GlacierPreviewPlaceholder(semanticLabel: 'Loading preview');
+    }
+    if (document.thumbnail == null &&
+        preparing &&
+        cubit.capabilities.preview &&
+        const {
+          'application/pdf',
+          'image/png',
+          'image/jpeg',
+        }.contains(document.original?.original.mediaType)) {
+      return const GlacierPreviewPlaceholder();
+    }
+    if (!state.failed ||
+        document.thumbnail == null ||
+        !cubit.capabilities.preview) {
+      return Center(
+        child: Icon(
+          Icons.description_outlined,
+          size: 36,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+    return const Center(
+      child: Icon(
+        Icons.broken_image_outlined,
+        semanticLabel: 'Preview unavailable',
+      ),
+    );
+  }
 }

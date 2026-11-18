@@ -51,7 +51,7 @@ void main() {
         await tester.pumpAndSettle();
         final field = find.byKey(const Key('documentSearchTerm'));
         final collection = find.byKey(const Key('documentCollectionScroll'));
-        expect(field, findsOneWidget);
+        expect(field, findsNothing);
         expect(
           find.descendant(
             of: find.byType(DocumentsScreen),
@@ -63,11 +63,14 @@ void main() {
         final first = tester.getRect(find.byType(DocumentCollectionCard).first);
         expect(first.top - surface.top, 18);
         expect(find.byKey(const Key('documentCount')), findsNothing);
+        await tester.tap(find.byKey(const Key('documentFilters')));
+        await tester.pumpAndSettle();
         await tester.enterText(field, 'invoice');
         await tester.tap(find.byKey(const Key('applyDocumentSearch')));
         await tester.pumpAndSettle();
-        final controller = tester.widget<TextField>(field).controller;
-        final searchPosition = tester.getRect(field);
+        expect(field, findsNothing);
+        final toolbar = find.byType(DocumentsWorkspaceToolbar);
+        final searchPosition = tester.getRect(toolbar);
         final scroll = tester
             .state<ScrollableState>(
               find
@@ -82,7 +85,7 @@ void main() {
           find.byKey(const Key('documentCount')).hitTestable(),
           findsNothing,
         );
-        expect(tester.getRect(field), searchPosition);
+        expect(tester.getRect(toolbar), searchPosition);
         expect(tester.getRect(find.byKey(const Key('pageSurface'))), surface);
         final offset = scroll.pixels;
         final card = find.byType(DocumentCollectionCard).hitTestable().first;
@@ -98,10 +101,16 @@ void main() {
         expect(repository.reads, 1);
         await tester.tap(find.byKey(const Key('closeDocument')));
         await tester.pumpAndSettle();
-        expect(tester.widget<TextField>(field).controller, same(controller));
-        expect(controller!.text, 'invoice');
+        expect(field, findsNothing);
+        expect(tester.getRect(toolbar), searchPosition);
         expect(scroll.pixels, closeTo(offset, .01));
         expect(cubit.state.desiredCriteria.query, 'invoice');
+        await tester.tap(find.byKey(const Key('documentFilters')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(field).controller!.text, 'invoice');
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(scroll.pixels, closeTo(offset, .01));
         expect(tester.takeException(), isNull);
       },
     );

@@ -19,6 +19,8 @@ import '../presentation/server/views/server_configuration_screen.dart';
 import '../ui/domabas_ui.dart';
 import 'app_dependencies.dart';
 import 'domabas_app.dart';
+import 'glacier_application_theme.dart';
+import 'native_desktop_frame.dart';
 import 'http_client.dart';
 import 'public_licenses_access.dart';
 
@@ -62,6 +64,8 @@ final class NativeServerApp extends StatefulWidget {
 }
 
 final class _NativeServerAppState extends State<NativeServerApp> {
+  final _nativeNavigator = GlobalKey<NavigatorState>();
+  final _nativeRoutes = DesktopWindowRouteObserver();
   late final _configuration = ServerConfigurationCubit(
     widget.repository,
     initialAddress: widget.initialAddress,
@@ -77,6 +81,7 @@ final class _NativeServerAppState extends State<NativeServerApp> {
 
   @override
   void dispose() {
+    _nativeRoutes.dispose();
     unawaited(_configuration.close());
     unawaited(_appearance.close());
     super.dispose();
@@ -103,21 +108,32 @@ final class _NativeServerAppState extends State<NativeServerApp> {
           return BlocBuilder<AppearanceCubit, AppearanceState>(
             bloc: _appearance,
             builder: (context, appearance) => MaterialApp(
+              navigatorKey: _nativeNavigator,
+              navigatorObservers: [_nativeRoutes],
               title: 'Domabas',
               debugShowCheckedModeBanner: false,
-              theme: AppTheme.light(),
-              darkTheme: AppTheme.dark(),
+              theme: GlacierTheme.light(),
+              darkTheme: GlacierTheme.dark(),
               themeMode: switch (appearance.preference) {
                 AppearancePreference.system => ThemeMode.system,
                 AppearancePreference.light => ThemeMode.light,
                 AppearancePreference.dark => ThemeMode.dark,
               },
+              builder: (context, child) => glacierApplicationTheme(
+                context,
+                NativeDesktopFrame(
+                  navigatorKey: _nativeNavigator,
+                  observer: _nativeRoutes,
+                  library: 'Connect to your server',
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
               home: Scaffold(
                 appBar: AppBar(
                   title: const Text('domabas'),
                   actions: [AppearanceAction(cubit: _appearance)],
                 ),
-                body: AppPaperCanvas(
+                body: GlacierActivityBackdrop(
                   child: SafeArea(
                     child: Column(
                       children: [

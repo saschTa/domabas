@@ -52,7 +52,7 @@ void main() {
           'newDocument',
         ]) {
           await revealWorkspaceAction(tester, key);
-          final action = find.byKey(Key(key));
+          final action = find.byKey(Key(key)).last;
           await tester.ensureVisible(action);
           await tester.pumpAndSettle();
           expect(action.hitTestable(), findsOneWidget, reason: key);
@@ -63,9 +63,13 @@ void main() {
         expect(find.text('Upload files'), findsOneWidget);
         expect(find.text('View uploads'), findsOneWidget);
         expect(find.text('Create metadata'), findsOneWidget);
+        await revealWorkspaceAction(tester, 'uploadFiles');
+        await tester.ensureVisible(find.byKey(const Key('uploadFiles')).last);
+        await tester.pumpAndSettle();
         expect(
-          Theme.of(tester.element(find.byKey(const Key('uploadFiles'))))
-              .brightness,
+          Theme.of(
+            tester.element(find.byKey(const Key('uploadFiles')).hitTestable()),
+          ).brightness,
           dark ? Brightness.dark : Brightness.light,
         );
         expect(tester.takeException(), isNull);
@@ -192,7 +196,7 @@ void main() {
 
 Future<void> _tapAction(WidgetTester tester, String key) async {
   await revealWorkspaceAction(tester, key);
-  final action = find.byKey(Key(key));
+  final action = find.byKey(Key(key)).last;
   await tester.ensureVisible(action);
   await tester.pumpAndSettle();
   await tester.tap(action);

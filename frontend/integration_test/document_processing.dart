@@ -1,3 +1,4 @@
+import 'package:domabas/ui/domabas_ui.dart';
 import 'package:domabas_api/api.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,9 +36,7 @@ Future<void> exerciseDocumentProcessing(
         .byKey(const Key('reindexLibrary'))
         .hitTestable()
         .evaluate()
-        .any(
-          (element) => (element.widget as ButtonStyleButton).onPressed != null,
-        ),
+        .any((element) => (element.widget as GlacierButton).onPressed != null),
     'reindex action loaded',
   );
   await tester.tap(find.byKey(const Key('reindexLibrary')));
@@ -65,8 +64,14 @@ Future<void> exerciseDocumentProcessing(
   await tester.tap(find.byKey(const Key('documentsNavigation')));
   await tester.pump(const Duration(milliseconds: 400));
   expect(find.byKey(const Key('jobActivityIndicator')), findsOneWidget);
-  await tester.tap(find.byKey(const Key('jobActivityIndicator')));
-  await tester.pump(const Duration(milliseconds: 400));
+  await tester.tap(find.byKey(const ValueKey('activity-dock-token')));
+  await tester.pumpAndSettle();
+  final allActivity = find.text('View all activity');
+  if (allActivity.evaluate().isNotEmpty) {
+    await tester.tap(allActivity);
+    await tester.pumpAndSettle();
+  }
+  expect(find.text('Activity'), findsWidgets);
   expect(find.text('Reindex · Current library'), findsOneWidget);
   await tester.tap(find.text('Close'));
   await tester.pump(const Duration(milliseconds: 400));
@@ -123,12 +128,9 @@ Future<void> exerciseDocumentProcessing(
   await tester.tap(find.widgetWithText(ChoiceChip, 'Jobs'));
   await tester.pumpAndSettle();
   final row = find.byKey(Key('job-${reindexed.id}'));
-  final details = find.descendant(
-    of: row,
-    matching: find.widgetWithText(TextButton, 'Details'),
-  );
-  await _reveal(tester, details);
-  await tester.tap(details);
+  await _reveal(tester, row);
+  expect(tester.widget<GlacierJobRow>(row).onOpen, isNotNull);
+  await tester.tap(row);
   await _wait(
     tester,
     () => find.text('Job details').evaluate().isNotEmpty,

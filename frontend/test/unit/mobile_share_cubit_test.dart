@@ -234,30 +234,43 @@ void main() {
     expect(source.contexts.last, isNull);
   });
 
-  testWidgets(
-    'confirmation names the library, never auto uploads, and allows discard',
-    (tester) async {
-      uploads.attach(target, busy: false);
-      shares.attach(_session(), target, busy: false);
-      await tester.pump();
-      source.batch = MobileShareBatch(id: 'ui', paths: ['/cache/a.pdf']);
-      source.changed!();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: MobileShareHost(
-            shares: shares,
-            child: const Scaffold(body: Text('Documents')),
+  for (final compact in [false, true]) {
+    testWidgets(
+      'confirmation names the library, never auto uploads, and allows discard compact=$compact',
+      (tester) async {
+        if (compact) {
+          tester.view.physicalSize = const Size(320, 320);
+          tester.view.devicePixelRatio = 1;
+          tester.platformDispatcher.textScaleFactorTestValue = 2;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        }
+        uploads.attach(target, busy: false);
+        shares.attach(_session(), target, busy: false);
+        await tester.pump();
+        source.batch = MobileShareBatch(id: 'ui', paths: ['/cache/a.pdf']);
+        source.changed!();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MobileShareHost(
+              shares: shares,
+              child: const Scaffold(body: Text('Documents')),
+            ),
           ),
-        ),
-      );
-      await tester.pump();
-      expect(find.text('Upload 1 file to Library?'), findsOneWidget);
-      expect(repository.calls, 0);
-      await tester.tap(find.text('Discard'));
-      await tester.pump();
-      expect(find.text('Shared with Domabas'), findsNothing);
-      expect(source.released, contains('ui'));
-      expect(tester.takeException(), isNull);
-    },
-  );
+        );
+        await tester.pump();
+        expect(find.text('Library library'), findsOneWidget);
+        expect(find.text('a.pdf'), findsOneWidget);
+        expect(repository.calls, 0);
+        expect(tester.takeException(), isNull);
+        expect(find.text('Discard').hitTestable(), findsOneWidget);
+        await tester.tap(find.text('Discard'));
+        await tester.pump();
+        expect(find.text('Shared with Domabas'), findsNothing);
+        expect(source.released, contains('ui'));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }

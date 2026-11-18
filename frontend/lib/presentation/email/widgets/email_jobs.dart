@@ -55,6 +55,7 @@ final class EmailRunCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppSurface(
+    glacier: true,
     key: Key('email-job-${run.id}'),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,9 +119,10 @@ final class EmailRunCard extends StatelessWidget {
           'Accepted emails and attachments continue as separate document ingestion jobs.',
         ),
         if (provider != null)
-          TextButton(
+          GlacierButton(
+            kind: GlacierButtonKind.quiet,
+            label: 'Open email account',
             onPressed: () => onOpenAccount(run.providerId),
-            child: const Text('Open email account'),
           ),
       ],
     ),

@@ -76,11 +76,19 @@ void main() {
       await tester.tap(find.byKey(const Key('navigation-more')));
       await tester.pumpAndSettle();
       expect(
-        find.byKey(const Key('manageChat')),
+        find.byKey(const Key('navigation-admin-settings')),
         canManage ? findsOneWidget : findsNothing,
       );
-      await tester.tap(find.byKey(const Key('closeNavigationChooser')));
-      await tester.pumpAndSettle();
+      if (canManage) {
+        await tester.tap(find.byKey(const Key('navigation-admin-settings')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('manageChat')), findsOneWidget);
+        expect(find.byType(Dialog), findsNothing);
+      } else {
+        expect(find.byKey(const Key('manageChat')), findsNothing);
+        await tester.tap(find.byTooltip('Close actions'));
+        await tester.pumpAndSettle();
+      }
       if (canChat) {
         await tester.ensureVisible(find.byKey(const Key('chatNavigation')));
         await tester.tap(find.byKey(const Key('chatNavigation')));
@@ -168,7 +176,7 @@ void main() {
       }
       if (permissions.length == 4) {
         expect(
-          find.byKey(const Key('workspaceNotchedNavigation')),
+          find.byKey(const Key('workspaceBottomNavigation')),
           findsOneWidget,
         );
       }

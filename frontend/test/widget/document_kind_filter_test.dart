@@ -78,7 +78,7 @@ void main() {
       expect(repository.requests.last.kinds, isEmpty);
       expect(
         tester
-            .widget<ChoiceChip>(find.byKey(const Key('documentType-all')))
+            .widget<GlacierChoice>(find.byKey(const Key('documentType-all')))
             .selected,
         isTrue,
       );

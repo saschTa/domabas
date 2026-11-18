@@ -17,6 +17,8 @@ import '../presentation/document/widgets/document_route_scope.dart';
 import '../presentation/identity/cubits/session_cubit.dart';
 import '../ui/domabas_ui.dart';
 import 'account_workspace.dart';
+import 'glacier_application_theme.dart';
+import 'native_desktop_frame.dart';
 import 'app_dependencies.dart';
 import 'document_upload_coordinator.dart';
 import 'mobile_share_cubit.dart';
@@ -55,6 +57,8 @@ final class _DomabasAppState extends State<DomabasApp>
   late final SessionCubit _sessions;
   late final StreamSubscription<SessionState> _sessionSubscription;
   AuthSession? _session;
+  var _nativeNavigator = GlobalKey<NavigatorState>();
+  var _nativeRoutes = DesktopWindowRouteObserver();
   AuthenticatedDependencies? _scope;
   final Set<AuthenticatedDependencies> _retiring = {};
   RouteObserver<ModalRoute<void>> _documentRoutes =
@@ -83,6 +87,12 @@ final class _DomabasAppState extends State<DomabasApp>
       final previous = _scope;
       if (previous != null && !_retiring.contains(previous)) previous.dispose();
       _session = session;
+      final retiringNativeRoutes = _nativeRoutes;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => retiringNativeRoutes.dispose(),
+      );
+      _nativeNavigator = GlobalKey<NavigatorState>();
+      _nativeRoutes = DesktopWindowRouteObserver();
       _documentRoutes = RouteObserver<ModalRoute<void>>();
       _scope = session == null
           ? null
@@ -128,6 +138,7 @@ final class _DomabasAppState extends State<DomabasApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _nativeRoutes.dispose();
     if (widget.appearanceCubit == null) unawaited(_appearance.close());
     unawaited(_sessionSubscription.cancel());
     unawaited(_sessions.close());
@@ -154,9 +165,10 @@ final class _DomabasAppState extends State<DomabasApp>
           key: ObjectKey(_session),
           title: 'Domabas',
           debugShowCheckedModeBanner: false,
-          navigatorObservers: [_documentRoutes],
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
+          navigatorKey: _nativeNavigator,
+          navigatorObservers: [_documentRoutes, _nativeRoutes],
+          theme: GlacierTheme.light(),
+          darkTheme: GlacierTheme.dark(),
           themeMode: switch (state.preference) {
             AppearancePreference.system => ThemeMode.system,
             AppearancePreference.light => ThemeMode.light,
@@ -165,11 +177,19 @@ final class _DomabasAppState extends State<DomabasApp>
           themeAnimationStyle: reduceMotion
               ? AnimationStyle.noAnimation
               : const AnimationStyle(duration: Duration(milliseconds: 200)),
-          builder: (context, child) => DocumentUploadHost(
-            cubit: _scope?.uploads,
-            child: MobileShareHost(
-              shares: widget.shares,
-              child: child ?? const SizedBox.shrink(),
+          builder: (context, child) => glacierApplicationTheme(
+            context,
+            DocumentUploadHost(
+              cubit: _scope?.uploads,
+              child: MobileShareHost(
+                shares: widget.shares,
+                child: NativeDesktopFrame(
+                  navigatorKey: _nativeNavigator,
+                  observer: _nativeRoutes,
+                  library: _session?.identity.accountName ?? 'Sign in',
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
             ),
           ),
           home: Builder(builder: _home),
@@ -187,7 +207,7 @@ final class _DomabasAppState extends State<DomabasApp>
             AppearanceAction(cubit: _appearance),
           ],
         ),
-        body: AppPaperCanvas(
+        body: GlacierActivityBackdrop(
           child: SafeArea(
             child: Column(
               children: [
@@ -198,6 +218,7 @@ final class _DomabasAppState extends State<DomabasApp>
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 480),
                         child: AppSurface(
+                          glacier: true,
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -216,24 +237,24 @@ final class _DomabasAppState extends State<DomabasApp>
                               else ...[
                                 Text(_sessions.error ?? 'Please try again.'),
                                 const SizedBox(height: 24),
-                                FilledButton(
+                                GlacierButton(
+                                  kind: GlacierButtonKind.primary,
                                   key: const Key('retrySession'),
                                   onPressed: _sessions.busy
                                       ? null
                                       : _sessions.forgetFailed
                                       ? _sessions.forgetSavedSession
                                       : _sessions.restore,
-                                  child: const Text('Try again'),
+                                  label: 'Try again',
                                 ),
                                 if (!_sessions.forgetFailed)
-                                  TextButton(
+                                  GlacierButton(
+                                    kind: GlacierButtonKind.quiet,
                                     key: const Key('forgetSession'),
                                     onPressed: _sessions.busy
                                         ? null
                                         : _sessions.forgetSavedSession,
-                                    child: const Text(
-                                      'Sign out on this device',
-                                    ),
+                                    label: 'Sign out on this device',
                                   ),
                               ],
                             ],

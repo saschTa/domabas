@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'app/app_dependencies.dart';
 import 'app/domabas_app.dart';
 import 'app/native_server_app.dart';
+import 'app/native_desktop_frame.dart';
 
 void main() {
   LicenseRegistry.addLicense(() async* {
@@ -25,7 +26,11 @@ void main() {
       'OpenCV and bundled scanner dependencies',
     ], await rootBundle.loadString('assets/licenses/scanner-opencv.txt'));
   });
-  runApp(kIsWeb ? const _DomabasBootstrap() : NativeServerApp.production());
+  runApp(
+    NativeDesktopHost(
+      child: kIsWeb ? const _DomabasBootstrap() : NativeServerApp.production(),
+    ),
+  );
 }
 
 final class _DomabasBootstrap extends StatefulWidget {

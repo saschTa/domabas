@@ -14,7 +14,7 @@ final class SystemUsersScreen extends StatelessWidget {
       BlocBuilder<SystemUsersCubit, SystemUsersState>(
         bloc: cubit,
         builder: (context, _) => AppPage(
-          eyebrow: 'Admin settings',
+          glacier: true,
           title: 'System users',
           insetBody: false,
           description: 'Manage administrators for this installation. Library access is managed separately.',
@@ -27,18 +27,19 @@ final class SystemUsersScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: AppNotice(
                     message: error,
-                    action: TextButton(
+                    action: GlacierButton(
                       onPressed: cubit.loading || cubit.saving
                           ? null
                           : () => cubit.load(),
-                      child: const Text('Retry'),
+                      label: 'Retry',
+                      kind: GlacierButtonKind.quiet,
                     ),
                   ),
                 ),
               AppProgressSlot(active: cubit.loading || cubit.saving),
               Expanded(
                 child: ListView.separated(
-                  padding: AppLayout.cardListPadding(context),
+                  padding: GlacierSettingsPage.scrollPadding(context),
                   itemCount: cubit.users.isEmpty
                       ? 1
                       : cubit.users.length + (cubit.canLoadMore ? 1 : 0),
@@ -47,20 +48,27 @@ final class SystemUsersScreen extends StatelessWidget {
                     if (cubit.users.isEmpty) {
                       return cubit.loading
                           ? const SizedBox.shrink()
-                          : const AppEmptyState(
-                              icon: Icons.manage_accounts_outlined,
-                              title: 'No users to display',
-                              message: 'Pull down to refresh the users in this installation.',
+                          : const GlacierSettingsSection(
+                              child: AppEmptyState(
+                                icon: Icons.manage_accounts_outlined,
+                                title: 'No users to display',
+                                message: 'Pull down to refresh the users in this installation.',
+                              ),
                             );
                     }
                     if (index == cubit.users.length) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: TextButton(
-                          onPressed: cubit.loading || cubit.saving
-                              ? null
-                              : () => cubit.load(more: true),
-                          child: const Text('Load more users'),
+                      return GlacierWorkspaceGeometry.measureEndActions(
+                        context,
+                        followingExtent: 24,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: GlacierButton(
+                            onPressed: cubit.loading || cubit.saving
+                                ? null
+                                : () => cubit.load(more: true),
+                            label: 'Load more users',
+                            kind: GlacierButtonKind.quiet,
+                          ),
                         ),
                       );
                     }
@@ -69,53 +77,43 @@ final class SystemUsersScreen extends StatelessWidget {
                     final alternate = user.role == SystemRole.admin
                         ? SystemRole.user
                         : SystemRole.admin;
-                    return AppSurface(
-                      padding: EdgeInsets.zero,
-                      child: AppRecordRow(
-                        key: Key('system-user-${user.id}'),
-                        leading: CircleAvatar(
-                          child: Icon(
-                            user.role == SystemRole.admin
-                                ? Icons.admin_panel_settings_outlined
-                                : Icons.person_outline,
-                          ),
-                        ),
-                        title: user.email,
-                        subtitle: lastAdmin
-                            ? const Text(
-                                'The last administrator. Promote another user before removing this role.',
-                              )
-                            : user.id == cubit.identity.userId
-                            ? const Text('Your account')
-                            : null,
-                        metadata: AppStatusBadge(
-                          label: user.role == SystemRole.admin
-                              ? 'System admin'
-                              : 'User',
-                          tone: user.role == SystemRole.admin
-                              ? AppTone.success
-                              : AppTone.neutral,
-                        ),
-                        trailing: TextButton.icon(
+                    return GlacierSettingsRecord(
+                      card: true,
+                      key: Key('system-user-${user.id}'),
+                      title: user.email,
+                      icon: user.role == SystemRole.admin
+                          ? Icons.admin_panel_settings_outlined
+                          : Icons.person_outline,
+                      detail: lastAdmin
+                          ? 'The last administrator. Promote another user before removing this role.'
+                          : user.id == cubit.identity.userId
+                          ? 'Your account'
+                          : '',
+                      status: AppStatusBadge(
+                        label: user.role == SystemRole.admin
+                            ? 'System admin'
+                            : 'User',
+                        tone: user.role == SystemRole.admin
+                            ? AppTone.success
+                            : AppTone.neutral,
+                      ),
+                      actions: [
+                        GlacierButton(
                           key: Key('system-role-${user.id}'),
                           onPressed: cubit.canChangeRole(user, alternate)
                               ? () => _change(context, user)
                               : null,
-                          icon: Icon(
-                            lastAdmin
-                                ? Icons.lock_outline
-                                : user.role == SystemRole.admin
-                                ? Icons.remove_moderator_outlined
-                                : Icons.add_moderator_outlined,
-                            size: 18,
-                          ),
-                          label: Text(
-                            user.role == SystemRole.admin
-                                ? 'Remove admin'
-                                : 'Make admin',
-                          ),
+                          label: user.role == SystemRole.admin
+                              ? 'Remove admin'
+                              : 'Make admin',
+                          icon: lastAdmin
+                              ? Icons.lock_outline
+                              : user.role == SystemRole.admin
+                              ? Icons.remove_moderator_outlined
+                              : Icons.add_moderator_outlined,
+                          kind: GlacierButtonKind.quiet,
                         ),
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -130,22 +128,25 @@ final class SystemUsersScreen extends StatelessWidget {
         ? SystemRole.user
         : SystemRole.admin;
     if (!cubit.canChangeRole(user, role)) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlacierDialog<bool>(
       context: context,
       builder: (context) => AppDialog(
+        glacier: true,
         title: role == SystemRole.admin
             ? 'Make system administrator?'
             : 'Remove system administrator?',
         description: user.email,
         actions: [
-          TextButton(
+          GlacierButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            label: 'Cancel',
+            kind: GlacierButtonKind.quiet,
           ),
-          FilledButton(
+          GlacierButton(
             key: const Key('confirmSystemRole'),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
+            label: 'Confirm',
+            kind: GlacierButtonKind.primary,
           ),
         ],
         child: Text(

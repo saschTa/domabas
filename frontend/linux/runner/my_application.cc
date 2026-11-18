@@ -1,4 +1,5 @@
 #include "my_application.h"
+#include "desktop_window_channel.h"
 
 #include <flutter_linux/flutter_linux.h>
 #ifdef GDK_WINDOWING_X11
@@ -70,6 +71,7 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  domabas_desktop_window_attach(window, view);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

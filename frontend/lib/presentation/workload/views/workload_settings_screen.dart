@@ -20,14 +20,15 @@ final class WorkloadSettingsScreen extends StatelessWidget {
       ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(state.notice!))),
     builder: (context, state) => AppPage(
+      glacier: true,
       insetBody: false,
-      eyebrow: 'ADMIN SETTINGS',
+
       title: 'Workload limits',
       description: 'Control how many background jobs share workers and AI providers across all libraries.',
       onRefresh: state.loading || state.saving ? null : cubit.load,
       child: ListView(
         key: const Key('workloadSettingsScroll'),
-        padding: AppLayout.cardListPadding(context),
+        padding: GlacierSettingsPage.scrollPadding(context),
         children: [
           const AppNotice(
             tone: AppTone.info,
@@ -42,72 +43,39 @@ final class WorkloadSettingsScreen extends StatelessWidget {
           ],
           if (state.settings case final settings?) ...[
             for (final resource in settings.resources) ...[
-              AppSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppSectionHeader(
-                      title: resource.label,
-                      description: switch (resource.id) {
-                        'worker' => 'One slot per active background job across all pipelines.',
-                        'ollama' => 'Shared by background embedding jobs and AI pipelines configured to use Ollama.',
-                        _ => 'Shared by background jobs using this provider address, including different models and API paths.',
-                      },
+              GlacierWorkloadResource(
+                label: resource.label,
+                active: resource.activeJobs,
+                savedLimit: resource.limit,
+                maximumLimit: resource.maximumLimit,
+                description: switch (resource.id) {
+                  'worker' =>
+                    'One slot per active background job across all pipelines.',
+                  'ollama' => 'Shared by background embedding jobs and AI pipelines configured to use Ollama.',
+                  _ => 'Shared by background jobs using this provider address, including different models and API paths.',
+                },
+                limitField: _WorkloadLimitField(
+                  key: ValueKey('workloadLimit-${resource.id}'),
+                  resourceId: resource.id,
+                  value: state.drafts[resource.id] ?? '',
+                  keyboardType: TextInputType.number,
+                  enabled: !state.loading && !state.saving,
+                  decoration: InputDecoration(
+                    labelText: 'Maximum active background jobs',
+                    errorText: resource.validateLimit(
+                      state.drafts[resource.id] ?? '',
                     ),
-                    const SizedBox(height: 16),
-                    _WorkloadLimitField(
-                      key: ValueKey('workloadLimit-${resource.id}'),
-                      resourceId: resource.id,
-                      value: state.drafts[resource.id] ?? '',
-                      keyboardType: TextInputType.number,
-                      enabled: !state.loading && !state.saving,
-                      decoration: InputDecoration(
-                        labelText: 'Maximum active background jobs',
-                        helperText: 'Allowed: 1–${resource.maximumLimit}',
-                        errorText: resource.validateLimit(
-                          state.drafts[resource.id] ?? '',
-                        ),
-                      ),
-                      onChanged: (value) => cubit.edit(resource.id, value),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final (label, value) in [
-                          ('Saved', resource.limit),
-                          ('Active', resource.activeJobs),
-                        ])
-                          Expanded(
-                            child: MergeSemantics(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [Text(label), Text('$value')],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'New jobs wait until active usage falls below the saved limit.',
-                    ),
-                    if (resource.id == 'ollama') ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Configured Ollama queue: ${settings.ollamaQueueSize}. At most ${resource.maximumLimit} active background jobs, capped at 50% of the queue.',
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'The queue sets a safety ceiling. Ollama controls how many requests run inference at once.',
-                      ),
-                    ],
-                  ],
+                  ),
+                  onChanged: (value) => cubit.edit(resource.id, value),
                 ),
+                notice: resource.id == 'ollama'
+                    ? 'New jobs wait until active usage falls below the saved limit. Configured Ollama queue: ${settings.ollamaQueueSize}. At most ${resource.maximumLimit} active background jobs, capped at 50% of the queue. The queue sets a safety ceiling. Ollama controls how many requests run inference at once.'
+                    : 'New jobs wait until active usage falls below the saved limit.',
               ),
               const SizedBox(height: 16),
             ],
             AppSurface(
+              glacier: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -115,34 +83,41 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                     'Active counts include jobs starting or finishing. Changes apply to new admissions and do not reindex documents.',
                   ),
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton.icon(
-                        key: const Key('saveWorkloadSettings'),
-                        onPressed: state.canSave ? cubit.save : null,
-                        icon: const Icon(Icons.save_outlined),
-                        label: const Text('Save limits'),
-                      ),
-                      TextButton(
-                        key: const Key('resetWorkloadSettings'),
-                        onPressed:
-                            state.dirty &&
-                                !state.loading &&
-                                !state.saving &&
-                                !state.requiresRefresh
-                            ? cubit.resetDraft
-                            : null,
-                        child: const Text('Use saved limits'),
-                      ),
-                    ],
+                  GlacierWorkspaceGeometry.measureEndActions(
+                    context,
+                    followingExtent: 24,
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        GlacierButton(
+                          key: const Key('saveWorkloadSettings'),
+                          onPressed: state.canSave ? cubit.save : null,
+                          label: 'Save limits',
+                          icon: Icons.save_outlined,
+                          kind: GlacierButtonKind.primary,
+                        ),
+                        GlacierButton(
+                          key: const Key('resetWorkloadSettings'),
+                          onPressed:
+                              state.dirty &&
+                                  !state.loading &&
+                                  !state.saving &&
+                                  !state.requiresRefresh
+                              ? cubit.resetDraft
+                              : null,
+                          label: 'Use saved limits',
+                          kind: GlacierButtonKind.quiet,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
             AppSurface(
+              glacier: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

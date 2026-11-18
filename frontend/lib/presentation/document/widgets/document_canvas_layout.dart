@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../ui/glacier.dart';
+
 final class DocumentCanvasLayout extends StatelessWidget {
   const DocumentCanvasLayout({
     super.key,
@@ -39,13 +41,10 @@ final class DocumentCanvasLayout extends StatelessWidget {
                   id: 'controls',
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    child: Material(
+                    child: GlacierSurface(
                       key: const Key('documentCanvasControls'),
-                      color: Theme.of(context).colorScheme.surface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      clipBehavior: Clip.antiAlias,
+                      radius: 14,
+                      padding: EdgeInsets.zero,
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,

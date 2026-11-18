@@ -121,11 +121,12 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
                     if (state.ocrLoading) const AppStripedProgressIndicator(),
                     if (state.ocrError case final error?) ...[
                       Text(error),
-                      TextButton(
+                      GlacierButton(
+                        label: 'Retry extracted text',
+                        kind: GlacierButtonKind.quiet,
                         onPressed: state.ocrLoading
                             ? null
                             : widget.cubit.loadOcr,
-                        child: const Text('Retry extracted text'),
                       ),
                     ],
                     if (ocr == null &&
@@ -164,89 +165,74 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
                         runSpacing: 8,
                         children: [
                           if (state.editingOcr) ...[
-                            FilledButton(
+                            GlacierButton(
+                              kind: GlacierButtonKind.primary,
                               onPressed:
                                   state.saving ||
                                       state.conflict ||
                                       state.reconcileRequired
                                   ? null
                                   : widget.cubit.saveOcr,
-                              child: Text(
-                                state.saving
-                                    ? 'Saving…'
-                                    : 'Save extracted text',
-                              ),
+                              label: state.saving
+                                  ? 'Saving…'
+                                  : 'Save extracted text',
                             ),
-                            TextButton(
+                            GlacierButton(
+                              label: 'Cancel',
+                              kind: GlacierButtonKind.quiet,
                               onPressed: state.saving ? null : widget.onCancel,
-                              child: const Text('Cancel'),
                             ),
                           ] else if (widget.cubit.capabilities.updateOcr &&
                               state.document?.file != null)
-                            OutlinedButton.icon(
+                            GlacierButton(
                               onPressed: state.saving
                                   ? null
                                   : widget.cubit.editOcr,
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Edit extracted text'),
+                              icon: Icons.edit_outlined,
+                              label: 'Edit extracted text',
                             ),
                           if (state.conflict || state.reconcileRequired)
-                            TextButton(
+                            GlacierButton(
+                              label: 'Reload latest',
+                              kind: GlacierButtonKind.quiet,
                               onPressed: state.ocrLoading || state.saving
                                   ? null
                                   : widget.cubit.loadOcr,
-                              child: const Text('Reload latest'),
                             ),
                           if (widget.cubit.capabilities.retry &&
                               (ocr.reason == 'legacy_text_missing' ||
                                   ocr.reason == 'processing_failed'))
-                            TextButton(
+                            GlacierButton(
+                              label: 'Retry processing',
+                              kind: GlacierButtonKind.quiet,
                               onPressed: state.saving
                                   ? null
                                   : widget.cubit.retryProcessing,
-                              child: const Text('Retry processing'),
                             ),
                         ],
                       ),
                       if (ocr.available || state.editingOcr) ...[
                         const SizedBox(height: 12),
-                        TextField(
+                        GlacierFindBar(
+                          fieldKey: const Key('ocrSearch'),
                           controller: _query,
-                          decoration: const InputDecoration(
-                            labelText: 'Find in extracted text',
-                            prefixIcon: Icon(Icons.search),
-                          ),
+                          autofocus: false,
+                          hint: 'Find in extracted text',
+                          previousLabel: 'Previous text match',
+                          nextLabel: 'Next text match',
+                          resultLabel: _query.text.isEmpty
+                              ? 'Text search has no page highlights.'
+                              : _matches.isEmpty
+                              ? 'No matches'
+                              : '${_match + 1} of ${_matches.length} matches',
                           onChanged: (_) {
                             setState(_find);
                             _showMatch(0);
                           },
-                        ),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 4,
-                          children: [
-                            Text(
-                              _query.text.isEmpty
-                                  ? 'Text search has no page highlights.'
-                                  : _matches.isEmpty
-                                  ? 'No matches'
-                                  : '${_match + 1} of ${_matches.length} matches',
-                            ),
-                            IconButton(
-                              tooltip: 'Previous text match',
-                              onPressed: _matches.isEmpty
-                                  ? null
-                                  : () => _showMatch(-1),
-                              icon: const Icon(Icons.keyboard_arrow_up),
-                            ),
-                            IconButton(
-                              tooltip: 'Next text match',
-                              onPressed: _matches.isEmpty
-                                  ? null
-                                  : () => _showMatch(1),
-                              icon: const Icon(Icons.keyboard_arrow_down),
-                            ),
-                          ],
+                          onPrevious: _matches.isEmpty
+                              ? null
+                              : () => _showMatch(-1),
+                          onNext: _matches.isEmpty ? null : () => _showMatch(1),
                         ),
                         if (_text.text.isEmpty && !state.editingOcr)
                           const Padding(

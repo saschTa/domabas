@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/identity/models/identity.dart';
 import '../cubits/account_cubit.dart';
+import '../../../ui/glacier.dart';
 
 final class PasswordForm extends StatefulWidget {
   const PasswordForm({super.key, required this.cubit});
@@ -86,7 +87,8 @@ final class _PasswordFormState extends State<PasswordForm> {
             ),
           ],
           const SizedBox(height: 20),
-          FilledButton(
+          GlacierButton(
+            kind: GlacierButtonKind.primary,
             key: const Key('savePassword'),
             onPressed: widget.cubit.saving
                 ? null
@@ -98,9 +100,9 @@ final class _PasswordFormState extends State<PasswordForm> {
                       );
                     }
                   },
-            child: Text(
-              widget.cubit.saving ? 'Changing password…' : 'Change password',
-            ),
+            label: widget.cubit.saving
+                ? 'Changing password…'
+                : 'Change password',
           ),
         ],
       ),

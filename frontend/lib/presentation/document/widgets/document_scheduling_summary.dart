@@ -15,6 +15,7 @@ final class DocumentSchedulingSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppSurface(
+    glacier: true,
     child: Semantics(
       container: true,
       explicitChildNodes: true,

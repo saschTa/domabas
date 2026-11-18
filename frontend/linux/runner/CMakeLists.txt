@@ -21,6 +21,7 @@ add_custom_command(
 add_executable(${BINARY_NAME}
   "main.cc"
   "my_application.cc"
+  "desktop_window_channel.cc"
   "${DOMABAS_ICON_RESOURCE}"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"
 )

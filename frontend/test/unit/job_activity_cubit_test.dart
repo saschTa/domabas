@@ -23,6 +23,104 @@ JobActivityCubit monitor(
 Future<void> flush() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  DocumentProcessingJob thumbnailJob(
+    String id, {
+    String status = 'running',
+    bool current = true,
+    bool deleted = false,
+    String pipeline = 'thumbnail',
+  }) => DocumentProcessingJob(
+    id: id,
+    documentId: id,
+    reason: 'missing_thumbnail',
+    status: status,
+    stage: 'rendering',
+    createdAt: DateTime.utc(2026),
+    updatedAt: DateTime.utc(2026),
+    isCurrent: current,
+    documentDeleted: deleted,
+    pipeline: pipeline,
+  );
+
+  test(
+    'preview preparation uses only known current active thumbnail jobs',
+    () async {
+      final repository = FakeProcessingRepository();
+      final cursors = <String?>[];
+      repository.onJobs = (cursor, _) async {
+        cursors.add(cursor);
+        return DocumentProcessingJobPage(
+          items: cursor == null
+              ? [
+                  thumbnailJob('running'),
+                  thumbnailJob('queued', status: 'queued'),
+                  thumbnailJob('obsolete', current: false),
+                  thumbnailJob('deleted', deleted: true),
+                  thumbnailJob('failed', status: 'failed'),
+                  thumbnailJob('ingestion', pipeline: 'ingestion'),
+                ]
+              : [thumbnailJob('older')],
+          nextCursor: cursor == null ? 'next' : null,
+        );
+      };
+      final cubit = monitor(repository)..setActive(true);
+      addTearDown(cubit.close);
+      await flush();
+      expect(cubit.state.preparingPreviewDocumentIds, {'running', 'queued'});
+      expect(cursors, [null]);
+      expect(
+        () => cubit.state.preparingPreviewDocumentIds.add('invented'),
+        throwsUnsupportedError,
+      );
+      await cubit.loadMore();
+      expect(cubit.state.preparingPreviewDocumentIds, {
+        'running',
+        'queued',
+        'older',
+      });
+      expect(cursors, [null, 'next']);
+    },
+  );
+
+  test(
+    'preview preparation clears on pause and disconnect until refreshed',
+    () async {
+      final repository = FakeProcessingRepository()
+        ..jobs = [thumbnailJob('ready-to-render')];
+      final cubit = monitor(repository)..setActive(true);
+      addTearDown(cubit.close);
+      await flush();
+      expect(cubit.state.preparingPreviewDocumentIds, {'ready-to-render'});
+      cubit.setRealtimeHealthy(false);
+      expect(cubit.state.preparingPreviewDocumentIds, isEmpty);
+      cubit.setRealtimeHealthy(true);
+      expect(cubit.state.preparingPreviewDocumentIds, isEmpty);
+      await cubit.refresh();
+      expect(cubit.state.preparingPreviewDocumentIds, {'ready-to-render'});
+      repository.onJobs = (_, _) async => throw const DocumentProcessingFailure(
+        DocumentProcessingFailureKind.unavailable,
+      );
+      await cubit.refresh();
+      expect(cubit.state.preparingPreviewDocumentIds, isEmpty);
+      repository.onJobs = null;
+      await cubit.refresh();
+      expect(cubit.state.preparingPreviewDocumentIds, {'ready-to-render'});
+      cubit.setActive(false);
+      expect(cubit.state.preparingPreviewDocumentIds, isEmpty);
+      final pending = Completer<DocumentProcessingJobPage>();
+      repository.onJobs = (_, _) => pending.future;
+      cubit.setActive(true);
+      expect(cubit.state.preparingPreviewDocumentIds, isEmpty);
+      pending.complete(DocumentProcessingJobPage(items: []));
+      await flush();
+      expect(cubit.state.preparingPreviewDocumentIds, isEmpty);
+      final denied = monitor(repository, allowed: false)..setActive(true);
+      addTearDown(denied.close);
+      await flush();
+      expect(denied.state.preparingPreviewDocumentIds, isEmpty);
+    },
+  );
+
   testWidgets(
     'server totals clear a thousand completed jobs after one hint with no polling',
     (tester) async {

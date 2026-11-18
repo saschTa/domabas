@@ -16,17 +16,21 @@ final class InvoiceFilterDialog extends StatefulWidget {
     required this.initial,
     required this.isCurrent,
     required this.onClose,
+    this.embedded = false,
+    this.onDraftChanged,
   });
+  final bool embedded;
+  final ValueChanged<InvoiceFilters>? onDraftChanged;
   final InvoicesCubit cubit;
   final InvoiceFilters initial;
   final bool Function() isCurrent;
   final ValueChanged<InvoiceFilters?> onClose;
 
   @override
-  State<InvoiceFilterDialog> createState() => _InvoiceFilterDialogState();
+  InvoiceFilterDialogState createState() => InvoiceFilterDialogState();
 }
 
-final class _InvoiceFilterDialogState extends State<InvoiceFilterDialog> {
+final class InvoiceFilterDialogState extends State<InvoiceFilterDialog> {
   late InvoiceFilters _draft = widget.initial;
   late final _dates = [
     TextEditingController(text: _draft.createdFrom),
@@ -44,18 +48,36 @@ final class _InvoiceFilterDialogState extends State<InvoiceFilterDialog> {
 
   bool get _owns => mounted && !widget.cubit.isClosed && widget.isCurrent();
 
-  void _apply() {
-    if (!_owns) return;
-    final filters = _draft.copyWith(
-      createdFrom: _dates[0].text.trim(),
-      createdTo: _dates[1].text.trim(),
-      issueFrom: _dates[2].text.trim(),
-      issueTo: _dates[3].text.trim(),
-      dueFrom: _dates[4].text.trim(),
-      dueTo: _dates[5].text.trim(),
-      totalMin: _minimum.text.trim(),
-      totalMax: _maximum.text.trim(),
-    );
+  @override
+  void initState() {
+    super.initState();
+    for (final controller in [..._dates, _minimum, _maximum]) {
+      controller.addListener(_notifyDraft);
+    }
+  }
+
+  void _notifyDraft() => widget.onDraftChanged?.call(draft);
+
+  InvoiceFilters get draft => _draft.copyWith(
+    createdFrom: _dates[0].text.trim(),
+    createdTo: _dates[1].text.trim(),
+    issueFrom: _dates[2].text.trim(),
+    issueTo: _dates[3].text.trim(),
+    dueFrom: _dates[4].text.trim(),
+    dueTo: _dates[5].text.trim(),
+    totalMin: _minimum.text.trim(),
+    totalMax: _maximum.text.trim(),
+  );
+  InvoiceFilters? validatedFilters() {
+    if (!_owns ||
+        [..._dates, _minimum, _maximum].any(
+          (controller) =>
+              controller.value.composing.isValid &&
+              !controller.value.composing.isCollapsed,
+        )) {
+      return null;
+    }
+    final filters = draft;
     final error = filters.validation;
     if (error != null) {
       setState(() => _error = error);
@@ -65,20 +87,27 @@ final class _InvoiceFilterDialogState extends State<InvoiceFilterDialog> {
           unawaited(Scrollable.ensureVisible(context));
         }
       });
-      return;
+      return null;
     }
-    widget.onClose(filters);
+    return filters;
   }
 
-  void _clear() {
+  void _apply() {
+    final filters = validatedFilters();
+    if (filters != null) widget.onClose(filters);
+  }
+
+  void clearDraft() {
     if (!_owns) return;
     for (final controller in [..._dates, _minimum, _maximum]) {
       controller.clear();
     }
     setState(() {
       _draft = const InvoiceFilters();
+      _selecting = null;
       _error = null;
     });
+    _notifyDraft();
   }
 
   @override
@@ -94,6 +123,7 @@ final class _InvoiceFilterDialogState extends State<InvoiceFilterDialog> {
     if (_selecting case final field?) {
       return _InvoiceFilterValuePicker(
         key: ValueKey(field),
+        embedded: widget.embedded,
         cubit: widget.cubit,
         field: field,
         selected: _draft.value(field),
@@ -108,178 +138,149 @@ final class _InvoiceFilterDialogState extends State<InvoiceFilterDialog> {
               _selecting = null;
               _error = null;
             });
+            _notifyDraft();
           }
         },
       );
     }
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: GlacierButton(
+            key: const Key('resetInvoiceFilterDraft'),
+            label: 'Clear filters',
+            kind: GlacierButtonKind.quiet,
+            onPressed: clearDraft,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final field in InvoiceFilterField.values) ...[
+          GlacierSettingsRecord(
+            key: Key('invoiceFilterField-${field.name}'),
+            title: field.label,
+            detail: _draft.value(field).isEmpty
+                ? 'Any'
+                : invoiceFilterValueLabel(field, _draft.value(field)),
+            icon: Icons.search,
+            onTap: () {
+              if (_owns) setState(() => _selecting = field);
+            },
+            actions: [
+              if (_draft.value(field).isNotEmpty)
+                GlacierIconButton(
+                  label: 'Clear ${field.label.toLowerCase()}',
+                  icon: Icons.close,
+                  onPressed: () {
+                    if (_owns) {
+                      setState(() => _draft = _draft.withValue(field, ''));
+                      _notifyDraft();
+                    }
+                  },
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        const SizedBox(height: 16),
+        Text('Dates', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        const Text(
+          'Ranges include both dates. Added dates use UTC. Leave an end blank for an open range.',
+        ),
+        const SizedBox(height: 12),
+        for (var index = 0; index < 3; index++) ...[
+          _InvoiceRangeFields(
+            first: TextField(
+              key: Key('invoiceDateFrom-$index'),
+              controller: _dates[index * 2],
+              keyboardType: TextInputType.datetime,
+              decoration: InputDecoration(
+                labelText: '${['Added', 'Issue date', 'Due date'][index]} from',
+                hintText: 'YYYY-MM-DD',
+              ),
+            ),
+            second: TextField(
+              key: Key('invoiceDateTo-$index'),
+              controller: _dates[index * 2 + 1],
+              keyboardType: TextInputType.datetime,
+              decoration: InputDecoration(
+                labelText:
+                    '${['Added', 'Issue date', 'Due date'][index]} through',
+                hintText: 'YYYY-MM-DD',
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        Text('Gross total', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          _draft.currency.isEmpty
+              ? 'Choose a currency above to filter totals.'
+              : 'Amounts in ${_draft.currency}, including negative credit notes.',
+        ),
+        const SizedBox(height: 12),
+        _InvoiceRangeFields(
+          first: TextField(
+            key: const Key('invoiceTotalMin'),
+            controller: _minimum,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: true,
+            ),
+            decoration: const InputDecoration(
+              labelText: 'Minimum total',
+              hintText: '0.00',
+            ),
+          ),
+          second: TextField(
+            key: const Key('invoiceTotalMax'),
+            controller: _maximum,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: true,
+            ),
+            decoration: const InputDecoration(
+              labelText: 'Maximum total',
+              hintText: '119.00',
+            ),
+          ),
+        ),
+        if (_error case final error?) ...[
+          const SizedBox(height: 16),
+          Semantics(
+            key: _errorAnchor,
+            liveRegion: true,
+            child: AppNotice(message: error, tone: AppTone.danger),
+          ),
+        ],
+      ],
+    );
+    if (widget.embedded) return content;
     return AppDialog(
+      glacier: true,
       title: 'Filter invoices',
       description:
           'Choose exact invoice properties and optional date or total ranges.',
       actions: [
-        TextButton(
+        GlacierButton(
           key: const Key('cancelInvoiceFilters'),
+          label: 'Cancel',
+          kind: GlacierButtonKind.quiet,
           onPressed: () {
             if (_owns) widget.onClose(null);
           },
-          child: const Text('Cancel'),
         ),
-        FilledButton(
+        GlacierButton(
           key: const Key('applyInvoiceFilters'),
+          label: 'Apply filters',
+          kind: GlacierButtonKind.primary,
           onPressed: _apply,
-          child: const Text('Apply filters'),
         ),
       ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              key: const Key('resetInvoiceFilterDraft'),
-              onPressed: _clear,
-              child: const Text('Clear filters'),
-            ),
-          ),
-          const SizedBox(height: 8),
-          for (final field in InvoiceFilterField.values) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: Key('invoiceFilterField-${field.name}'),
-                    onPressed: () {
-                      if (_owns) setState(() => _selecting = field);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Tooltip(
-                              message: _draft.value(field).isEmpty
-                                  ? 'Any ${field.label.toLowerCase()}'
-                                  : _draft.value(field),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    field.label,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium,
-                                  ),
-                                  Text(
-                                    _draft.value(field).isEmpty
-                                        ? 'Any'
-                                        : invoiceFilterValueLabel(
-                                            field,
-                                            _draft.value(field),
-                                          ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.search, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (_draft.value(field).isNotEmpty)
-                  IconButton(
-                    tooltip: 'Clear ${field.label.toLowerCase()}',
-                    onPressed: () {
-                      if (_owns) {
-                        setState(() => _draft = _draft.withValue(field, ''));
-                      }
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          const SizedBox(height: 16),
-          Text('Dates', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          const Text(
-            'Ranges include both dates. Added dates use UTC. Leave an end blank for an open range.',
-          ),
-          const SizedBox(height: 12),
-          for (var index = 0; index < 3; index++) ...[
-            _InvoiceRangeFields(
-              first: TextField(
-                key: Key('invoiceDateFrom-$index'),
-                controller: _dates[index * 2],
-                keyboardType: TextInputType.datetime,
-                decoration: InputDecoration(
-                  labelText:
-                      '${['Added', 'Issue date', 'Due date'][index]} from',
-                  hintText: 'YYYY-MM-DD',
-                ),
-              ),
-              second: TextField(
-                key: Key('invoiceDateTo-$index'),
-                controller: _dates[index * 2 + 1],
-                keyboardType: TextInputType.datetime,
-                decoration: InputDecoration(
-                  labelText:
-                      '${['Added', 'Issue date', 'Due date'][index]} through',
-                  hintText: 'YYYY-MM-DD',
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          Text('Gross total', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(
-            _draft.currency.isEmpty
-                ? 'Choose a currency above to filter totals.'
-                : 'Amounts in ${_draft.currency}, including negative credit notes.',
-          ),
-          const SizedBox(height: 12),
-          _InvoiceRangeFields(
-            first: TextField(
-              key: const Key('invoiceTotalMin'),
-              controller: _minimum,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Minimum total',
-                hintText: '0.00',
-              ),
-            ),
-            second: TextField(
-              key: const Key('invoiceTotalMax'),
-              controller: _maximum,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-                signed: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Maximum total',
-                hintText: '119.00',
-              ),
-            ),
-          ),
-          if (_error case final error?) ...[
-            const SizedBox(height: 16),
-            Semantics(
-              key: _errorAnchor,
-              liveRegion: true,
-              child: AppNotice(message: error, tone: AppTone.danger),
-            ),
-          ],
-        ],
-      ),
+      child: content,
     );
   }
 }
@@ -318,8 +319,10 @@ final class _InvoiceFilterValuePicker extends StatefulWidget {
     required this.isCurrent,
     required this.onBack,
     required this.onSelected,
+    this.embedded = false,
   });
   final InvoicesCubit cubit;
+  final bool embedded;
   final InvoiceFilterField field;
   final String selected;
   final bool Function() isCurrent;
@@ -374,17 +377,8 @@ final class _InvoiceFilterValuePickerState
             }
           });
         },
-        builder: (context, state) => AppDialog(
-          title: 'Choose ${widget.field.label.toLowerCase()}',
-          description: 'Search all existing values in this library.',
-          actions: [
-            TextButton(
-              key: const Key('backInvoiceFilterValues'),
-              onPressed: widget.onBack,
-              child: const Text('Back to filters'),
-            ),
-          ],
-          child: Column(
+        builder: (context, state) {
+          final content = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextField(
@@ -411,25 +405,27 @@ final class _InvoiceFilterValuePickerState
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton(
+                child: GlacierButton(
                   key: const Key('anyInvoiceFilterValue'),
+                  label: 'Any value',
+                  kind: GlacierButtonKind.quiet,
                   onPressed: () {
                     if (_owns) widget.onSelected('');
                   },
-                  child: const Text('Any value'),
                 ),
               ),
               AppProgressSlot(active: state.loading || state.debouncing),
               if (state.error case final error?)
                 AppNotice(
                   message: error,
-                  action: TextButton(
+                  action: GlacierButton(
+                    label: 'Retry',
+                    kind: GlacierButtonKind.quiet,
                     onPressed: state.busy
                         ? null
                         : () {
                             if (_owns) unawaited(_lookup.retry());
                           },
-                    child: const Text('Retry'),
                   ),
                 ),
               if (state.items.isEmpty &&
@@ -444,22 +440,17 @@ final class _InvoiceFilterValuePickerState
               for (var index = 0; index < state.items.length; index++)
                 Tooltip(
                   message: state.items[index],
-                  child: ListTile(
+                  child: GlacierChoice(
                     key: Key('invoiceFilterValue-$index'),
-                    title: Text(
-                      invoiceFilterValueLabel(widget.field, state.items[index]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    label: invoiceFilterValueLabel(
+                      widget.field,
+                      state.items[index],
                     ),
+                    maxLines: 2,
                     selected: state.items[index] == widget.selected,
-                    leading: Icon(
-                      state.items[index] == widget.selected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                    ),
-                    onTap: state.busy
+                    onChanged: state.busy
                         ? null
-                        : () {
+                        : (_) {
                             if (_owns) widget.onSelected(state.items[index]);
                           },
                   ),
@@ -470,38 +461,70 @@ final class _InvoiceFilterValuePickerState
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    TextButton(
+                    GlacierButton(
                       key: const Key('firstInvoiceFilterValues'),
+                      label: 'First',
+                      kind: GlacierButtonKind.quiet,
                       onPressed: state.busy || state.page == 1
                           ? null
                           : () {
                               if (_owns) unawaited(_lookup.submit());
                             },
-                      child: const Text('First'),
                     ),
-                    TextButton(
+                    GlacierButton(
                       key: const Key('previousInvoiceFilterValues'),
+                      label: 'Previous',
+                      kind: GlacierButtonKind.quiet,
                       onPressed: state.busy || !state.hasPrevious
                           ? null
                           : () {
                               if (_owns) unawaited(_lookup.previous());
                             },
-                      child: const Text('Previous'),
                     ),
                     Text('Page ${state.page}'),
-                    TextButton(
+                    GlacierButton(
                       key: const Key('nextInvoiceFilterValues'),
+                      label: 'Next',
+                      kind: GlacierButtonKind.quiet,
                       onPressed: state.busy || state.nextCursor == null
                           ? null
                           : () {
                               if (_owns) unawaited(_lookup.next());
                             },
-                      child: const Text('Next'),
                     ),
                   ],
                 ),
             ],
-          ),
-        ),
+          );
+          if (widget.embedded) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                GlacierButton(
+                  key: const Key('backInvoiceFilterValues'),
+                  label: 'Back to filters',
+                  kind: GlacierButtonKind.quiet,
+                  onPressed: widget.onBack,
+                ),
+                const SizedBox(height: 12),
+                content,
+              ],
+            );
+          }
+          return AppDialog(
+            glacier: true,
+            title: 'Choose ${widget.field.label.toLowerCase()}',
+            description: 'Search all existing values in this library.',
+            actions: [
+              GlacierButton(
+                key: const Key('backInvoiceFilterValues'),
+                label: 'Back to filters',
+                kind: GlacierButtonKind.quiet,
+                onPressed: widget.onBack,
+              ),
+            ],
+            child: content,
+          );
+        },
       );
 }

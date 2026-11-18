@@ -55,86 +55,94 @@ final class _IdentityPersonalActivityActionState
       return;
     }
     unawaited(widget.cubit.refresh());
-    final route = DialogRoute<void>(
+    final route = createGlacierDialogRoute<void>(
       context: context,
       builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         insetPadding: const EdgeInsets.all(16),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: BlocBuilder<PersonalActivityCubit, PersonalActivityState>(
-            bloc: widget.cubit,
-            builder: (context, state) => AppRefreshable(
-              onRefresh: state.loading ? null : widget.cubit.refresh,
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        'Your jobs',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      IconButton(
-                        key: const Key('personal-activity-close'),
-                        tooltip: 'Close jobs',
-                        onPressed: _close,
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                  const Text(
-                    'Your work across libraries you can access. Automatic work without a recorded owner is not listed.',
-                  ),
-                  AppProgressSlot(active: state.loading),
-                  if (state.error case final error?)
-                    AppNotice(
-                      message: error,
-                      action: TextButton(
-                        onPressed: state.loading ? null : widget.cubit.refresh,
-                        child: const Text('Retry'),
-                      ),
+        child: GlacierSurface(
+          padding: EdgeInsets.zero,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: BlocBuilder<PersonalActivityCubit, PersonalActivityState>(
+              bloc: widget.cubit,
+              builder: (context, state) => AppRefreshable(
+                onRefresh: state.loading ? null : widget.cubit.refresh,
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Your jobs',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        IconButton(
+                          key: const Key('personal-activity-close'),
+                          tooltip: 'Close jobs',
+                          onPressed: _close,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 20),
-                  const AppSectionHeader(title: 'Active'),
-                  if (state.activity case final activity?) ...[
-                    Text(
-                      'Last updated: ${formatLocalDateTime(activity.generatedAt)}${state.error == null ? '' : ' · Refresh failed; statuses may be out of date.'}',
+                    const Text(
+                      'Your work across libraries you can access. Automatic work without a recorded owner is not listed.',
                     ),
-                    for (final item in activity.active) _item(item),
-                    if (activity.active.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text('No active jobs.'),
+                    AppProgressSlot(active: state.loading),
+                    if (state.error case final error?)
+                      AppNotice(
+                        message: error,
+                        action: GlacierButton(
+                          onPressed: state.loading
+                              ? null
+                              : widget.cubit.refresh,
+                          label: 'Retry',
+                          kind: GlacierButtonKind.quiet,
+                        ),
                       ),
-                    _pages(
-                      page: state.activePage,
-                      hasMore: activity.activeNextCursor != null,
-                      loading: state.loading,
-                      previous: () =>
-                          widget.cubit.refresh(previousActive: true),
-                      next: () => widget.cubit.refresh(moreActive: true),
-                    ),
                     const SizedBox(height: 20),
-                    const AppSectionHeader(title: 'Finished jobs'),
-                    for (final item in activity.finished) _item(item),
-                    _pages(
-                      page: state.finishedPage,
-                      hasMore: activity.finishedNextCursor != null,
-                      loading: state.loading,
-                      previous: () =>
-                          widget.cubit.refresh(previousFinished: true),
-                      next: () => widget.cubit.refresh(moreFinished: true),
-                    ),
-                    if (activity.finished.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text('No finished jobs yet.'),
+                    const AppSectionHeader(title: 'Active'),
+                    if (state.activity case final activity?) ...[
+                      Text(
+                        'Last updated: ${formatLocalDateTime(activity.generatedAt)}${state.error == null ? '' : ' · Refresh failed; statuses may be out of date.'}',
                       ),
+                      for (final item in activity.active) _item(item),
+                      if (activity.active.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text('No active jobs.'),
+                        ),
+                      _pages(
+                        page: state.activePage,
+                        hasMore: activity.activeNextCursor != null,
+                        loading: state.loading,
+                        previous: () =>
+                            widget.cubit.refresh(previousActive: true),
+                        next: () => widget.cubit.refresh(moreActive: true),
+                      ),
+                      const SizedBox(height: 20),
+                      const AppSectionHeader(title: 'Finished jobs'),
+                      for (final item in activity.finished) _item(item),
+                      _pages(
+                        page: state.finishedPage,
+                        hasMore: activity.finishedNextCursor != null,
+                        loading: state.loading,
+                        previous: () =>
+                            widget.cubit.refresh(previousFinished: true),
+                        next: () => widget.cubit.refresh(moreFinished: true),
+                      ),
+                      if (activity.finished.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text('No finished jobs yet.'),
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -160,49 +168,44 @@ final class _IdentityPersonalActivityActionState
           spacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            TextButton(
+            GlacierButton(
               onPressed: loading || page == 1 ? null : previous,
-              child: const Text('Previous'),
+              label: 'Previous',
+              kind: GlacierButtonKind.quiet,
             ),
             Text('Page $page'),
-            TextButton(
+            GlacierButton(
               onPressed: loading || !hasMore ? null : next,
-              child: const Text('Next'),
+              label: 'Next',
+              kind: GlacierButtonKind.quiet,
             ),
           ],
         );
 
-  Widget _item(PersonalActivityItem item) => AppRecordRow(
+  Widget _item(PersonalActivityItem item) => GlacierSettingsRecord(
     key: Key('personal-activity-${item.kind}-${item.id}'),
-    leading: Icon(
-      item.kind == 'email_retrieval'
-          ? Icons.mail_outline
-          : item.kind == 'reindex_batch'
-          ? Icons.manage_search
-          : item.kind == 'document_ai'
-          ? Icons.auto_awesome_outlined
-          : Icons.description_outlined,
-    ),
+    icon: item.kind == 'email_retrieval'
+        ? Icons.mail_outline
+        : item.kind == 'reindex_batch'
+        ? Icons.manage_search
+        : item.kind == 'document_ai'
+        ? Icons.auto_awesome_outlined
+        : Icons.description_outlined,
     title: item.label,
-    subtitle: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${item.namespaceName}${item.kind == 'document_ai' ? ' · AI processing' : ''} · ${item.status}${item.stage == null ? '' : ' · ${item.stage == 'invoicing' ? 'Checking and extracting invoice' : item.stage}'}',
+    detail: [
+      '${item.namespaceName}${item.kind == 'document_ai' ? ' · AI processing' : ''} · ${item.status}${item.stage == null ? '' : ' · ${item.stage == 'invoicing' ? 'Checking and extracting invoice' : item.stage}'}',
+      if (item.finishedAt case final finished?) formatLocalDateTime(finished),
+    ].join(' · '),
+    actions: [
+      if (item.canOpen)
+        GlacierButton(
+          onPressed: () => _openItem(item),
+          label: item.namespaceId == widget.namespaceId
+              ? 'Open'
+              : 'Switch library',
+          kind: GlacierButtonKind.quiet,
         ),
-        if (item.finishedAt case final finished?)
-          Text(formatLocalDateTime(finished)),
-        if (item.canOpen)
-          TextButton(
-            onPressed: () => _openItem(item),
-            child: Text(
-              item.namespaceId == widget.namespaceId
-                  ? 'Open'
-                  : 'Switch library',
-            ),
-          ),
-      ],
-    ),
+    ],
   );
   @override
   Widget build(

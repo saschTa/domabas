@@ -86,7 +86,9 @@ void main() {
               : ['invoiceThinkingEnabled', 'propertyThinkingEnabled'];
           for (final key in keys) {
             await reveal(key);
-            final toggle = tester.widget<SwitchListTile>(find.byKey(Key(key)));
+            final toggle = tester.widget<GlacierSwitchRow>(
+              find.byKey(Key(key)),
+            );
             expect(toggle.value, isFalse);
             expect(toggle.onChanged, isNotNull);
           }
@@ -101,7 +103,7 @@ void main() {
           for (final key in keys) {
             await reveal(key);
             expect(
-              tester.widget<SwitchListTile>(find.byKey(Key(key))).value,
+              tester.widget<GlacierSwitchRow>(find.byKey(Key(key))).value,
               key == keys.first,
             );
           }
@@ -120,7 +122,7 @@ void main() {
           await tap(chat ? 'resetChatSettings' : 'resetLLMSettings');
           await reveal(keys.first);
           expect(
-            tester.widget<SwitchListTile>(find.byKey(Key(keys.first))).value,
+            tester.widget<GlacierSwitchRow>(find.byKey(Key(keys.first))).value,
             isTrue,
           );
           if (!chat) {

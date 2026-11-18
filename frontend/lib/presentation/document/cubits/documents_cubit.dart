@@ -70,11 +70,14 @@ final class DocumentsState {
     Iterable<DocumentVocabularyOption> selectedTags = const [],
     this.selectedSender,
     this.selectedRecipient,
-  }) : documents = List.unmodifiable(documents),
+    Iterable<String> retryingIds = const [],
+  }) : retryingIds = Set.unmodifiable(retryingIds),
+       documents = List.unmodifiable(documents),
        results = List.unmodifiable(results),
        desiredCriteria =
            desiredCriteria ?? criteria ?? DocumentSearchCriteria(),
        selectedTags = List.unmodifiable(selectedTags);
+  final Set<String> retryingIds;
   final List<Document> documents;
   final List<DocumentSearchResult> results;
   final DocumentSearchCriteria? criteria;
@@ -178,7 +181,9 @@ final class DocumentsState {
     DocumentVocabularyOption? selectedRecipient,
     bool clearSender = false,
     bool clearRecipient = false,
+    Iterable<String>? retryingIds,
   }) => DocumentsState(
+    retryingIds: retryingIds ?? this.retryingIds,
     documents: documents ?? this.documents,
     results: clearSearch ? const [] : results ?? this.results,
     criteria: clearSearch ? null : criteria ?? this.criteria,
@@ -225,6 +230,7 @@ final class DocumentsCubit extends Cubit<DocumentsState> {
   final DocumentCapabilities capabilities;
   final DocumentFileSaver? fileSaver;
   final DocumentPreviewCoordinator previews;
+  final _retryRequests = <String, Completer<void>>{};
   final _viewers = <DocumentCubit>{};
   final _viewerLinks = <DocumentCubit, DocumentEmailLinksCubit>{};
   final _visibleViewers = <DocumentCubit>{};
@@ -389,7 +395,13 @@ final class DocumentsCubit extends Cubit<DocumentsState> {
     return _readDesired(first: true);
   }
 
-  Future<void> applySearch(DocumentSearchCriteria criteria) async {
+  Future<void> applySearch(
+    DocumentSearchCriteria criteria, {
+    Iterable<DocumentVocabularyOption>? selectedTags,
+    DocumentVocabularyOption? selectedSender,
+    DocumentVocabularyOption? selectedRecipient,
+    bool replaceSelections = false,
+  }) async {
     if (_closing || !capabilities.read || !capabilities.search) return;
     _fence();
     final error = DocumentSearchCriteria.validateTerm(criteria.query);
@@ -400,15 +412,21 @@ final class DocumentsCubit extends Cubit<DocumentsState> {
         composing: false,
         termError: error,
         clearTermError: error == null,
-        selectedTags: state.selectedTags.where(
+        selectedTags: (selectedTags ?? state.selectedTags).where(
           (option) => criteria.tags.contains(option.value),
         ),
+        selectedSender: selectedSender,
+        selectedRecipient: selectedRecipient,
         clearSender:
             criteria.senderMatch != DocumentAddressMatch.exact ||
-            state.selectedSender?.value != criteria.sender,
+            (replaceSelections ? selectedSender : state.selectedSender)
+                    ?.value !=
+                criteria.sender,
         clearRecipient:
             criteria.recipientMatch != DocumentAddressMatch.exact ||
-            state.selectedRecipient?.value != criteria.recipient,
+            (replaceSelections ? selectedRecipient : state.selectedRecipient)
+                    ?.value !=
+                criteria.recipient,
       ),
     );
     await _readDesired(first: true);
@@ -860,6 +878,53 @@ final class DocumentsCubit extends Cubit<DocumentsState> {
     }
   }
 
+  Future<void> retryDocument(String id) async {
+    if (_closing ||
+        !capabilities.read ||
+        !capabilities.retry ||
+        _retryRequests.containsKey(id)) {
+      return;
+    }
+    final visible = state.searching
+        ? state.results.any(
+            (value) => value.id == id && value.processingState == 'failed',
+          )
+        : state.documents.any(
+            (value) => value.id == id && value.processing?.state == 'failed',
+          );
+    if (!visible) return;
+    final request = Completer<void>();
+    _retryRequests[id] = request;
+    emit(state.copyWith(retryingIds: _retryRequests.keys, clearError: true));
+    try {
+      final document = await _repository.getById(id, cancel: request.future);
+      if (_closing || _retryRequests[id] != request) return;
+      if (document.processing?.failureCode == 'encrypted_pdf') {
+        emit(
+          state.copyWith(
+            notice: 'Open this document to provide its PDF password.',
+          ),
+        );
+        return;
+      }
+      if (document.processing?.state != 'failed') {
+        await _mutated(confirmed: false);
+        return;
+      }
+      await _repository.retry(id, cancel: request.future);
+      if (_closing || _retryRequests[id] != request) return;
+      emit(state.copyWith(notice: 'Processing queued.'));
+      await _mutated();
+    } on DocumentFailure catch (failure) {
+      if (!_closing && _retryRequests[id] == request) {
+        emit(state.copyWith(error: failure.message));
+      }
+    } finally {
+      _retryRequests.remove(id);
+      if (!_closing) emit(state.copyWith(retryingIds: _retryRequests.keys));
+    }
+  }
+
   void clearSaveError() {
     if (!_closing) emit(state.copyWith(clearSaveError: true));
   }
@@ -912,6 +977,10 @@ final class DocumentsCubit extends Cubit<DocumentsState> {
   Future<void> close() async {
     if (_closing) return;
     _closing = true;
+    for (final request in _retryRequests.values) {
+      if (!request.isCompleted) request.complete();
+    }
+    _retryRequests.clear();
     _debounce?.cancel();
     _refresh.dispose();
     _cancelRead();

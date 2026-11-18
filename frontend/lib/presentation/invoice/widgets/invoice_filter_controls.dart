@@ -32,15 +32,14 @@ final class InvoiceFilterControls extends StatelessWidget {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            OutlinedButton.icon(
+            GlacierButton(
               key: const Key('invoiceFilters'),
+              label: criteria.filters.count == 0
+                  ? 'Filters'
+                  : 'Filters (${criteria.filters.count})',
+              icon: Icons.tune,
+              kind: GlacierButtonKind.secondary,
               onPressed: onFilters,
-              icon: const Icon(Icons.tune),
-              label: Text(
-                criteria.filters.count == 0
-                    ? 'Filters'
-                    : 'Filters (${criteria.filters.count})',
-              ),
             ),
             InvoiceSortControl(criteria: criteria, onSort: onSort),
           ],
@@ -97,10 +96,11 @@ final class InvoiceFilterControls extends StatelessWidget {
                       '$label: ${from.isEmpty ? 'Any' : from} – ${to.isEmpty ? 'Any' : to}',
                   onRemove: () => unawaited(onChanged(cleared)),
                 ),
-            TextButton(
+            GlacierButton(
               key: const Key('clearInvoiceFilters'),
+              label: 'Clear filters',
+              kind: GlacierButtonKind.quiet,
               onPressed: () => unawaited(onChanged(const InvoiceFilters())),
-              child: const Text('Clear filters'),
             ),
           ],
         ),

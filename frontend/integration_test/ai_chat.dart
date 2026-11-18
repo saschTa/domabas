@@ -1,3 +1,5 @@
+import 'package:domabas/ui/domabas_ui.dart';
+
 import 'dart:convert';
 
 import 'package:domabas/app/http_client.dart';
@@ -178,7 +180,7 @@ Future<void> exerciseAIChat(
     );
     expect(
       tester
-          .widget<IconButton>(find.byKey(const Key('sendChatMessage')))
+          .widget<GlacierButton>(find.byKey(const Key('sendChatMessage')))
           .onPressed,
       isNotNull,
       reason: 'The send button reflects the entered draft before tapping.',

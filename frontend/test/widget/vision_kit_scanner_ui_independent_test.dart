@@ -3,6 +3,7 @@ import 'package:domabas/domain/scanner/models/scan.dart';
 import 'package:domabas/presentation/scanner/cubits/scanner_cubit.dart';
 import 'package:domabas/presentation/scanner/views/scanner_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../integration_test/scanner_fixtures.dart';
@@ -93,7 +94,7 @@ void main() {
       expect(cubit.state.pendingPages, 2);
       await tester.tap(find.byKey(const Key('closeScanner')));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(AppDialog), findsOneWidget);
       expect(find.text('Leave this scan?'), findsOneWidget);
       expect(find.textContaining('upload is in progress'), findsNothing);
       await tester.tap(find.text('Cancel'));

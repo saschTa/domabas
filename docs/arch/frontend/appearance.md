@@ -42,23 +42,20 @@ timers and fences callbacks, without waiting indefinitely for platform storage.
 
 ## Rendering and controls
 
-`AppTheme` supplies paired semantic light and dark Material schemes. Shared
-surfaces, navigation, input boundaries, statuses, processing cards and document
-chrome resolve colors from the current theme. A five-color `AppSemanticColors`
-extension supplies success and warning foreground/background pairs and the viewer
-canvas. Studio uses achromatic white and charcoal surfaces, restrained orange
-actions and borderless cards without shadows. Record and form cards sit directly
-on the canvas; dialogs use spacing and headings for internal sections. Fields and secondary buttons
-have filled resting states. Primary focus and error outlines retain two-pixel
-borders; labels accompany state colors. `AppPaperCanvas` paints a plain neutral
-background. The existing progress and divider presenters paint a solid rounded
-progress segment and a fine section rule, with no dot or stripe decoration.
-Document pixels retain their own opaque viewer canvas. Bundled Barlow Condensed
-provides strong page headings; DM Sans supplies body text, navigation, controls
-and form titles. The font files and their original OFL notices are included
-locally, with no runtime font download. The light-mode primary role uses the
-deeper Studio orange to keep small white action labels readable.
-See [shared UI components](components.md) for surfaces and typography.
+`GlacierTheme` supplies paired light and dark Material schemes with semantic
+`GlacierTokens` for canvas, glass, edges, previews and text. Existing
+`AppSemanticColors` supplies status and viewer roles. Production auth, recovery
+and workspace compositions use the Glacier backdrop and shared surfaces; background
+charts require caller-supplied real values and are not invented for empty data.
+DM Sans is bundled locally and used for body text, navigation, controls and forms.
+Source pages retain their original colors on an opaque canvas.
+
+Appearance uses rich selected choices for the existing light/dark/system preference.
+Glass borders, hover and keyboard-focus outlines are specified in
+[Glacier components](glacier.md). The compatibility `AppTheme` and `AppPaperCanvas`
+remain available for older presenter callers; they do not define the production
+workspace palette. Catalog-only softness, pattern and transparency controls are
+not exposed as persisted production preferences.
 
 Appearance is passed to feature screens as an action widget. Foreign presentation
 domains do not import its Cubit or storage implementation. The action opens a

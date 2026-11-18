@@ -8,45 +8,44 @@ correcting OCR does not rewrite that original.
 ## Collection and visual language
 
 The collection uses pages of 48 records in the backend's stable newest-first
-order. Grid and list modes show the same title, a single row of up to three
-ordered tags with an overflow count, and processing state. Full tags remain in
+order. Grid and list modes show the same title, a bounded row of ordered tags with an overflow count, and processing state. Full tags remain in
 tooltips, semantics and document details. Preview failures leave details and permitted actions usable.
 Metadata-only records have an explicit no-original state.
 
 Grid cards reserve the same preview, two-line title, tag and footer areas for
 every record. Search cards also reserve two snippet lines even when the snippet
 is empty. Text slots use measured theme typography and the active text scaler;
-neither missing originals nor long tags change a card's height. The grid fills
-the available workspace width with at least 240 logical pixels per card, adding
-columns on wide screens. Columns account for the inter-card gap. Pages stay
-bounded and lazy rows build only visible cards. Lists use a 56-by-72 preview,
-12-pixel padding and 8-pixel row gaps, with inline metadata on wide screens and
-stacked metadata when needed.
+neither missing originals nor long tags change a card's height. The responsive grid uses the shared desktop or mobile Glacier card, adding
+columns only when the available width and active text scale permit. Pages stay
+bounded and lazy rows build only visible cards. List rows use the same real preview
+and metadata, with wrapping controls and bounded tags.
 
 Users with both document-read and document-search claims can apply a combined search
 term, document kinds, AND tags, literal sender/recipient filters, and six stable sort orders.
-Type chips expose Documents, Letters and Emails directly below search and inside
-the filter dialog. Multiple types combine with OR; All types clears the type
+Quick type choices expose Documents, Letters and Emails in the floating toolbar
+and inside the search dialog. Multiple types combine with OR; All types clears the type
 restriction. Selecting Documents and Letters excludes email records while
 retaining attachments with those kinds. Type changes apply immediately, reset
 pagination and retain the latest term and other filters. Active summaries can
 remove individual filter categories, and Reset filters preserves term and sort.
 The dialog groups Document type separately from the Tags and people lookup.
-Typing applies the latest valid term after 300 milliseconds; Enter or Search
-submits immediately. Active IME composition and invalid text never submit. The
-search field releases focus on outside touch, collection drag and completed
-submission, so returning from another action cannot reopen its keyboard or reveal
-the offscreen search field. Background refresh preserves active editing and the
-collection scroll position.
+Search opens from the sidebar or Cmd/Ctrl+K in a dedicated glass dialog. Typing,
+kind, tag, sender, recipient and sort edits remain local until Enter or Apply
+commits the entire draft atomically. Active IME composition and invalid text never
+submit. Escape first clears a nonempty draft; a second Escape closes it. Dismissal
+without Apply preserves the committed collection criteria. Vocabulary selections
+retain their opaque server keys and original address values through this draft.
+Quick toolbar filters still apply immediately to the current committed search.
 
-The collection Cubit owns the raw term, composition, desired filters, debounce and
-intent revision. A meaningful edit cancels and fences the previous read before
-waiting for the timer. Sort, filters, refresh and mutation reconciliation all use
-the latest desired term. Clear search returns to ordinary offset browsing and
-preserves its layout. The adapter requests `hybrid` mode: typo-tolerant and semantic
-matches appear together, with title/property matches before document text.
-Empty filter-only searches do not need inference. The backend's existing
-fulltext and semantic modes remain available to API clients.
+The collection Cubit owns committed desired criteria, cancellation and intent
+revision. Its legacy direct term-edit entry point retains debounce and composition
+guards for callers that use it; the production search dialog applies one atomic
+intent. Sort, refresh and mutation reconciliation use the latest desired criteria.
+Clear search returns to ordinary offset browsing and preserves its layout. The
+adapter requests `hybrid` mode: typo-tolerant and semantic matches appear together,
+with title/property matches before document text. Empty filter-only searches do
+not need inference. The backend's fulltext and semantic modes remain available
+to API clients.
 
 Nonempty hybrid search omits an exact total because semantic relevance uses
 approximate indexed retrieval. The collection footer says “Search results” and
@@ -74,26 +73,24 @@ appear in a bounded, scrollable row below the collection and above phone navigat
 healthy collections reserve no empty status row. Its separate persistent toolbar has bounded scrolling for short
 windows and enlarged text.
 
-Search uses the available toolbar width beside Filters, Sort and Grid/List.
-Compact layouts keep search and the library picker above the controls.
-The field controller and focus node survive responsive changes. Search and clear
-actions are embedded in the field with 48-pixel targets. Type shortcuts and selected
-filters use a horizontally scrollable strip; healthy state needs no extra status
-row. Pending work, errors and stale results show readable status text.
-Filters select existing tags, senders and recipients from a namespace-scoped
-vocabulary. The authenticated composition injects a narrow vocabulary repository;
-a route-scoped Cubit owns one active field and abortable lookup. Tags keep AND
-semantics, while selected addresses use independent exact match modes. Legacy
-contains filters remain explicit until changed. Selected server keys and original
-values survive route dismissal and case-only representative changes. Metadata
-editing and scanner properties still allow new values.
+The floating toolbar contains quick types, Filters, Sort and Grid/List. The
+sidebar owns search and library selection. Applied summaries scroll with the
+collection rather than increasing the toolbar height. The search route retains its
+controllers across responsive changes; its filter body scrolls within the bounded
+glass dialog. Short windows and enlarged text can scroll the complete form.
 
-Filter changes apply immediately. Done, Back and barrier dismissal retain them.
-Every callback validates the exact route, navigator, generation and owning scope;
+Filters select existing tags, senders and recipients from a namespace-scoped
+vocabulary. A route-scoped Cubit owns one active field and abortable lookup. Tags
+keep AND semantics, while selected addresses use independent exact match modes.
+Legacy contains filters remain explicit until changed. Metadata editing and scanner
+properties still allow new values.
+
+Within search, vocabulary changes update only the draft. The standalone vocabulary
+picker's immediate mode remains available to explicit legacy callers. Every
+callback validates the exact route, navigator, generation and owning scope;
 covered or replaced routes cannot change filters. One coordinated scroll body
-contains controls, wrapping selected values and a lazy options list; the Close
-control stays outside it. Rows use two natural-scale lines, full semantics and
-tooltips. Accessible summary actions expose an activation action.
+contains controls, selected values and a lazy options list. Rows retain full
+semantics and tooltips.
 
 Lookups request 40 records at a time and retain at most 400 options plus at most
 22 selected records. The client deduplicates by opaque server key and retains no
@@ -114,34 +111,33 @@ Refresh resolves the latest desired target and coalesces an identical active rea
 An empty later page recovers to the first page once. These are live results;
 metadata/OCR edits between requests can change ordering and membership.
 
-The visual language follows the shared Studio neutral light and dark palettes.
-Rounded document cards sit directly on the canvas without borders, shadows or
-hover translation.
-The feature-owned toolbar contains search, filters, sorting and view selection.
-Pulling down from the top refreshes the collection, including an empty library,
-while preserving search criteria and the current page. The refresh indicator
-waits for the read to finish; failed reads keep the last snapshot and a Retry
-action. App composition places the toolbar in the persistent top bar beside the library
-picker; standalone screens use the same controls above their collection. The
-selected navigation identifies Documents; counts scroll with the pagination while
-the surrounding pane stays fixed. Opening a card or row
-goes directly to the original full-size document viewer.
-An opaque metadata pill fades over the preview to show original type, size and
-date without fetching additional data. Hover uses a subtle surface fill.
-Keyboard focus uses a primary container fill and retains supplemental details;
-list rows expose those details through a tooltip. Preview arrival has a brief
-reveal. Actions also work by touch, with complete information in the opened
-document. Reduced-motion settings suppress translation and optional transitions.
-Controls wrap for narrow windows and enlarged text instead of relying on desktop
-platform checks. The [shared component guide](components.md) defines the theme,
-navigation breakpoints and presenter boundary.
+The visual language uses Glacier light and dark glass surfaces, restrained borders
+and accent hover/focus feedback. The collection fills the remaining workspace
+height; count and pagination stay in its scroll flow. A measured trailing spacer
+keeps the last actions reachable above the bottom-right activity overlay without
+resizing the viewport or reflowing cards. Pull-to-refresh preserves active criteria
+and the current page. A failed read retains the last snapshot and an explicit Retry.
+
+Opening a card or row goes directly to the real document viewer. A compact metadata
+pill fades over desktop previews without moving cards. Keyboard focus exposes the
+same supplemental information. Reduced-motion settings suppress optional
+transitions. Failed ingestion exposes a small inline retry only with the required
+capabilities; it re-reads the current record before submitting, rejects encrypted
+or changed records, and admits only one command per document. Pending retry uses
+the card's existing spinner slot. It never creates a viewer or retries an uncertain
+write automatically. The [shared component guide](components.md) defines the
+presenter boundary.
 
 ## Open document and editing
 
 Opening a record uses an inset, rounded dialog route on the existing Navigator.
 Wide windows initially show details beside the document. Compact windows open
 details in a separate rounded dialog with the same save/discard protection.
-The viewer provides back, document information, fit/zoom and page controls.
+The glass reader keeps Edit, eligible processing retry, Download and Delete in its
+top actions according to current capabilities and state. Wide layouts show properties
+and document links directly in the inspector; compact layouts use an owned details
+dialog with the same draft protection. Original/Text selection switches between
+the real renderer and OCR editor. Fit/zoom and page controls remain on the canvas.
 A circular, icon-only download action saves the original through the existing
 download claim. It reuses loaded bytes, fetches email originals on demand and
 keeps save failures visible with retry. App composition injects a file-saving
@@ -158,7 +154,8 @@ selection magnifier disabled. Its context menu uses Flutter's adaptive toolbar
 and localizations so the renderer's separate Material/Cupertino UI dependency
 does not create a second localization requirement.
 
-PDF search uses PDFium's native text layer and highlights matching page text.
+A compact shared find bar handles PDF and OCR searches without replacing their
+separate controllers or result semantics. PDF search uses PDFium's native text layer and highlights matching page text.
 Extracted-text search operates separately on OCR text. Scanned PDFs can have no
 native matches; the UI does not claim that OCR matches have page geometry that
 the backend never stored. A correction changes searchable extracted content while
@@ -218,11 +215,23 @@ output hash, so browse, search and layout changes share ready thumbnails, while
 background generation replaces an empty preview. The adapter validates every
 present thumbnail and original descriptor before generated DTO parsing.
 Incomplete or malformed descriptors fail the page instead of becoming a download
-request. Missing thumbnails show a placeholder and never fetch an original.
+request. Preview slots show a bounded shared shimmer while an advertised thumbnail
+is queued, downloading or decoding. The existing activity monitor also supplies
+known current queued/running thumbnail jobs for eligible originals; fresh evidence
+can show preparation before the descriptor arrives. This uses only already-loaded
+permission-gated job pages, without additional requests. Unknown missing thumbnails,
+emails, metadata-only records and unsupported originals remain static. Stale,
+disconnected or paused monitors do not claim preparation. Neither placeholder
+fetches an original, and ready decoded images always take precedence.
 Both `documents:thumbnails:read` and `documents:download` are required for previews.
 A separate resume revision
 retries empty previews interrupted by pause, including cancellation that has not
-yet settled; genuine failures still require Retry. Collection admission resumes
+yet settled; genuine failures expose an independent Retry preview action inside
+the document card or row. The collection card owns the preview Cubit so this
+action remains outside the opener's excluded semantics. Preview retry never
+opens the document or retries processing; processing retains its own action.
+Unknown, cancelled and loading previews do not expose a failure action.
+Collection admission resumes
 only in the foreground with collection ownership and all viewers closed. Cancelled
 physical work remains counted until it drains, and unadopted image clones are
 disposed even when cancellation races a completed result.
@@ -243,8 +252,10 @@ PDF and image renderer boundaries
 use bounded typed-byte copies so debug JavaScript interop receives native typed
 arrays instead of immutable Dart list views. The PDF copy is held by a stable
 document reference, avoiding reference replacement during asynchronous initialization.
-The image copy is scoped to decoding and its codec is then disposed. Each bridge
-copy is at most the 100 MiB original limit. Image headers must declare no
+The image copy is scoped to decoding and its codec is then disposed. The image
+viewer uses the same preview placeholder during initial decoding; decoding failures
+retain the original retry action. Reduced motion leaves the placeholder static.
+Each bridge copy is at most the 100 MiB original limit. Image headers must declare no
 more than 50 million source pixels before decoding, matching the processor limit.
 The retained image is resized to a longest edge of 4096 pixels. Flutter web first
 decodes original pixels before resizing, so this target does not bound transient

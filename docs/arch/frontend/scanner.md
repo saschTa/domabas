@@ -14,6 +14,15 @@ availability there.
 
 ## Capture and presentation
 
+The production review uses the Glacier mobile shell, real page thumbnails and
+48-pixel reorder/remove controls. The selected library name comes from the current
+authenticated scope. Safe-area actions remain reachable while review details
+scroll; a camera preview uses the complete available body width without a hidden
+navigation-rail inset. Pending page recovery precedes explanatory error text.
+Native capture, local draft recovery, property validation and uncertain upload
+states remain authoritative; catalog sample pages and counters are never used.
+
+
 Android opens Google's ML Kit Document Scanner in full mode for each Add page
 action. Google Play services owns capture, automatic page detection, crop controls
 and image cleanup. The app requests one JPEG, with gallery import disabled, and

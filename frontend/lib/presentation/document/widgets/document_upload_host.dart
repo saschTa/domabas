@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../cubits/document_uploads_cubit.dart';
+import '../../../ui/glacier.dart';
 
 final class DocumentUploadHost extends StatelessWidget {
   const DocumentUploadHost({
@@ -25,10 +26,10 @@ final class DocumentUploadHost extends StatelessWidget {
           if (state.hover)
             Positioned.fill(
               child: IgnorePointer(
-                child: Material(
+                child: GlacierSurface(
                   key: const Key('fileDropInvitation'),
-                  color: Theme.of(context).colorScheme.surface
-                      .withValues(alpha: 0.96),
+                  radius: 20,
+                  padding: EdgeInsets.zero,
                   child: SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.all(12),

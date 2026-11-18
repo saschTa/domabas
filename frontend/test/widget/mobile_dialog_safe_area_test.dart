@@ -91,7 +91,7 @@ void main() {
   }
 
   testWidgets(
-    'document filter close stays below the notch with keyboard open',
+    'document search cancel remains reachable inside safe bounds with keyboard open',
     (tester) async {
       phoneViewport(tester);
       final cubit = DocumentsCubit(
@@ -120,12 +120,12 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('documentFilters')));
       await tester.pumpAndSettle();
-      final close = find.byKey(const Key('closeDocumentFilters'));
+      final close = find.text('Cancel');
       expect(panelRect(tester).top, 59 + 12);
       expect(panelRect(tester).bottom, 844 - 34 - 12);
       expect(tester.getRect(close).top, greaterThanOrEqualTo(59));
       await tester.enterText(
-        find.byKey(const Key('documentVocabularyQuery')),
+        find.byKey(const Key('documentSearchTerm')),
         'option',
       );
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -133,6 +133,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(panelRect(tester).top, 59 + 12);
       expect(panelRect(tester).bottom, 844 - 300 - 12);
+      await tester.ensureVisible(close);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(close).top, greaterThanOrEqualTo(59));
+      expect(tester.getRect(close).bottom, lessThanOrEqualTo(844 - 300));
       expect(close.hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(close);

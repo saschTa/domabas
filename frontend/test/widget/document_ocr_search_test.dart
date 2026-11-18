@@ -48,7 +48,7 @@ void main() {
       final query = find.byWidgetPredicate(
         (widget) =>
             widget is TextField &&
-            widget.decoration?.labelText == 'Find in extracted text',
+            widget.decoration?.hintText == 'Find in extracted text',
       );
       final editor = find.byWidgetPredicate(
         (widget) =>

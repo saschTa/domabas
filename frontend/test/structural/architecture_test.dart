@@ -159,12 +159,25 @@ void main() {
         final resolved = _resolve(file.absolute.uri, target);
         expect(
           target.startsWith('package:flutter/') ||
+              target == 'dart:ui' ||
+              (file.absolute.uri ==
+                      _root.resolve(
+                        'ui/platform/glacier_pointer_modality_web.dart',
+                      ) &&
+                  target == 'dart:js_interop') ||
               resolved.path.startsWith(root.path),
           isTrue,
           reason: '${file.path} must not depend on $target',
         );
       }
     }
+  });
+
+  test('browser pointer modality adapter remains SDK-only', () {
+    final file = File.fromUri(
+      _root.resolve('ui/platform/glacier_pointer_modality_web.dart'),
+    );
+    expect(_targets(file.readAsStringSync()), ['dart:js_interop']);
   });
 
   test('every domain uses the domain, data and presentation boundaries', () {

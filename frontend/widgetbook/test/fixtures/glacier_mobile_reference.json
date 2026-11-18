@@ -1,0 +1,1253 @@
+{
+  "revision": "glacier-mobile-v1.2",
+  "status": "accepted-frozen",
+  "viewports": [
+    320,
+    390,
+    430,
+    768
+  ],
+  "appearances": [
+    "light",
+    "dark"
+  ],
+  "platforms": [
+    "ios",
+    "android"
+  ],
+  "fixtures": {
+    "safe": "true",
+    "keyboard": "true",
+    "textScale": "2",
+    "motion": "reduced",
+    "opaque": "true"
+  },
+  "screens": [
+    {
+      "id": "documents",
+      "title": "Documents",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=documents&state=ready"
+        },
+        {
+          "id": "loading",
+          "url": "?screen=documents&state=loading"
+        },
+        {
+          "id": "empty",
+          "url": "?screen=documents&state=empty"
+        },
+        {
+          "id": "no-match",
+          "url": "?screen=documents&state=no-match"
+        },
+        {
+          "id": "error",
+          "url": "?screen=documents&state=error"
+        },
+        {
+          "id": "stale",
+          "url": "?screen=documents&state=stale"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=documents&state=page-error"
+        },
+        {
+          "id": "read-only",
+          "url": "?screen=documents&state=read-only"
+        },
+        {
+          "id": "selection",
+          "url": "?screen=documents&state=selection"
+        }
+      ]
+    },
+    {
+      "id": "search",
+      "title": "Search and filters",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=search&state=ready"
+        },
+        {
+          "id": "keyboard",
+          "url": "?screen=search&state=keyboard"
+        },
+        {
+          "id": "validation",
+          "url": "?screen=search&state=validation"
+        }
+      ]
+    },
+    {
+      "id": "reader",
+      "title": "Original and text reader",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=reader&state=ready"
+        },
+        {
+          "id": "text",
+          "url": "?screen=reader&state=text"
+        },
+        {
+          "id": "find",
+          "url": "?screen=reader&state=find"
+        },
+        {
+          "id": "image",
+          "url": "?screen=reader&state=image"
+        },
+        {
+          "id": "email",
+          "url": "?screen=reader&state=email"
+        },
+        {
+          "id": "locked",
+          "url": "?screen=reader&state=locked"
+        },
+        {
+          "id": "missing",
+          "url": "?screen=reader&state=missing"
+        },
+        {
+          "id": "error",
+          "url": "?screen=reader&state=error"
+        },
+        {
+          "id": "deleted",
+          "url": "?screen=reader&state=deleted"
+        },
+        {
+          "id": "read-only",
+          "url": "?screen=reader&state=read-only"
+        }
+      ]
+    },
+    {
+      "id": "properties",
+      "title": "Document properties and links",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=properties&state=ready"
+        },
+        {
+          "id": "conflict",
+          "url": "?screen=properties&state=conflict"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=properties&state=uncertain"
+        },
+        {
+          "id": "deleted",
+          "url": "?screen=properties&state=deleted"
+        },
+        {
+          "id": "saving",
+          "url": "?screen=properties&state=saving"
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "title": "Native scan handoff",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=capture&state=ready"
+        },
+        {
+          "id": "permission",
+          "url": "?screen=capture&state=permission"
+        },
+        {
+          "id": "unavailable",
+          "url": "?screen=capture&state=unavailable"
+        },
+        {
+          "id": "restored",
+          "url": "?screen=capture&state=restored"
+        },
+        {
+          "id": "storage-error",
+          "url": "?screen=capture&state=storage-error"
+        },
+        {
+          "id": "pending",
+          "url": "?screen=capture&state=pending"
+        },
+        {
+          "id": "limit",
+          "url": "?screen=capture&state=limit"
+        }
+      ]
+    },
+    {
+      "id": "scan-review",
+      "title": "Scan draft review",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=scan-review&state=ready"
+        },
+        {
+          "id": "reorder",
+          "url": "?screen=scan-review&state=reorder"
+        },
+        {
+          "id": "pending",
+          "url": "?screen=scan-review&state=pending"
+        },
+        {
+          "id": "recovery",
+          "url": "?screen=scan-review&state=recovery"
+        }
+      ]
+    },
+    {
+      "id": "upload",
+      "title": "Upload and metadata",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=upload&state=ready"
+        },
+        {
+          "id": "metadata",
+          "url": "?screen=upload&state=metadata"
+        },
+        {
+          "id": "sending",
+          "url": "?screen=upload&state=sending"
+        },
+        {
+          "id": "accepted",
+          "url": "?screen=upload&state=accepted"
+        },
+        {
+          "id": "rejected",
+          "url": "?screen=upload&state=rejected"
+        },
+        {
+          "id": "duplicate",
+          "url": "?screen=upload&state=duplicate"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=upload&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "upload-receipts",
+      "title": "Upload receipts",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=upload-receipts&state=ready"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=upload-receipts&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "share-android",
+      "title": "Android incoming sharing",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=share-android&state=ready"
+        },
+        {
+          "id": "auth",
+          "url": "?screen=share-android&state=auth"
+        },
+        {
+          "id": "blocked",
+          "url": "?screen=share-android&state=blocked"
+        },
+        {
+          "id": "existing",
+          "url": "?screen=share-android&state=existing"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=share-android&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "share-ios",
+      "title": "iOS share extension",
+      "domain": "A",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=share-ios&state=ready"
+        },
+        {
+          "id": "setup",
+          "url": "?screen=share-ios&state=setup"
+        },
+        {
+          "id": "sending",
+          "url": "?screen=share-ios&state=sending"
+        },
+        {
+          "id": "accepted",
+          "url": "?screen=share-ios&state=accepted"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=share-ios&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "invoices",
+      "title": "Invoices",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=invoices&state=ready"
+        },
+        {
+          "id": "filters",
+          "url": "?screen=invoices&state=filters"
+        },
+        {
+          "id": "empty",
+          "url": "?screen=invoices&state=empty"
+        },
+        {
+          "id": "error",
+          "url": "?screen=invoices&state=error"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=invoices&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "invoice-detail",
+      "title": "Invoice detail",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=invoice-detail&state=ready"
+        },
+        {
+          "id": "unavailable",
+          "url": "?screen=invoice-detail&state=unavailable"
+        }
+      ]
+    },
+    {
+      "id": "chat",
+      "title": "Conversation",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=chat&state=ready"
+        },
+        {
+          "id": "empty",
+          "url": "?screen=chat&state=empty"
+        },
+        {
+          "id": "disabled",
+          "url": "?screen=chat&state=disabled"
+        },
+        {
+          "id": "sending",
+          "url": "?screen=chat&state=sending"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=chat&state=uncertain"
+        },
+        {
+          "id": "failed",
+          "url": "?screen=chat&state=failed"
+        },
+        {
+          "id": "keyboard",
+          "url": "?screen=chat&state=keyboard"
+        }
+      ]
+    },
+    {
+      "id": "chat-history",
+      "title": "Conversation history",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=chat-history&state=ready"
+        },
+        {
+          "id": "empty",
+          "url": "?screen=chat-history&state=empty"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=chat-history&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "jobs",
+      "title": "Jobs and activity",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=jobs&state=ready"
+        },
+        {
+          "id": "failed",
+          "url": "?screen=jobs&state=failed"
+        },
+        {
+          "id": "unknown",
+          "url": "?screen=jobs&state=unknown"
+        },
+        {
+          "id": "stale",
+          "url": "?screen=jobs&state=stale"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=jobs&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "job-detail",
+      "title": "Processing evidence",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ingestion",
+          "url": "?screen=job-detail&state=ingestion"
+        },
+        {
+          "id": "ai",
+          "url": "?screen=job-detail&state=ai"
+        },
+        {
+          "id": "thumbnail",
+          "url": "?screen=job-detail&state=thumbnail"
+        },
+        {
+          "id": "email",
+          "url": "?screen=job-detail&state=email"
+        },
+        {
+          "id": "paperless",
+          "url": "?screen=job-detail&state=paperless"
+        },
+        {
+          "id": "unknown",
+          "url": "?screen=job-detail&state=unknown"
+        },
+        {
+          "id": "failed",
+          "url": "?screen=job-detail&state=failed"
+        }
+      ]
+    },
+    {
+      "id": "reindex",
+      "title": "Reindex scope",
+      "domain": "B",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=reindex&state=ready"
+        },
+        {
+          "id": "enumerating",
+          "url": "?screen=reindex&state=enumerating"
+        },
+        {
+          "id": "partial",
+          "url": "?screen=reindex&state=partial"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=reindex&state=uncertain"
+        },
+        {
+          "id": "system",
+          "url": "?screen=reindex&state=system"
+        }
+      ]
+    },
+    {
+      "id": "more",
+      "title": "More destinations",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=more&state=ready"
+        },
+        {
+          "id": "restricted",
+          "url": "?screen=more&state=restricted"
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "title": "Choose library",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=library&state=ready"
+        },
+        {
+          "id": "empty",
+          "url": "?screen=library&state=empty"
+        },
+        {
+          "id": "error",
+          "url": "?screen=library&state=error"
+        }
+      ]
+    },
+    {
+      "id": "libraries",
+      "title": "Libraries",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=libraries&state=ready"
+        },
+        {
+          "id": "create",
+          "url": "?screen=libraries&state=create"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=libraries&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "members",
+      "title": "Members and roles",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=members&state=ready"
+        },
+        {
+          "id": "invite",
+          "url": "?screen=members&state=invite"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=members&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "title": "Member access",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=access&state=ready"
+        },
+        {
+          "id": "read-only",
+          "url": "?screen=access&state=read-only"
+        },
+        {
+          "id": "conflict",
+          "url": "?screen=access&state=conflict"
+        }
+      ]
+    },
+    {
+      "id": "invitations",
+      "title": "Invitations",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=invitations&state=ready"
+        },
+        {
+          "id": "expired",
+          "url": "?screen=invitations&state=expired"
+        }
+      ]
+    },
+    {
+      "id": "signin",
+      "title": "Sign in",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=signin&state=ready"
+        },
+        {
+          "id": "register",
+          "url": "?screen=signin&state=register"
+        },
+        {
+          "id": "restoring",
+          "url": "?screen=signin&state=restoring"
+        },
+        {
+          "id": "expired",
+          "url": "?screen=signin&state=expired"
+        },
+        {
+          "id": "error",
+          "url": "?screen=signin&state=error"
+        }
+      ]
+    },
+    {
+      "id": "server",
+      "title": "Server selection",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=server&state=ready"
+        },
+        {
+          "id": "hosted",
+          "url": "?screen=server&state=hosted"
+        },
+        {
+          "id": "error",
+          "url": "?screen=server&state=error"
+        },
+        {
+          "id": "confirm",
+          "url": "?screen=server&state=confirm"
+        }
+      ]
+    },
+    {
+      "id": "account",
+      "title": "Account and password",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=account&state=ready"
+        },
+        {
+          "id": "password",
+          "url": "?screen=account&state=password"
+        },
+        {
+          "id": "saving",
+          "url": "?screen=account&state=saving"
+        },
+        {
+          "id": "rejected",
+          "url": "?screen=account&state=rejected"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=account&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "appearance",
+      "title": "Appearance",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=appearance&state=ready"
+        },
+        {
+          "id": "dark",
+          "url": "?screen=appearance&state=dark"
+        },
+        {
+          "id": "opaque",
+          "url": "?screen=appearance&state=opaque"
+        },
+        {
+          "id": "reduced",
+          "url": "?screen=appearance&state=reduced"
+        }
+      ]
+    },
+    {
+      "id": "live-updates",
+      "title": "Live updates",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=live-updates&state=ready"
+        },
+        {
+          "id": "offline",
+          "url": "?screen=live-updates&state=offline"
+        },
+        {
+          "id": "stale",
+          "url": "?screen=live-updates&state=stale"
+        }
+      ]
+    },
+    {
+      "id": "email",
+      "title": "Email connections",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=email&state=ready"
+        },
+        {
+          "id": "empty",
+          "url": "?screen=email&state=empty"
+        },
+        {
+          "id": "error",
+          "url": "?screen=email&state=error"
+        }
+      ]
+    },
+    {
+      "id": "email-editor",
+      "title": "Email connection",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=email-editor&state=ready"
+        },
+        {
+          "id": "credentials",
+          "url": "?screen=email-editor&state=credentials"
+        },
+        {
+          "id": "rules",
+          "url": "?screen=email-editor&state=rules"
+        },
+        {
+          "id": "consent",
+          "url": "?screen=email-editor&state=consent"
+        },
+        {
+          "id": "checking",
+          "url": "?screen=email-editor&state=checking"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=email-editor&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "email-import",
+      "title": "Email import",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=email-import&state=ready"
+        },
+        {
+          "id": "running",
+          "url": "?screen=email-import&state=running"
+        },
+        {
+          "id": "failed",
+          "url": "?screen=email-import&state=failed"
+        }
+      ]
+    },
+    {
+      "id": "paperless",
+      "title": "Paperless connection",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=paperless&state=ready"
+        },
+        {
+          "id": "checking",
+          "url": "?screen=paperless&state=checking"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=paperless&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "paperless-import",
+      "title": "Paperless import",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=paperless-import&state=ready"
+        },
+        {
+          "id": "running",
+          "url": "?screen=paperless-import&state=running"
+        },
+        {
+          "id": "partial",
+          "url": "?screen=paperless-import&state=partial"
+        },
+        {
+          "id": "unknown",
+          "url": "?screen=paperless-import&state=unknown"
+        }
+      ]
+    },
+    {
+      "id": "paperless-outcomes",
+      "title": "Paperless outcomes",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=paperless-outcomes&state=ready"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=paperless-outcomes&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "title": "Chat and AI",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=ai&state=ready"
+        },
+        {
+          "id": "external",
+          "url": "?screen=ai&state=external"
+        },
+        {
+          "id": "disabled",
+          "url": "?screen=ai&state=disabled"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=ai&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "processing-settings",
+      "title": "OCR and extraction",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=processing-settings&state=ready"
+        },
+        {
+          "id": "conflict",
+          "url": "?screen=processing-settings&state=conflict"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=processing-settings&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "workload",
+      "title": "Workload limits",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=workload&state=ready"
+        },
+        {
+          "id": "conflict",
+          "url": "?screen=workload&state=conflict"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=workload&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "paperless-limits",
+      "title": "Paperless retrieval limits",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=paperless-limits&state=ready"
+        },
+        {
+          "id": "conflict",
+          "url": "?screen=paperless-limits&state=conflict"
+        },
+        {
+          "id": "uncertain",
+          "url": "?screen=paperless-limits&state=uncertain"
+        }
+      ]
+    },
+    {
+      "id": "users",
+      "title": "System users",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=users&state=ready"
+        },
+        {
+          "id": "page-error",
+          "url": "?screen=users&state=page-error"
+        }
+      ]
+    },
+    {
+      "id": "user-access",
+      "title": "System user access",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=user-access&state=ready"
+        },
+        {
+          "id": "last-admin",
+          "url": "?screen=user-access&state=last-admin"
+        },
+        {
+          "id": "conflict",
+          "url": "?screen=user-access&state=conflict"
+        }
+      ]
+    },
+    {
+      "id": "licenses",
+      "title": "Licenses",
+      "domain": "C",
+      "states": [
+        {
+          "id": "ready",
+          "url": "?screen=licenses&state=ready"
+        },
+        {
+          "id": "detail",
+          "url": "?screen=licenses&state=detail"
+        }
+      ]
+    },
+    {
+      "id": "confirm",
+      "title": "Named confirmation",
+      "domain": "shared",
+      "states": [
+        {
+          "id": "delete",
+          "url": "?screen=confirm&state=delete"
+        },
+        {
+          "id": "discard",
+          "url": "?screen=confirm&state=discard"
+        },
+        {
+          "id": "signout",
+          "url": "?screen=confirm&state=signout"
+        },
+        {
+          "id": "revoke",
+          "url": "?screen=confirm&state=revoke"
+        },
+        {
+          "id": "delete-email",
+          "url": "?screen=confirm&state=delete-email"
+        },
+        {
+          "id": "cancel-import",
+          "url": "?screen=confirm&state=cancel-import"
+        },
+        {
+          "id": "delete-chat",
+          "url": "?screen=confirm&state=delete-chat"
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "mobile-shell",
+      "title": "Workspace and safe-inset frame",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "mobile-navigation",
+      "title": "Five destinations / tablet rail",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "mobile-header",
+      "title": "Scoped title and actions",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "search-entry",
+      "title": "Document search trigger",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "quick-filters",
+      "title": "Immediate common filters",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "document-card",
+      "title": "Compact title/tags/processing/retry",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "document-row",
+      "title": "Readable list result",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "selection-bar",
+      "title": "Bulk actions",
+      "url": "?screen=documents&state=selection"
+    },
+    {
+      "id": "continuation",
+      "title": "Bounded list continuation",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "collection-state",
+      "title": "Loading/empty/error/stale",
+      "url": "?screen=documents&state=empty"
+    },
+    {
+      "id": "glass-sheet",
+      "title": "Input-first focus-protected sheet",
+      "url": "?screen=search"
+    },
+    {
+      "id": "search-filters",
+      "title": "Query/type/tag/address/date/sort",
+      "url": "?screen=search"
+    },
+    {
+      "id": "reader-toolbar",
+      "title": "Visible original actions",
+      "url": "?screen=reader"
+    },
+    {
+      "id": "original-canvas",
+      "title": "Opaque source document",
+      "url": "?screen=reader"
+    },
+    {
+      "id": "reader-find",
+      "title": "Compact on-demand find",
+      "url": "?screen=reader&state=find"
+    },
+    {
+      "id": "properties-editor",
+      "title": "Always reachable metadata/links",
+      "url": "?screen=properties"
+    },
+    {
+      "id": "recovery-notice",
+      "title": "Conflict/unknown recovery",
+      "url": "?screen=properties&state=uncertain"
+    },
+    {
+      "id": "scan-handoff",
+      "title": "Native capture launch",
+      "url": "?screen=capture"
+    },
+    {
+      "id": "scan-page",
+      "title": "Ordered page preview/actions",
+      "url": "?screen=scan-review"
+    },
+    {
+      "id": "scan-draft",
+      "title": "Draft safety/pending batch",
+      "url": "?screen=scan-review&state=pending"
+    },
+    {
+      "id": "upload-form",
+      "title": "File metadata and destination",
+      "url": "?screen=upload"
+    },
+    {
+      "id": "upload-outcome",
+      "title": "Accepted/rejected/unknown receipt",
+      "url": "?screen=upload&state=uncertain"
+    },
+    {
+      "id": "incoming-share",
+      "title": "Android staged batch",
+      "url": "?screen=share-android"
+    },
+    {
+      "id": "share-extension",
+      "title": "iOS extension boundary",
+      "url": "?screen=share-ios"
+    },
+    {
+      "id": "invoice-row",
+      "title": "Exact source amount",
+      "url": "?screen=invoices"
+    },
+    {
+      "id": "invoice-sections",
+      "title": "Bounded evidence details",
+      "url": "?screen=invoice-detail"
+    },
+    {
+      "id": "chat-message",
+      "title": "Transcript and source links",
+      "url": "?screen=chat"
+    },
+    {
+      "id": "chat-composer",
+      "title": "IME-safe send/stop/check",
+      "url": "?screen=chat"
+    },
+    {
+      "id": "chat-history-row",
+      "title": "History continuation",
+      "url": "?screen=chat-history"
+    },
+    {
+      "id": "activity-summary",
+      "title": "Compact truthful jobs",
+      "url": "?screen=documents"
+    },
+    {
+      "id": "job-row",
+      "title": "Status/stage/retry",
+      "url": "?screen=jobs"
+    },
+    {
+      "id": "pipeline-evidence",
+      "title": "Five pipeline families",
+      "url": "?screen=job-detail"
+    },
+    {
+      "id": "reindex-form",
+      "title": "Independent scoped operation",
+      "url": "?screen=reindex"
+    },
+    {
+      "id": "destination-row",
+      "title": "Grouped secondary navigation",
+      "url": "?screen=more"
+    },
+    {
+      "id": "library-row",
+      "title": "Scope switch",
+      "url": "?screen=library"
+    },
+    {
+      "id": "member-row",
+      "title": "Role and permissions",
+      "url": "?screen=members"
+    },
+    {
+      "id": "access-selector",
+      "title": "Role/explicit access distinction",
+      "url": "?screen=access"
+    },
+    {
+      "id": "auth-form",
+      "title": "Identity and session state",
+      "url": "?screen=signin"
+    },
+    {
+      "id": "server-form",
+      "title": "Native server vs hosted origin",
+      "url": "?screen=server"
+    },
+    {
+      "id": "settings-field",
+      "title": "Labeled fields and save state",
+      "url": "?screen=workload"
+    },
+    {
+      "id": "settings-switch",
+      "title": "Rich toggle",
+      "url": "?screen=appearance"
+    },
+    {
+      "id": "appearance-choice",
+      "title": "Theme/background selection",
+      "url": "?screen=appearance"
+    },
+    {
+      "id": "connection-row",
+      "title": "Import integration",
+      "url": "?screen=email"
+    },
+    {
+      "id": "import-outcome",
+      "title": "Partial/unknown bounded outcomes",
+      "url": "?screen=paperless-outcomes"
+    },
+    {
+      "id": "named-confirmation",
+      "title": "Scoped destructive decision",
+      "url": "?screen=confirm"
+    }
+  ],
+  "designDecisions": "parity-design-decisions.md"
+}

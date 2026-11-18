@@ -1,8 +1,10 @@
+import 'package:domabas/presentation/invoice/widgets/invoices_workspace_toolbar.dart';
 import 'package:domabas/app/account_workspace.dart';
 import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
 import 'package:domabas/ui/domabas_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_activity_repository.dart';
@@ -59,13 +61,13 @@ void main() {
         await tester.pumpAndSettle();
         await navigateWorkspace(tester, 'invoicesNavigation');
         final search = find.byKey(const Key('invoiceSearchTerm'));
-        expect(
-          find.descendant(
-            of: find.byKey(const Key('workspaceHeader')),
-            matching: search,
-          ),
-          findsOneWidget,
-        );
+        expect(search, findsNothing);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('invoiceSearchDialog')), findsOneWidget);
+        expect(find.byKey(const Key('documentSearchDialog')), findsNothing);
         final controller = tester.widget<TextField>(search).controller!;
         await tester.showKeyboard(search);
         const draft = TextEditingValue(
@@ -77,18 +79,24 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
         final reads = repository.queries.length;
 
-        void expectLibraryAtRight() {
-          final row = tester.getRect(
-            find.byKey(const Key('collectionToolbarPrimary')),
+        void expectSearchInModal() {
+          expect(
+            find.descendant(
+              of: find.byKey(const Key('invoiceSearchDialog')),
+              matching: search,
+            ),
+            findsOneWidget,
           );
-          final library = tester.getRect(
-            find.byKey(const Key('collectionToolbarLibrary')),
+          expect(
+            find.descendant(
+              of: find.byType(InvoicesWorkspaceToolbar),
+              matching: search,
+            ),
+            findsNothing,
           );
-          expect(library.right, closeTo(row.right, .1));
-          expect(tester.getRect(search).right, lessThan(library.left));
         }
 
-        expectLibraryAtRight();
+        expectSearchInModal();
         for (final (size, scale) in [
           (const Size(320, 640), 1.0),
           (const Size(320, 320), 2.0),
@@ -99,15 +107,9 @@ void main() {
           expect(tester.widget<TextField>(search).controller, same(controller));
           expect(controller.value, draft);
           expect(repository.queries.length, reads);
-          expectLibraryAtRight();
+          expectSearchInModal();
           expect(tester.takeException(), isNull);
         }
-        final header = tester.getRect(find.byKey(const Key('workspaceHeader')));
-        final navigation = tester.getRect(
-          find.byKey(const Key('workspaceBottomNavigation')),
-        );
-        expect(navigation.top - header.bottom, greaterThanOrEqualTo(48));
-
         tester.testTextInput.updateEditingValue(
           const TextEditingValue(
             text: 'Example supplier',
@@ -117,7 +119,20 @@ void main() {
         await tester.testTextInput.receiveAction(TextInputAction.search);
         await tester.pumpAndSettle();
         expect(repository.queries.last, 'Example supplier');
-        expect(controller.text, 'Example supplier');
+        final header = tester.getRect(
+          find
+              .ancestor(
+                of: find.byType(GlacierMobileHeader),
+                matching: find.byType(SingleChildScrollView),
+              )
+              .first,
+        );
+        final navigation = tester.getRect(
+          find.byKey(const Key('workspaceBottomNavigation')),
+        );
+        expect(navigation.top - header.bottom, greaterThanOrEqualTo(48));
+
+        expect(search, findsNothing);
         final source = find.byKey(const Key('invoiceSource'));
         await revealWorkspaceHeader(tester, source);
         expect(source.hitTestable(), findsOneWidget);
@@ -131,7 +146,6 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(repository.sources.last, 'structured');
-        expect(controller.text, 'Example supplier');
 
         await revealWorkspaceHeader(
           tester,
@@ -139,7 +153,11 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('invoiceFilters')));
         await tester.pumpAndSettle();
-        expect(find.text('Filter invoices'), findsOneWidget);
+        expect(find.byKey(const Key('invoiceSearchDialog')), findsOneWidget);
+        expect(
+          tester.widget<TextField>(search).controller!.text,
+          'Example supplier',
+        );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();

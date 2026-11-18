@@ -6,9 +6,14 @@ import '../../../domain/document/models/document.dart';
 import '../models/document_previews.dart';
 
 final class DocumentPreviewState {
-  const DocumentPreviewState({this.image, this.loading = false});
+  const DocumentPreviewState({
+    this.image,
+    this.loading = false,
+    this.failed = false,
+  });
   final ui.Image? image;
   final bool loading;
+  final bool failed;
 }
 
 final class DocumentPreviewCubit extends Cubit<DocumentPreviewState> {
@@ -40,7 +45,12 @@ final class DocumentPreviewCubit extends Cubit<DocumentPreviewState> {
       return;
     }
     final old = state.image;
-    emit(DocumentPreviewState(image: image));
+    emit(
+      DocumentPreviewState(
+        image: image,
+        failed: image == null && document != null,
+      ),
+    );
     old?.dispose();
   }
 

@@ -1,52 +1,44 @@
 # Mobile workspace navigation
 
-Below 600 logical pixels, the workspace uses a floating bottom bar with Documents
-fixed in the center. Its raised primary-action circle and curved surface remain the
-normal layout, with up to five entries after secondary groups are collected in More.
+The production workspace uses the Glacier mobile shell below 800 logical pixels.
+Below 600px, a glass bottom bar contains permitted primary destinations; 600–799px
+uses the 70px tablet rail. At enlarged text sizes the rail widens to 208px and
+scrolls vertically, keeping the selected destination visible. Desktop begins at
+800px and uses the collapsible sidebar. Layout follows available space while
+scanner, sharing and keyboard interactions keep their platform-specific owners.
 
-The standard native entries are Invoices, Scanner, Documents, AI chat and More.
-App composition supplies the primary order and filters destinations by claims;
-the shared shell receives presentation values and never checks permissions itself.
-Users without a primary claim see only their permitted destinations. Scanner
-requires upload permission and the native Android or iOS scanner capability. It
-opens the existing scanner route while preserving the selected workspace; closing
-the scanner returns to that workspace. Other platforms omit this bottom entry.
+The standard primary entries are Invoices, Scanner, Documents, AI chat and More.
+App composition filters these by current claims. Scanner requires upload permission
+and Android or iOS scanner capability; it opens the existing scanner route without
+changing the selected workspace. Closing it returns to that workspace. The shared
+navigation receives display values and callbacks, never a permission repository.
 
-Jobs, Settings, Admin and every future group outside the primary set belong in
-More, including when there are fewer than five visible entries. Adding another
-secondary destination must never add a sixth bottom-bar button. Desktop and
-tablet navigation retain their permitted groups without a Scanner entry.
+Jobs, Settings, Administration and other secondary destinations live in More.
+Its glass action-menu route also exposes current feature actions and account
+utilities. Selecting a destination closes only that menu and invokes the current
+callback; opening or dismissing it does not change the workspace. Escape, system
+Back and the outside barrier dismiss it. Resize or owner changes invalidate stale
+menu selections, and focus returns only to a surviving trigger on the current
+route. User settings and Admin settings navigate to permission-filtered overview
+pages. Desktop sidebar groups instead disclose their leaf links inline without
+changing the current page. Overview cards open the same leaf routes; a parent
+control returns to the overview while system Back retains the workspace's return
+to Documents. The actual selected leaf continues to control refresh and feature
+lifetime. Licenses remains available from settings for every workspace role.
 
-Licenses is a leaf in User settings, available to every workspace role. It uses
-the existing Settings chooser or More sidebar and adds no bottom-bar group.
+The mobile header provides library selection and a named scoped Search action.
+Documents and Invoices open their own draft-and-apply search dialogs; Cmd/Ctrl+K
+uses the same current-route and capability guards. Menus and headers retain 48px
+app targets, natural text scale and system safe insets. Large text uses bounded
+scrolling instead of shrinking labels or covering the entire content viewport.
 
-More opens a rounded right sidebar. It shows each remaining group's heading and
-its permitted leaf destinations directly, with a fixed Close control and a
-scrollable list. Selecting a leaf closes the sidebar and highlights More in the
-bar. Opening or dismissing the sidebar does not change the current destination.
-Escape, system Back and the outside scrim dismiss it. Account utilities remain in
-the same sidebar: Appearance, live updates, Your jobs and Sign out. The current
-workspace's actions, including upload, scanning, metadata creation and upload
-history when permitted, appear above its destinations. The phone header keeps
-the upload shortcut and has no separate overflow button. More remains available
-even when there are no secondary destinations.
+The navigation hides while a software keyboard is visible. Stable feature and
+toolbar subtrees retain drafts and controllers through width and keyboard changes.
+Collections scroll above measured navigation clearance. The compact Activity token
+sits at the content's bottom right above navigation; trailing scroll extent lets
+final actions remain reachable. Native document scanning and incoming-share
+controllers retain their existing draft storage, permissions and upload lifetimes.
 
-The sidebar shares the shell's exact-route ownership, stale callback protection,
-permission-change invalidation and reduced-motion behavior. Crossing a responsive
-breakpoint closes it without selecting a page. Focus returns only to a mounted
-trigger. Action rows update with current busy state, connection details and
-badges. Selecting an action removes the sidebar before invoking its current
-callback; focus returns after the action completes. Tablet and desktop navigation
-continue to expose all permitted groups and their existing action menus.
-
-Retain at least 48-pixel targets, system safe insets and the user's text scale.
-The five-button bar is 92 pixels high before outer spacing and safe insets, with
-an eight-pixel bottom margin above the system safe area. Its surface has no
-painted shadow. Only
-use the accessible stacked fallback when measured labels do not fit, such as
-narrow screens or enlarged text; cap its scrolling height at 40 percent of usable
-height. Hide the bar while the software keyboard is open without replacing the
-page or losing the chat draft. Content must be scrollable above the measured bar.
-
-See [shared UI components](components.md#responsive-layout-and-navigation) for
-shell layout, theme, interaction and content-inset rules.
+See [shared UI components](components.md#responsive-layout-and-navigation) and
+[Glacier](glacier.md#responsive-behavior-and-checks) for current layout and material
+contracts.

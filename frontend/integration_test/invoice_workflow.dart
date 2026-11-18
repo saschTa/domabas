@@ -109,12 +109,36 @@ Future<void> exerciseInvoiceWorkflow(
         .widget<InvoicesScreen>(find.byType(InvoicesScreen))
         .cubit;
     final search = find.byKey(const Key('invoiceSearchTerm'));
+    Future<void> openSearch() async {
+      final trigger = find.byKey(const Key('invoiceFilters'));
+      await tester.ensureVisible(trigger);
+      await tester.tap(trigger);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('invoiceSearchDialog')), findsOneWidget);
+    }
+
+    Future<void> applySearch() async {
+      final apply = find.byKey(const Key('applyInvoiceSearch'));
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('invoiceSearchDialog')), findsNothing);
+    }
+
     Future<void> searchFor(String query) async {
+      final previous = cubit.state.rawTerm;
+      await openSearch();
       await tester.ensureVisible(search);
       await tester.tap(search);
       await tester.pumpAndSettle();
       await tester.enterText(search, query);
       expect(tester.widget<TextField>(search).controller!.text, query);
+      expect(
+        cubit.state.rawTerm,
+        previous,
+        reason: 'Typing changes only the modal draft.',
+      );
+      await applySearch();
       expect(cubit.state.rawTerm, query);
       await _wait(
         tester,
@@ -142,10 +166,12 @@ Future<void> exerciseInvoiceWorkflow(
 
     await searchFor('INV-2026-001');
     expect(details, findsOneWidget);
+    await openSearch();
     await tester.enterText(search, 'unrelated pending term');
+    expect(cubit.state.rawTerm, 'INV-2026-001');
     expect(cubit.state.items.any((item) => item.id == invoice.id), isTrue);
     await tester.enterText(search, 'Acme Supplies');
-    await tester.tap(find.byKey(const Key('applyInvoiceSearch')));
+    await applySearch();
     await _wait(
       tester,
       () =>
@@ -189,7 +215,9 @@ Future<void> exerciseInvoiceWorkflow(
     );
     await searchFor('Printer paper');
     expect(details, findsOneWidget, reason: 'Invoice line item is searchable');
-    await tester.tap(find.byKey(const Key('clearInvoiceSearch')));
+    await openSearch();
+    await tester.enterText(search, '');
+    await applySearch();
     await _wait(
       tester,
       () =>
@@ -199,7 +227,10 @@ Future<void> exerciseInvoiceWorkflow(
       'Clearing search restores source-filtered invoice list',
     );
     expect(cubit.state.source, 'structured');
+    expect(cubit.state.rawTerm, isEmpty);
+    await openSearch();
     expect(tester.widget<TextField>(search).controller!.text, isEmpty);
+    await applySearch();
     final sort = find.byKey(const Key('sortInvoices'));
     await tester.ensureVisible(sort);
     await tester.tap(sort);
@@ -242,7 +273,7 @@ Future<void> exerciseInvoiceWorkflow(
       0,
       reason: 'Draft selections do not change results before Apply',
     );
-    await tester.tap(find.byKey(const Key('applyInvoiceFilters')));
+    await applySearch();
     await _wait(
       tester,
       () =>

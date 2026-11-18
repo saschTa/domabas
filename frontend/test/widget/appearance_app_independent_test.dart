@@ -144,7 +144,7 @@ void main() {
       expect(_themeAt(tester, title).brightness, Brightness.dark);
       expect(
         tester.widget<Text>(title).style?.color,
-        AppTheme.dark().textTheme.titleLarge!.color,
+        GlacierTheme.dark().textTheme.titleLarge!.color,
       );
       expect(find.byKey(const Key('appearance-action')), findsOneWidget);
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
@@ -169,7 +169,7 @@ void main() {
       expect(_themeAt(tester, failed).brightness, Brightness.dark);
       expect(
         tester.widget<Text>(failed).style?.color,
-        AppTheme.dark().textTheme.titleLarge!.color,
+        GlacierTheme.dark().textTheme.titleLarge!.color,
       );
       await _choose(tester, 'light');
       expect(failed, findsOneWidget);
@@ -358,7 +358,7 @@ void main() {
       expect(tester.getSize(action).width, greaterThanOrEqualTo(48));
       expect(tester.getSize(action).height, greaterThanOrEqualTo(48));
       expect(
-        tester.getRect(find.byKey(const Key('librarySwitcher'))).right,
+        tester.getRect(find.byKey(const Key('librarySwitcher')).last).right,
         lessThanOrEqualTo(320),
       );
       await _openAppearance(tester);
@@ -367,7 +367,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<ListTile>(find.byKey(const Key('appearance-dark')))
+            .widget<GlacierChoice>(find.byKey(const Key('appearance-dark')))
             .selected,
         isTrue,
       );
@@ -443,7 +443,7 @@ void main() {
 
   for (final width in [390.0, 900.0]) {
     testWidgets(
-      'retained navigation chooser at width $width follows system theme',
+      'retained settings navigation at width $width follows system theme',
       (tester) async {
         tester.view.physicalSize = Size(width, 1000);
         tester.view.devicePixelRatio = 1;
@@ -462,6 +462,10 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        if (width < 600) {
+          await tester.tap(find.byKey(const Key('navigation-user-settings')));
+          await tester.pumpAndSettle();
+        }
         final item = find.byKey(const Key('manageLibraries')).last;
         final route = ModalRoute.of(tester.element(item));
         Color visibleSurface() => tester
@@ -469,7 +473,7 @@ void main() {
               find.ancestor(of: item, matching: find.byType(Material)),
             )
             .firstWhere(
-              (material) => material.color != null && material.color!.a == 1,
+              (material) => material.color != null && material.color!.a > 0,
             )
             .color!;
         final before = visibleSurface();
@@ -510,14 +514,20 @@ void main() {
           .widgetList<Material>(
             find.ancestor(of: title, matching: find.byType(Material)),
           )
-          .firstWhere((material) => material.type == MaterialType.card);
+          .firstWhere(
+            (material) => material.color != null && material.color!.a > 0,
+          );
       final oldSurface = dialogSurface().color;
       tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
       await tester.pumpAndSettle();
       expect(ModalRoute.of(tester.element(title)), same(route));
       expect(tester.widget<TextFormField>(title).controller, same(controller));
       expect(controller!.text, 'Unsaved new document');
-      expect(dialogSurface().color, AppTheme.dark().colorScheme.surface);
+      expect(_themeAt(tester, title).brightness, Brightness.dark);
+      expect(
+        dialogSurface().color,
+        GlacierTokens.of(tester.element(title)).glass,
+      );
       expect(dialogSurface().color, isNot(oldSurface));
       expect(fixture.appearance.writes, isEmpty);
       expect(fixture.authenticated, 1);

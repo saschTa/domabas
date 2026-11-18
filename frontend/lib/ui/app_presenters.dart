@@ -4,6 +4,7 @@ import 'app_ink_widgets.dart';
 import 'app_job_progress.dart';
 import 'app_refreshable.dart';
 import 'app_theme.dart';
+import 'glacier/glacier_surfaces.dart';
 
 enum AppTone { neutral, info, success, warning, danger }
 
@@ -40,20 +41,26 @@ final class AppSurface extends StatelessWidget {
     this.padding = const EdgeInsets.all(24),
     this.color,
     this.elevation = AppElevation.panel,
+    this.glacier = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color? color;
   final AppElevation elevation;
+  final bool glacier;
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: color ?? Theme.of(context).colorScheme.surface,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(padding: padding, child: child),
-  );
+  Widget build(BuildContext context) => glacier
+      ? GlacierSurface(padding: padding, color: color, child: child)
+      : Material(
+          color: color ?? Theme.of(context).colorScheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(padding: padding, child: child),
+        );
 }
 
 final class AppPage extends StatelessWidget {
@@ -67,6 +74,7 @@ final class AppPage extends StatelessWidget {
     this.insetBody = true,
     this.showHeading = false,
     this.onRefresh,
+    this.glacier = false,
   });
 
   final String title;
@@ -77,6 +85,7 @@ final class AppPage extends StatelessWidget {
 
   final Future<void> Function()? onRefresh;
 
+  final bool glacier;
   final bool insetBody;
   final bool showHeading;
 
@@ -88,7 +97,11 @@ final class AppPage extends StatelessWidget {
         0.0,
         media.padding.bottom,
       );
-      final margin = MediaQuery.sizeOf(context).width < 600 ? 8.0 : 16.0;
+      final margin = glacier
+          ? 0.0
+          : MediaQuery.sizeOf(context).width < 600
+          ? 8.0
+          : 16.0;
       final availableHeight = (constraints.maxHeight - margin * 2 - safeBottom)
           .clamp(0.0, constraints.maxHeight);
       final visibleHeight =
@@ -130,7 +143,9 @@ final class AppPage extends StatelessWidget {
             ),
           Expanded(
             child: Padding(
-              padding: insetBody ? const EdgeInsets.all(16) : EdgeInsets.zero,
+              padding: insetBody
+                  ? EdgeInsets.all(glacier ? 20 : 16)
+                  : EdgeInsets.zero,
               child: _AppPageBody(
                 key: PageStorageKey((title, child.key)),
                 onRefresh: onRefresh,
@@ -572,6 +587,7 @@ final class AppDialog extends StatelessWidget {
     this.description,
     this.width = 720,
     this.onRefresh,
+    this.glacier = false,
   });
 
   final String title;
@@ -580,68 +596,78 @@ final class AppDialog extends StatelessWidget {
   final List<Widget> actions;
   final double width;
   final Future<void> Function()? onRefresh;
+  final bool glacier;
 
   @override
   Widget build(BuildContext context) => SafeArea(
     child: Dialog(
+      backgroundColor: glacier ? Colors.transparent : null,
+      elevation: glacier ? 0 : null,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: width),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Flexible(
-                child: AppRefreshable(
-                  onRefresh: onRefresh,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Semantics(
-                          namesRoute: true,
-                          header: true,
-                          child: Text(
-                            title,
-                            style: Theme.of(context).textTheme.titleLarge,
+      child: _surface(
+        context,
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: width),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Flexible(
+                  child: AppRefreshable(
+                    onRefresh: onRefresh,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Semantics(
+                            namesRoute: true,
+                            header: true,
+                            child: Text(
+                              title,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
                           ),
-                        ),
-                        if (description != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            description!,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                          ),
+                          if (description != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              description!,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          child,
                         ],
-                        const SizedBox(height: 24),
-                        child,
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: actions,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: actions,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     ),
   );
+
+  Widget _surface(BuildContext context, Widget child) => glacier
+      ? GlacierSurface(padding: EdgeInsets.zero, radius: 20, child: child)
+      : child;
 }

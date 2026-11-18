@@ -60,10 +60,36 @@ Future<void> navigateWorkspace(
     await tester.tap(trigger);
     await tester.pumpAndSettle();
   } else if (destination.evaluate().isEmpty) {
-    await tester.tap(find.byTooltip(group));
+    final trigger = find.byKey(
+      Key(
+        group == 'Admin settings'
+            ? 'navigation-admin-settings'
+            : 'navigation-user-settings',
+      ),
+    );
+    await tester.tap(
+      trigger.evaluate().isNotEmpty ? trigger : find.byTooltip(group),
+    );
     await tester.pumpAndSettle();
   }
-  await tester.ensureVisible(destination);
-  await tester.tap(destination);
+  if (destination.evaluate().isEmpty) {
+    final overview = find.byKey(
+      Key(
+        group == 'Admin settings'
+            ? 'navigation-admin-settings'
+            : 'navigation-user-settings',
+      ),
+    );
+    await tester.ensureVisible(overview);
+    await tester.tap(overview);
+    await tester.pumpAndSettle();
+  }
+  final target = tester.widget(destination) is InkWell
+      ? find.descendant(of: destination, matching: find.byType(Text)).first
+      : destination;
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  expect(target.hitTestable(), findsOneWidget);
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }

@@ -129,64 +129,44 @@ final class _DocumentPdfCanvasState extends State<DocumentPdfCanvas> {
       onControlsHeight: (height) => _controlsHeight = height,
       search: _searchOpen
           ? Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
-                    key: const Key('pdfSearch'),
+                  GlacierFindBar(
+                    fieldKey: const Key('pdfSearch'),
                     controller: _query,
                     focusNode: _searchFocus,
-                    decoration: InputDecoration(
-                      labelText: 'Find in PDF',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: IconButton(
-                        tooltip: 'Close PDF search',
-                        onPressed: _hideSearch,
-                        icon: const Icon(Icons.close),
-                      ),
-                    ),
+                    hint: 'Find in PDF',
+                    previousLabel: 'Previous PDF match',
+                    nextLabel: 'Next PDF match',
+                    closeLabel: 'Close PDF search',
+                    searching: _searcher?.isSearching ?? false,
+                    resultLabel: (_searcher?.matches.isEmpty ?? true)
+                        ? 'No matches'
+                        : '${(_searcher?.currentIndex ?? -1) + 1}/${_searcher?.matches.length ?? 0}',
                     onChanged: (query) => _searcher?.startTextSearch(query),
+                    onPrevious: (_searcher?.matches.isEmpty ?? true)
+                        ? null
+                        : () {
+                            unawaited(_searcher?.goToPrevMatch());
+                            _changed();
+                          },
+                    onNext: (_searcher?.matches.isEmpty ?? true)
+                        ? null
+                        : () {
+                            unawaited(_searcher?.goToNextMatch());
+                            _changed();
+                          },
+                    onClose: _hideSearch,
                   ),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(
-                        (_searcher?.isSearching ?? false)
-                            ? 'Searching…'
-                            : (_searcher?.matches.isEmpty ?? true)
-                            ? 'No matches'
-                            : '${(_searcher?.currentIndex ?? -1) + 1} of ${_searcher?.matches.length ?? 0} matches',
-                      ),
-                      IconButton(
-                        tooltip: 'Previous PDF match',
-                        onPressed: (_searcher?.matches.isEmpty ?? true)
-                            ? null
-                            : () {
-                                unawaited(_searcher?.goToPrevMatch());
-                                _changed();
-                              },
-                        icon: const Icon(Icons.keyboard_arrow_up),
-                      ),
-                      IconButton(
-                        tooltip: 'Next PDF match',
-                        onPressed: (_searcher?.matches.isEmpty ?? true)
-                            ? null
-                            : () {
-                                unawaited(_searcher?.goToNextMatch());
-                                _changed();
-                              },
-                        icon: const Icon(Icons.keyboard_arrow_down),
-                      ),
-                      if (!(_searcher?.isSearching ?? false) &&
-                          (_searcher?.matches.isEmpty ?? true) &&
-                          _query.text.isNotEmpty)
-                        TextButton(
-                          onPressed: widget.onExtractedText,
-                          child: const Text('Find in extracted text'),
-                        ),
-                    ],
-                  ),
+                  if (!(_searcher?.isSearching ?? false) &&
+                      (_searcher?.matches.isEmpty ?? true) &&
+                      _query.text.isNotEmpty)
+                    TextButton(
+                      onPressed: widget.onExtractedText,
+                      child: const Text('Find in extracted text'),
+                    ),
                 ],
               ),
             )
@@ -427,7 +407,7 @@ final class _DocumentImageCanvasState extends State<DocumentImageCanvas> {
         ),
       );
     }
-    if (_image == null) return const Center(child: CircularProgressIndicator());
+    if (_image == null) return const GlacierPreviewPlaceholder();
     return DocumentCanvasLayout(
       onControlsHeight: (height) => _controlsHeight = height,
       canvas: LayoutBuilder(

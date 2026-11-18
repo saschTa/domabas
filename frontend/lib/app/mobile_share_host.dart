@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'mobile_share_cubit.dart';
+import '../ui/glacier.dart';
 
 final class MobileShareHost extends StatelessWidget {
   const MobileShareHost({super.key, required this.shares, required this.child});
@@ -20,46 +21,71 @@ final class MobileShareHost extends StatelessWidget {
         return Column(
           children: [
             Expanded(child: child),
-            Material(
-              elevation: 8,
-              color: Theme.of(context).colorScheme.surfaceContainer,
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * .55,
+              ),
               child: SafeArea(
                 top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Shared with Domabas',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        batch.error ??
-                            (state.library == null
-                                ? '${batch.paths.length} files ready. Sign in to choose your library.'
-                                : state.canUpload
-                                ? 'Upload ${batch.paths.length} ${batch.paths.length == 1 ? 'file' : 'files'} to ${state.library}?'
-                                : 'Uploading is unavailable in this library. Sign in with upload permission.'),
-                      ),
-                      Wrap(
-                        alignment: WrapAlignment.end,
-                        spacing: 12,
-                        children: [
-                          TextButton(
-                            onPressed: cubit.discard,
-                            child: const Text('Discard'),
+                child: GlacierMobileSurface(
+                  glass: true,
+                  radius: 20,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: batch.error != null
+                                ? GlacierMobileNotice(
+                                    title: 'Shared with Domabas',
+                                    message: batch.error!,
+                                  )
+                                : GlacierMobileIncomingShare(
+                                    files: [
+                                      for (final path in batch.paths)
+                                        GlacierMobileReceiptValue(
+                                          filename: path.split('/').last,
+                                          detail: 'Staged on this device',
+                                        ),
+                                    ],
+                                    state: state.library == null
+                                        ? GlacierMobileShareState.auth
+                                        : state.canUpload
+                                        ? GlacierMobileShareState.ready
+                                        : GlacierMobileShareState.blocked,
+                                    library: state.library ?? '',
+                                    showActions: false,
+                                  ),
                           ),
-                          if (batch.error == null)
-                            FilledButton(
-                              onPressed: state.canUpload ? cubit.confirm : null,
-                              child: const Text('Upload'),
+                        ),
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: constraints.maxHeight * .5,
+                          ),
+                          child: SingleChildScrollView(
+                            child: GlacierMobileActionBar(
+                              children: [
+                                GlacierButton(
+                                  label: 'Discard',
+                                  onPressed: cubit.discard,
+                                ),
+                                if (batch.error == null)
+                                  GlacierButton(
+                                    label: 'Upload',
+                                    kind: GlacierButtonKind.primary,
+                                    onPressed: state.canUpload
+                                        ? cubit.confirm
+                                        : null,
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
-                    ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

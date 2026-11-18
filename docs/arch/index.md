@@ -37,6 +37,7 @@ shows where implementation conventions are documented and checked. Use the
 | --- | --- |
 | [Frontend overview](frontend/index.md) | Layers, Cubits, immutable state and dependency ownership |
 | [Shared UI components](frontend/components.md) | Responsive surfaces, navigation, jobs and pipeline views |
+| [Glacier library and Widgetbook](frontend/glacier.md) | Glass components, desktop/mobile screens, native frame contracts and isolated catalog |
 | [Mobile navigation](frontend/mobile-navigation.md) | Bottom navigation and access to secondary destinations |
 | [Document workspace](frontend/documents.md) | Browsing, searching, viewing, editing and processing screens |
 | [Invoices workspace](frontend/invoices.md) | Filters, exact amounts, provenance and paginated details |

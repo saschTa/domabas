@@ -155,7 +155,7 @@ void main() {
         );
         expect(
           tester
-              .widget<FilledButton>(find.byKey(const Key('captureScanPage')))
+              .widget<GlacierButton>(find.byKey(const Key('captureScanPage')))
               .onPressed,
           isNull,
         );
@@ -224,9 +224,13 @@ void main() {
       final earlier = find.byKey(const Key('moveScanPageEarlier-0'));
       await tester.ensureVisible(earlier);
       await tester.pumpAndSettle();
-      expect(tester.widget<IconButton>(earlier).onPressed, isNull);
+      expect(tester.widget<GlacierIconButton>(earlier).onPressed, isNull);
       expect(
-        tester.getSemantics(earlier).getSemanticsData().tooltip,
+        tester
+            .widget<IconButton>(
+              find.descendant(of: earlier, matching: find.byType(IconButton)),
+            )
+            .tooltip,
         'Move page 1 earlier',
       );
       final later = find.byKey(const Key('moveScanPageLater-0'));
@@ -235,7 +239,7 @@ void main() {
       repository.moveGate = Completer<void>();
       await tester.tap(later);
       await tester.pump();
-      expect(tester.widget<IconButton>(later).onPressed, isNull);
+      expect(tester.widget<GlacierIconButton>(later).onPressed, isNull);
       expect(repository.draft.pages.first.id, 'one');
       repository.moveGate!.complete();
       await tester.pumpAndSettle();
@@ -247,10 +251,17 @@ void main() {
       final finalLater = find.byKey(const Key('moveScanPageLater-2'));
       await tester.ensureVisible(finalLater);
       await tester.pumpAndSettle();
-      expect(tester.widget<IconButton>(finalLater).onPressed, isNull);
+      expect(tester.widget<GlacierIconButton>(finalLater).onPressed, isNull);
       final finalEarlier = find.byKey(const Key('moveScanPageEarlier-2'));
       expect(
-        tester.getSemantics(finalEarlier).getSemanticsData().tooltip,
+        tester
+            .widget<IconButton>(
+              find.descendant(
+                of: finalEarlier,
+                matching: find.byType(IconButton),
+              ),
+            )
+            .tooltip,
         'Move page 3 earlier',
       );
       await tester.tap(finalEarlier);
@@ -534,7 +545,7 @@ void main() {
       expect(cubit.state.validCorners, isFalse);
       expect(
         tester
-            .widget<FilledButton>(find.byKey(const Key('keepScanPage')))
+            .widget<GlacierButton>(find.byKey(const Key('keepScanPage')))
             .onPressed,
         isNull,
       );

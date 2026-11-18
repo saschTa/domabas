@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../domain/chat/models/chat.dart';
@@ -146,37 +145,42 @@ final class _ChatScreenState extends State<ChatScreen> {
         : null;
   }
 
-  Future<void> _history() => showDialog<void>(
+  Future<void> _history() => showGlacierDialog<void>(
     context: context,
     builder: (context) => Dialog(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420, maxHeight: 600),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
-              child: Row(
-                children: [
-                  const Expanded(child: Text('Your conversations')),
-                  IconButton(
-                    tooltip: 'Close history',
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: BlocBuilder<ChatCubit, ChatState>(
-                bloc: cubit,
-                builder: (context, state) => _ChatHistory(
-                  cubit: cubit,
-                  state: state,
-                  onSelected: () => Navigator.pop(context),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: GlacierSurface(
+        padding: EdgeInsets.zero,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 600),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+                child: Row(
+                  children: [
+                    const Expanded(child: Text('Your conversations')),
+                    GlacierIconButton(
+                      label: 'Close history',
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icons.close,
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: BlocBuilder<ChatCubit, ChatState>(
+                  bloc: cubit,
+                  builder: (context, state) => _ChatHistory(
+                    cubit: cubit,
+                    state: state,
+                    onSelected: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
@@ -203,89 +207,90 @@ final class _ChatScreenState extends State<ChatScreen> {
     },
     builder: (context, state) => LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 600) {
-          return _compactPage(context, state, constraints);
-        }
-        return AppPage(
-          title: 'AI chat',
-          insetBody: false,
-          description:
-              'Ask questions about your documents in ${widget.libraryName}.',
-          actions: [
-            IconButton(
-              key: const Key('chatHistory'),
-              tooltip: 'Conversation history',
-              onPressed: state.canManageConversations ? _history : null,
-              icon: const Icon(Icons.history),
+        final compact = MediaQuery.sizeOf(context).width < 800;
+        final content = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GlacierToolbar(
+              trailing: [
+                GlacierIconButton(
+                  key: const Key('chatHistory'),
+                  label: 'Conversation history',
+                  icon: Icons.history,
+                  onPressed: state.canManageConversations ? _history : null,
+                ),
+                GlacierButton(
+                  key: const Key('newChat'),
+                  label: 'New chat',
+                  icon: Icons.add,
+                  onPressed: state.canManageConversations
+                      ? cubit.newConversation
+                      : null,
+                ),
+              ],
+              children: [
+                Text(
+                  'Conversations',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ],
             ),
-            OutlinedButton.icon(
-              key: const Key('newChat'),
-              onPressed: state.canManageConversations
-                  ? cubit.newConversation
-                  : null,
-              icon: const Icon(Icons.add),
-              label: const Text('New chat'),
+            Expanded(
+              child: AppPage(
+                glacier: true,
+                title: 'AI chat',
+                showHeading: false,
+                insetBody: false,
+                child: LayoutBuilder(
+                  builder: (context, bounds) {
+                    _bindScroll(context);
+                    final wide =
+                        bounds.maxWidth >= 850 &&
+                        MediaQuery.textScalerOf(context).scale(14) < 23;
+                    return Padding(
+                      padding: compact
+                          ? const EdgeInsets.fromLTRB(12, 8, 12, 0)
+                          : const EdgeInsets.all(20),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (wide) ...[
+                            SizedBox(
+                              width: 252,
+                              child: GlacierSurface(
+                                padding: EdgeInsets.zero,
+                                child: _ChatHistory(cubit: cubit, state: state),
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                          ],
+                          Expanded(
+                            child: _transcript(
+                              context,
+                              state,
+                              (bounds.maxHeight - (compact ? 8 : 40)).clamp(
+                                0,
+                                bounds.maxHeight,
+                              ),
+                              compact: compact,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ],
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              _bindScroll(context);
-              final wide =
-                  constraints.maxWidth >= 850 &&
-                  MediaQuery.textScalerOf(context).scale(14) < 23;
-              final transcript = _transcript(
-                context,
-                state,
-                constraints.maxHeight,
-              );
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (wide) ...[
-                    SizedBox(
-                      width: 260,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: _ChatHistory(cubit: cubit, state: state),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                  ],
-                  Expanded(child: transcript),
-                ],
-              );
-            },
-          ),
         );
-      },
-    ),
-  );
-
-  Widget _compactPage(
-    BuildContext context,
-    ChatState state,
-    BoxConstraints constraints,
-  ) => AppPage(
-    title: 'AI chat',
-    insetBody: false,
-    actions: [
-      IconButton(
-        key: const Key('chatHistory'),
-        tooltip: 'Conversation history',
-        onPressed: state.canManageConversations ? _history : null,
-        icon: const Icon(Icons.history),
-      ),
-      IconButton(
-        key: const Key('newChat'),
-        tooltip: 'New chat',
-        onPressed: state.canManageConversations ? cubit.newConversation : null,
-        icon: const Icon(Icons.add),
-      ),
-    ],
-    child: LayoutBuilder(
-      builder: (context, bounds) {
-        _bindScroll(context);
-        return _transcript(context, state, bounds.maxHeight, compact: true);
+        if (constraints.maxHeight < 320) {
+          return SingleChildScrollView(
+            primary: false,
+            child: SizedBox(height: 600, child: content),
+          );
+        }
+        return content;
       },
     ),
   );
@@ -388,18 +393,13 @@ final class _ChatScreenState extends State<ChatScreen> {
                           child: AppNotice(
                             message: state.error!,
                             action: state.uncertain
-                                ? TextButton(
-                                    key: const Key('reconcileChatMessage'),
-                                    onPressed: state.sending
-                                        ? null
-                                        : () => cubit.send(reconcile: true),
-                                    child: const Text('Check sent message'),
-                                  )
-                                : TextButton(
+                                ? null
+                                : GlacierButton(
+                                    label: 'Retry',
+                                    kind: GlacierButtonKind.quiet,
                                     onPressed: state.loading
                                         ? null
                                         : cubit.load,
-                                    child: const Text('Retry'),
                                   ),
                           ),
                         ),
@@ -413,15 +413,16 @@ final class _ChatScreenState extends State<ChatScreen> {
                         ),
                       if (state.messageCursor != null)
                         Center(
-                          child: TextButton.icon(
+                          child: GlacierButton(
+                            kind: GlacierButtonKind.quiet,
                             key: const Key('earlierChatMessages'),
                             onPressed:
                                 state.loadingMessages ||
                                     state.deletingConversationId != null
                                 ? null
                                 : _earlier,
-                            icon: const Icon(Icons.expand_less),
-                            label: const Text('Load earlier messages'),
+                            icon: Icons.expand_less,
+                            label: 'Load earlier messages',
                           ),
                         ),
                       if (state.messages.isEmpty)
@@ -455,21 +456,15 @@ final class _ChatScreenState extends State<ChatScreen> {
                               ])
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
-                                  child: OutlinedButton.icon(
+                                  child: GlacierButton(
+                                    label: prompt,
+                                    icon: Icons.arrow_outward,
                                     onPressed: !state.canManageConversations
                                         ? null
                                         : () {
                                             cubit.editDraft(prompt);
                                             _focus.requestFocus();
                                           },
-                                    icon: const Icon(
-                                      Icons.arrow_outward,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      prompt,
-                                      textAlign: TextAlign.center,
-                                    ),
                                   ),
                                 ),
                             ],
@@ -507,10 +502,11 @@ final class _ChatScreenState extends State<ChatScreen> {
                 constraints: BoxConstraints(maxHeight: height * .15),
                 child: SingleChildScrollView(
                   primary: false,
-                  child: TextButton.icon(
+                  child: GlacierButton(
+                    kind: GlacierButtonKind.quiet,
                     onPressed: _latest,
-                    icon: const Icon(Icons.arrow_downward, size: 18),
-                    label: const Text('Jump to latest'),
+                    icon: Icons.arrow_downward,
+                    label: 'Jump to latest',
                   ),
                 ),
               ),
@@ -525,81 +521,82 @@ final class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (state.hasActiveTurn)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: OutlinedButton.icon(
-                              key: const Key('stopChatReply'),
-                              onPressed:
-                                  state.stopping ||
-                                      state.deletingConversationId != null
-                                  ? null
-                                  : cubit.stop,
-                              icon: const Icon(Icons.stop_circle_outlined),
-                              label: Text(
-                                state.stopping ? 'Stopping…' : 'Stop reply',
-                              ),
-                            ),
-                          ),
+                      if (compact)
+                        GlacierMobileChatComposer(
+                          controller: _composer,
+                          focusNode: _focus,
+                          onChanged: cubit.editDraft,
+                          inputKey: const Key('chatMessage'),
+                          sendKey: const Key('sendChatMessage'),
+                          stopKey: const Key('stopChatReply'),
+                          checkKey: const Key('reconcileChatMessage'),
+                          errorText: state.draftError,
+                          minLines: 1,
+                          stopPending: state.stopping,
+                          readOnly:
+                              state.sending ||
+                              state.uncertain ||
+                              state.deletingConversationId != null ||
+                              state.configuration?.enabled != true,
+                          state: state.uncertain
+                              ? GlacierMobileChatSubmitState.uncertain
+                              : state.hasActiveTurn
+                              ? GlacierMobileChatSubmitState.sending
+                              : state.configuration?.enabled == true &&
+                                    !state.sending
+                              ? GlacierMobileChatSubmitState.ready
+                              : GlacierMobileChatSubmitState.disabled,
+                          onSend: state.canSend ? _send : null,
+                          onStop:
+                              state.stopping ||
+                                  state.deletingConversationId != null
+                              ? null
+                              : cubit.stop,
+                          onCheck: state.uncertain && !state.sending
+                              ? () => cubit.send(reconcile: true)
+                              : null,
+                        )
+                      else
+                        GlacierChatComposer(
+                          controller: _composer,
+                          focusNode: _focus,
+                          onChanged: cubit.editDraft,
+                          inputKey: const Key('chatMessage'),
+                          sendLabel: 'Send message',
+                          sendKey: const Key('sendChatMessage'),
+                          stopKey: const Key('stopChatReply'),
+                          checkKey: const Key('reconcileChatMessage'),
+                          errorText: state.draftError,
+                          minLines: compact ? 1 : 3,
+                          enabled:
+                              !state.sending &&
+                              !state.uncertain &&
+                              state.deletingConversationId == null &&
+                              state.configuration?.enabled == true,
+                          busy: state.hasActiveTurn,
+                          stopPending: state.stopping,
+                          onSend: state.canSend ? _send : null,
+                          onStop:
+                              state.stopping ||
+                                  state.deletingConversationId != null
+                              ? null
+                              : cubit.stop,
+                          onCheck: state.uncertain && !state.sending
+                              ? () => cubit.send(reconcile: true)
+                              : null,
                         ),
-                      CallbackShortcuts(
-                        bindings: {
-                          const SingleActivator(
-                            LogicalKeyboardKey.enter,
-                            control: true,
-                          ): () {
-                            if (state.canSend) unawaited(_send());
-                          },
-                          const SingleActivator(
-                            LogicalKeyboardKey.enter,
-                            meta: true,
-                          ): () {
-                            if (state.canSend) unawaited(_send());
-                          },
-                        },
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                key: const Key('chatMessage'),
-                                controller: _composer,
-                                focusNode: _focus,
-                                enabled:
-                                    !state.sending &&
-                                    !state.uncertain &&
-                                    state.deletingConversationId == null &&
-                                    state.configuration?.enabled == true,
-                                minLines: 1,
-                                maxLines: 5,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                keyboardType: TextInputType.multiline,
-                                decoration: InputDecoration(
-                                  labelText: 'Message',
-                                  hintText: 'Ask about your documents…',
-                                  errorText: state.draftError,
-                                  errorMaxLines: 2,
-                                ),
-                                onChanged: cubit.editDraft,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton.filled(
-                              key: const Key('sendChatMessage'),
-                              tooltip: 'Send message',
-                              onPressed: state.canSend ? _send : null,
-                              icon: const Icon(Icons.arrow_upward_rounded),
-                            ),
-                          ],
+                      if (!compact) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Review answers against their sources.',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        compact ? 'Review answers against their sources.' : 'Review answers against their sources. Ctrl/⌘ + Enter to send.',
-                        style: Theme.of(context).textTheme.bodySmall,
+                      ],
+                      SizedBox(
+                        height: GlacierWorkspaceGeometry.trailingOf(
+                          context,
+                          existingBottom: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -627,30 +624,29 @@ final class _ChatHistory extends StatelessWidget {
     BuildContext context,
     ChatConversation conversation,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showGlacierDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: const Text('Delete conversation?'),
-        content: Text(
-          '“${conversation.title.isEmpty ? 'New conversation' : conversation.title}” and its messages will be permanently deleted. Any active reply will stop. This cannot be undone.',
-        ),
+      builder: (context) => AppDialog(
+        glacier: true,
+        title: 'Delete conversation?',
         actions: [
-          TextButton(
+          GlacierButton(
+            label: 'Keep conversation',
+            kind: GlacierButtonKind.quiet,
             key: const Key('cancelDeleteChatConversation'),
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep conversation'),
           ),
-          FilledButton(
+          GlacierButton(
+            label: 'Delete conversation',
+            kind: GlacierButtonKind.danger,
             key: const Key('confirmDeleteChatConversation'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete conversation'),
           ),
         ],
+
+        child: Text(
+          '“${conversation.title.isEmpty ? 'New conversation' : conversation.title}” and its messages will be permanently deleted. Any active reply will stop. This cannot be undone.',
+        ),
       ),
     );
     if (confirmed == true && context.mounted) {
@@ -712,11 +708,14 @@ final class _ChatHistory extends StatelessWidget {
                   child: ListTile(
                     key: ValueKey('chatConversation-${conversation.id}'),
                     selected: conversation.id == state.selected?.id,
-                    selectedTileColor: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer,
+                    selectedTileColor: GlacierTokens.of(context).glass,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(
+                        color: conversation.id == state.selected?.id
+                            ? GlacierTokens.of(context).edge
+                            : Colors.transparent,
+                      ),
                     ),
                     leading: Icon(
                       conversation.activeTurnId != null
@@ -743,15 +742,15 @@ final class _ChatHistory extends StatelessWidget {
                               semanticsLabel: 'Deleting conversation',
                             ),
                           )
-                        : IconButton(
+                        : GlacierIconButton(
                             key: ValueKey(
                               'deleteChatConversation-${conversation.id}',
                             ),
-                            tooltip: 'Delete conversation',
+                            label: 'Delete conversation',
                             onPressed: state.canManageConversations
                                 ? () => _delete(context, conversation)
                                 : null,
-                            icon: const Icon(Icons.delete_outline, size: 20),
+                            icon: Icons.delete_outline,
                           ),
                     onTap: !state.canManageConversations
                         ? null
@@ -762,7 +761,9 @@ final class _ChatHistory extends StatelessWidget {
                   ),
                 ),
               if (state.conversationCursor != null)
-                TextButton(
+                GlacierButton(
+                  label: 'Load older conversations',
+                  kind: GlacierButtonKind.quiet,
                   key: const Key('olderChatConversations'),
                   onPressed:
                       state.loadingHistory ||
@@ -771,7 +772,6 @@ final class _ChatHistory extends StatelessWidget {
                           state.deletingConversationId != null
                       ? null
                       : () => cubit.load(more: true),
-                  child: const Text('Load older conversations'),
                 ),
             ],
           ),

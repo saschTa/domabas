@@ -106,12 +106,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Account a'), findsWidgets);
+      expect(find.byTooltip(RegExp('Library: Account a')), findsWidgets);
       await navigateWorkspace(tester, 'serverNavigation');
       await connect(tester, 'https://two.example.com');
       expect(find.byKey(const Key('authEmail')), findsOneWidget);
       expect(find.text('https://two.example.com'), findsOneWidget);
-      expect(find.text('Account a'), findsNothing);
+      expect(find.byTooltip(RegExp('Library: Account a')), findsNothing);
       expect(scopesClosed, 1);
       expect(firstAuth.saved, isNotNull);
       expect(secondAuth.saved, isNull);
@@ -119,7 +119,7 @@ void main() {
       await tester.tap(find.byKey(const Key('configureServer')));
       await tester.pumpAndSettle();
       await connect(tester, old.value);
-      expect(find.text('Account a'), findsWidgets);
+      expect(find.byTooltip(RegExp('Library: Account a')), findsWidgets);
       expect(find.byKey(const Key('serverAddress')), findsNothing);
       expect(firstAuth.revoked, isEmpty);
       await tester.pumpWidget(const SizedBox());

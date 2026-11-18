@@ -9,7 +9,7 @@ contain the Bun TypeScript implementations and their tests.
 | [development](development/) | Local app builds, development, Compose, PostgreSQL and native Ollama | `task build:app`, `task build:android`, `task build:ios`, `task build:macos`, `task build:windows`, `task dev`, `task infra:up`, `task compose:up`, `task db:up` |
 | [diagnostics](diagnostics/) | Memory reports and AI model comparisons | `task diagnose:memory`, `task evaluate:ai` |
 | [generation](generation/) | API clients, database adapters, icons, license inventories and generated-code checks | `task generate`, `task generate:db`, `task generate:icons`, `task generate:licenses` |
-| [release](release/) | Version selection, image publication and GitHub releases | `task release` |
+| [release](release/) | Version reservation, native preview packaging, image publication and GitHub releases | `task release:prepare`, `task release:native`, `task release` |
 | [security](security/) | OSV dependency scans and Trivy image scans | `task security:dependencies`, `task security:image` |
 | [shared](shared/) | Process ownership, cancellation, environment loading and repository paths | Imported by other scripts |
 | [testing](testing/) | Database, browser E2E and Compose test harnesses, workflow cleanup and cross-tool tests | `task test:integration`, `task test:temporal`, `task test:api-e2e`, `task test:e2e`, `task test:compose` |

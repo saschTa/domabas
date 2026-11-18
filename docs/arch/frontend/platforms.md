@@ -2,6 +2,10 @@
 
 The Flutter app shares its document screens and domain logic across Android, iOS, web, Linux, macOS and Windows. Each platform directory supplies the host application and build configuration. The domain and presentation layers do not depend on those platform files.
 
+Manual releases build Android preview APKs with development signing and universal
+macOS DMGs without Developer ID signing or notarization. Other native targets
+remain local builds. See [release downloads and limits](../../development/releases.md#native-preview-downloads).
+
 ## API transport
 
 The composition root owns and disposes the HTTP client. The API data source uses the generated Dart client, and the repository maps transport data to domain objects. Generated decoding can fail through runtime casts or debug assertions when fields are missing; the adapter translates those failures into the same domain error. The UI receives a stable error vocabulary rather than generated DTOs or raw server messages.

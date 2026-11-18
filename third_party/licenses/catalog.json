@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "inputs": {
     ".bun-version": "b99b4c7cdf236f59bc9f65d963deaecae3b16a7dad87939cacb9057f7664daee",
-    ".github/workflows/ci.yml": "2cb0488496effc201b3e230521b80fe6e7cde7e38ef95cf26095ae3a54aea6ae",
+    ".github/workflows/ci.yml": "2d3e02270cfb44416ea636e7d48d3e2124c1ceb7b0d5b0c86588304cceca61d8",
     ".tool-versions": "8c739ce12b29ece0f6dd22cad04e0a0e767da9a855e49a6210058f8a538ae217",
     "backend/Dockerfile": "fc80cf75aa26dd2e36af31432d9ecdfab32ae4af0ccf9b78e3265d0eee7ff6e6",
     "backend/go.mod": "f75d19f7f198b003d72768bd0a6acfd5ca7cbf99a1a9e11f802d6947f8d7f6b5",
@@ -45,7 +45,7 @@
     "infra/init/Dockerfile": "5cdf8a0858fa4273b4f035a592e58ed80e063e23cbc73186376c8503f686538f",
     "LICENSE": "c27b7b4e070bcf049bec9e7ead59d4a0fd6f75c3a2e50ceca2991cb5b1ea0e32",
     "package.json": "4bf266a97b24e429e11866e47878112a7a7608946c3164af98b2d948aeaaadb5",
-    "scripts/ci/setup-flutter.ts": "ce097aba484114a20c3db2f816737c8403123528b242425312a1c2fbcf4f8fe2",
+    "scripts/ci/setup-flutter.ts": "84828072c1a6b4f340b78ee7f0f73d53a74573e45ba73d6decc43cd232ed3b5a",
     "scripts/development/native-ollama.ts": "6633f6d439f8e9bffeef724d47d5ead1bc69090453f54b88fbdeb17971185873",
     "scripts/generation/generate-client.ts": "96110259cc616ae5e010c95d0b7ec26753fc9a3650ce4a7ab261932b7062adf9",
     "scripts/security/scan-dependencies.ts": "d35fe5ffc51bbc1437c316420ce4e71df52ef925df675268130e47ac4bef4b3a",
@@ -69,7 +69,7 @@
     "third_party/licenses/native/ml-kit-TERMS.txt": "c4a63622ff74b27e7b2481aba5dfd8480c15bd2f7c01bd963ee55b831e47e7d6",
     "third_party/licenses/sources/dbus/0.7.15/LICENSE": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
     "third_party/licenses/sources/dbus/0.7.15/retrieval.txt": "9fe258600df998cbcbcd4ebdd922fceccf7f387a0d721468f7de158cda513d1c",
-    "third_party/licenses/supplemental.json": "70a1faa2c0d2f0f70100dd6b2ce7bf8bee1a306c03b2d29a881e824757ab6ee0",
+    "third_party/licenses/supplemental.json": "acb553a6d1132f5286f5767a96c7cd12c7a9f17793b79c24a26686d84754043f",
     "third_party/models/NOMIC-LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
     "third_party/models/OLLAMA-LICENSE": "5934ed2ce0d15154bcdb9c85203210abac0da4314af34081e36df4599f90b226",
     "third_party/models/TESSDATA-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -2428,6 +2428,20 @@
       "notices": [
         {
           "title": "https://raw.githubusercontent.com/actions/checkout/3d3c42e5aac5ba805825da76410c181273ba90b1/LICENSE",
+          "textId": "3e855ffa704114a51628ef8f0bf3aeb41728adf9d9070e263bf58aa5640b0eb5"
+        }
+      ]
+    },
+    {
+      "id": "extra:actions/download-artifact",
+      "name": "actions/download-artifact",
+      "version": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "component": "CI tooling",
+      "license": "MIT",
+      "sourceUrl": "https://github.com/actions/download-artifact/tree/9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "notices": [
+        {
+          "title": "https://raw.githubusercontent.com/actions/download-artifact/9000827ccba6bdab643e8b6fd33ac0654aef8333/LICENSE",
           "textId": "3e855ffa704114a51628ef8f0bf3aeb41728adf9d9070e263bf58aa5640b0eb5"
         }
       ]

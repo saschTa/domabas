@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { scanImage } from "../security/scan-image.ts";
 import { type Environment, ROOT, ProcessScope, command, required, runCLI } from "../shared/runtime.ts";
+import { type NativeReleaseAsset, loadNativeArtifacts, nativeReleaseContext } from "./native-artifacts.ts";
 
 export const RELEASE_IMAGES = [
   { name: "backend", dockerfile: "backend/Dockerfile", services: ["backend"] },
@@ -16,6 +17,7 @@ export interface ReleaseImage { name: string; tag: string; reference: string; pl
 export interface GitHubRelease { id: number; draft: boolean; tag_name: string; target_commitish: string; html_url: string }
 interface GitHubTag { name: string; commit: { sha: string } }
 interface GitHubCIRun { id: number; event: string; head_branch: string; head_sha: string; status: string; conclusion: string }
+interface GitHubReleaseAsset { id: number; name: string; size: number; digest: string | null; state: string }
 type ReleaseRequest = (url: string, options: RequestInit) => Promise<Response>;
 export type ReleaseBump = "patch" | "minor" | "major";
 
@@ -113,6 +115,23 @@ export class GitHubReleaseClient {
     await this.verifyTag(release.tag_name);
     await this.api(`/releases/${release.id}`, "PATCH", { body, draft: false, make_latest: "false" });
   }
+
+  async uploadAssets(release: GitHubRelease, assets: readonly NativeReleaseAsset[]): Promise<void> {
+    if (!release.draft) throw new Error("Cannot replace assets of a published release.");
+    await this.verifyTag(release.tag_name);
+    const existing = await this.list<GitHubReleaseAsset>(`/releases/${release.id}/assets`);
+    for (const asset of assets) {
+      const matches = (value: GitHubReleaseAsset) => value.name === asset.name && value.state === "uploaded" && value.size === asset.content.size && value.digest === `sha256:${asset.sha256}`;
+      const previous = existing.filter(value => value.name === asset.name);
+      if (previous.length === 1 && matches(previous[0]!)) continue;
+      for (const value of previous) await this.api(`/releases/assets/${value.id}`, "DELETE");
+      const response = await this.request(`https://uploads.github.com/repos/${this.config.repository}/releases/${release.id}/assets?${new URLSearchParams({ name: asset.name })}`, {
+        method: "POST", redirect: "error", headers: { authorization: `Bearer ${this.token}`, accept: "application/vnd.github+json", "content-type": asset.contentType, "X-GitHub-Api-Version": "2022-11-28" }, body: asset.content,
+      });
+      if (!response.ok) throw new Error(`GitHub upload of ${asset.name} returned HTTP ${response.status}.`);
+      if (!matches(await response.json() as GitHubReleaseAsset)) throw new Error(`GitHub did not verify the uploaded ${asset.name} size and SHA-256 digest.`);
+    }
+  }
 }
 
 export function releaseCompose(source: string, images: readonly ReleaseImage[]): string {
@@ -132,10 +151,12 @@ export function releaseCompose(source: string, images: readonly ReleaseImage[]):
   return Bun.YAML.stringify(document);
 }
 
-export async function publishRelease(config: ReleaseConfiguration, client: GitHubReleaseClient, buildImages: (version: string) => Promise<ReleaseImage[]>, source: string): Promise<string> {
+export async function publishRelease(config: ReleaseConfiguration, client: GitHubReleaseClient, buildImages: (version: string) => Promise<ReleaseImage[]>, source: string, nativeAssets: (version: string) => Promise<NativeReleaseAsset[]>): Promise<string> {
   const mainCI = await client.verifyMainCI();
   const release = await client.prepare();
   if (!release.draft) return release.html_url;
+  const assets = await nativeAssets(release.tag_name);
+  await client.uploadAssets(release, assets);
   const images = await buildImages(release.tag_name);
   for (const image of images) {
     const repository = `ghcr.io/${config.repository.toLowerCase()}-${image.name}`;
@@ -144,7 +165,9 @@ export async function publishRelease(config: ReleaseConfiguration, client: GitHu
   const compose = releaseCompose(source, images);
   const notes = [
     `Built from [${config.sha.slice(0, 12)}](https://github.com/${config.repository}/commit/${config.sha}). Source tests, PostgreSQL integration, generation consistency and OSV dependency scanning passed in [main CI](${mainCI}) and were reused for this release. Built images passed Trivy scanning. Both vulnerability gates block critical findings.`,
-    "Containers target linux/amd64. The web image contains Flutter web; native apps are not distributed. Versions below 1.0.0 are previews. Temporal, browser E2E, live-model and complete Compose smoke tests are separate local validation, not guarantees of this release.",
+    "Containers target linux/amd64. The web image contains Flutter web. Versions below 1.0.0 are previews. Temporal, browser E2E, live-model and complete Compose smoke tests are separate local validation, not guarantees of this release.",
+    ["Native downloads:", ...assets.map(asset => `- [${asset.name}](https://github.com/${config.repository}/releases/download/${release.tag_name}/${asset.name})`)].join("\n"),
+    "Android APKs are release-mode previews signed with an ephemeral development key. Updating between releases may require uninstalling the previous app, which removes its local data. macOS DMGs contain a universal Intel/Apple silicon app and an Applications shortcut. They have no Developer ID signature or Apple notarization; macOS may block opening them. The app retains an ad hoc signature for Apple silicon. These builds have not been device-tested or scanned as native binaries. Verify downloads using SHA256SUMS.txt. Native apps connect to your existing Domabas server.",
     "Version tags are immutable after publication. Failed builds remain drafts; retry the same workflow run to reuse its version. No floating latest image tag is published.",
     ["| Image | Version | Immutable image |", "| --- | --- | --- |", ...images.map(image => `| ${image.name} | \`${image.tag}\` | \`${image.reference}\` |`)].join("\n"),
     ["```sh", ...images.map(image => `docker pull ${image.tag}`), "```"].join("\n"),
@@ -225,6 +248,7 @@ export async function buildReleaseImages(scope: ProcessScope, config: ReleaseCon
 
 if (import.meta.main) await runCLI(async scope => {
   const config = releaseConfiguration(process.env);
+  const nativeContext = nativeReleaseContext(process.env);
   const git = await scope.capture([command("git"), "rev-parse", "HEAD"]);
   if (git.code || git.stdout.trim() !== config.sha) throw new Error("Checkout does not match the release commit.");
   await scope.run([command("bun"), "--no-env-file", "scripts/generation/generate-licenses.ts", "--check"]);
@@ -241,7 +265,10 @@ if (import.meta.main) await runCLI(async scope => {
     await Bun.write(dockerConfig, JSON.stringify(settings));
     await chmod(dockerConfig, 0o600);
     const client = new GitHubReleaseClient(config, token, (url, options) => fetch(url, { ...options, signal: AbortSignal.any([scope.signal, AbortSignal.timeout(120000)]) }));
-    const url = await publishRelease(config, client, version => buildReleaseImages(scope, config, version, env, directory), await Bun.file(join(ROOT, "compose.yaml")).text());
+    const url = await publishRelease(config, client, version => buildReleaseImages(scope, config, version, env, directory), await Bun.file(join(ROOT, "compose.yaml")).text(), version => {
+      if (version !== nativeContext.version) throw new Error("Prepared release version changed before publication.");
+      return loadNativeArtifacts(join(ROOT, ".cache/native-release"), nativeContext);
+    });
     console.log(`Published ${url}`);
   } finally {
     try {

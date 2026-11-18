@@ -164,8 +164,8 @@ Before any version reservation or image build, the publisher queries this
 workflow's successful push/main runs for the exact release SHA. Missing or
 unsuccessful CI blocks publication with a retry instruction. Manual main releases
 skip the test jobs and source scan; release notes link to the reused main run.
-The serialized release job uses GitHub's `queue: max` to retain pending release
-runs.
+The preparation and publication jobs share a serialized GitHub concurrency group
+with `queue: max`. Native builds run between those phases without holding the lock.
 The publisher lists every page of tags and releases, reserves a semantic version
 as a lightweight tag at the exact event commit, and creates a draft. The manual
 `release_bump` input selects patch, minor or major, with patch as the default.
@@ -173,6 +173,18 @@ The entry point validates that choice before publication; PR labels are not read
 Reserved tags survive interrupted builds. Retrying the same commit reuses its
 version regardless of a later increment choice; moved/deleted tags or
 ambiguous versions fail. Published retries do no writes or builds.
+
+`scripts/release/build-native.ts` builds a development-signed Android preview APK
+on Linux and a universal macOS app on macOS. It packages the latter into an
+unsigned DMG using `hdiutil`, after checking both CPU architectures and the app's
+ad hoc signature. Both apps use the reserved semantic version and workflow run
+number. Native jobs have no release write permissions or signing secrets.
+The final job downloads the two exact current-run artifacts; manifests bind their
+names, versions, commit, build number, sizes and hashes. Both must validate before
+uploading the binaries and checksums to the draft or building containers. Upload
+receipts verify the bytes, and draft retries reuse matching assets or replace
+incomplete ones. Publication waits for both native jobs and every container scan
+and push. Native compilation does not establish device or installation behavior.
 
 Docker Buildx builds and loads backend, web, document-processor and init images
 into the runner's Docker engine. The loaded image ID must match either the

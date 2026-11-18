@@ -81,14 +81,24 @@ tasks:
     cmds: [bun --no-env-file scripts/ci/check-results.ts]
 
   ci:flutter:
-    desc: Install and verify the pinned Linux x64 Flutter SDK for CI
+    desc: Install and verify the pinned Linux x64 or macOS arm64 Flutter SDK for CI
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/ci/setup-flutter.ts]
 
   release:
-    desc: Publish versioned GHCR containers and a GitHub release from a manual main workflow run
+    desc: Publish native downloads and versioned GHCR containers from a manual main workflow run
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/release/release.ts]
+
+  release:prepare:
+    desc: Verify main CI and reserve the shared native/container release version
+    deps: [setup:tooling]
+    cmds: [bun --no-env-file scripts/release/prepare-release.ts]
+
+  release:native:
+    desc: Build a preview Android APK or unsigned universal macOS DMG for the prepared release
+    deps: [setup:tooling]
+    cmds: ['bun --no-env-file scripts/release/build-native.ts {{.CLI_ARGS}}']
 
   security:dependencies:
     desc: Scan locked Go, Dart and Bun dependencies with pinned OSV-Scanner

@@ -2315,6 +2315,17 @@
     "files": []
   },
   {
+    "id": "extra:actions/download-artifact",
+    "name": "actions/download-artifact",
+    "version": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+    "component": "CI tooling",
+    "sourceUrl": "https://github.com/actions/download-artifact/tree/9000827ccba6bdab643e8b6fd33ac0654aef8333",
+    "urls": [
+      "https://raw.githubusercontent.com/actions/download-artifact/9000827ccba6bdab643e8b6fd33ac0654aef8333/LICENSE"
+    ],
+    "files": []
+  },
+  {
     "id": "extra:actions/upload-artifact",
     "name": "actions/upload-artifact",
     "version": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",

@@ -136,7 +136,9 @@ test("the split fast suites retain every task check command", async () => {
 test("manual main releases schedule only publication and reuse checks from the main push", async () => {
   const workflow = Bun.YAML.parse(await Bun.file(join(ROOT, ".github/workflows/ci.yml")).text()) as { jobs: Record<string, { if: string }> };
   const github = { event_name: "workflow_dispatch", ref: "refs/heads/main" };
-  const needs = { changes: { result: "skipped", outputs: {} } };
+  const needs = { changes: { result: "skipped", outputs: {} }, release_prepare: { outputs: { publish: "true" } } };
   const selected = Object.entries(workflow.jobs).filter(([, job]) => new Function("github", "needs", "always", `return (${job.if});`)(github, needs, () => true)).map(([name]) => name);
-  expect(selected).toEqual(["release"]);
+  expect(selected).toEqual(["release_prepare", "release_native", "release"]);
+  needs.release_prepare.outputs.publish = "false";
+  for (const name of ["release_native", "release"]) expect(new Function("needs", `return (${workflow.jobs[name]!.if});`)(needs)).toBe(false);
 });

@@ -9,36 +9,7 @@ arguments; there is no service locator or dependency injection framework. See
 
 ## Document construction
 
-The `DocumentContainer` borrows the shared PostgreSQL `PostgresDatabase` capability and
-a clock. It constructs its document data source, repository, service and Temporal
-activities without opening a connection. The source receives only `QueryRow`,
-`Begin` and `BeginTx`; it cannot close or migrate the pool through that contract.
-The repository accepts a consumer-owned `DocumentSource` port using persistence records.
-The service accepts its domain repository port using core values.
-
-| Container operation | Responsibility |
-| --- | --- |
-| `NewDocumentContainer(ctx, database, authority, options, now)` | Construct document dependencies using borrowed storage, an identity service port, configuration and clock |
-| `Service()` | Return the document service for injection into consumers |
-| `RegisterWorker(registry, invoices)` | Register ingestion workflows and activities with an injected invoice service port |
-| `RegisterAIWorker(registry, invoices)` | Register the separate document AI workflow and activities |
-| `RegisterThumbnailWorker(registry)` | Register thumbnail workflow and activities |
-| `Close()`, `DrainAI()`, `DrainThumbnails()` | Cancel and drain the resources owned by each worker family |
-
-Root constructs `presentation/document/handlers.DocumentHandler` and injects the service
-through the handler's consumer-owned interface. Temporal activities in
-`data/document/temporal` receive the same service through their
-`DocumentReader` port. Neither consumer receives a repository or container.
-Generated HTTP types stay in presentation. Deterministic workflow definitions
-and their wire values live in `domain/document/workflows`; core models,
-interfaces and services remain independent of the SDK. Workflow files use
-`.workflow.go`, and their stable registration names are separate from Go names.
-
-`RegisterWorker` accepts `worker.Registry`, which permits registration without
-worker start or stop. It registers workflows and individual activity methods
-under explicit versioned names once, with duplicate registration checks enabled.
-It does not register the activity struct, whose exported `Close` method is a
-lifecycle operation.
+The document container borrows the database and constructs document services, storage, the processor client and the inference adapter. Root bootstrap passes those services to the HTTP handlers and native pipelines. Workers call the same service ports as other clients of the domain.
 
 ## Identity construction
 
@@ -54,20 +25,7 @@ for session, permission and transaction rules.
 
 ## Ownership and shutdown
 
-Root opens and migrates PostgreSQL, opens the Temporal client, creates domain
-containers and workers, and passes each activity drain hook to its worker
-lifecycle. Root supplies readiness, fatal-error supervision and HTTP
-composition. Domain containers do not import sibling containers or construct
-another domain's adapters.
-
-The startup context bounds connection, migration and container initialization.
-The document container receives it for initialization; activity lifetime belongs
-to the running application. Normal shutdown stops HTTP before the workers.
-Startup failure, normal close and fatal failure share each worker's stop/drain
-owner. Workers stop, activities cancel and drain, then Temporal and PostgreSQL
-close. A worker
-SDK timeout does not replace the activity drain barrier. See
-[boundaries and lifecycle](boundaries.md).
+Root opens and migrates PostgreSQL, constructs the domain containers and starts the realtime listener and native executor. Shutdown cancels discovery and joins running jobs before closing shared resources.
 
 ## Collaboration and enforcement
 

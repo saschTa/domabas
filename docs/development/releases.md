@@ -19,7 +19,7 @@ ghcr.io/<owner>/<repository>-init:v0.0.1
 ```
 
 Owner and repository names are lowercased for GHCR. Git tags use the same `v`
-prefix. Third-party PostgreSQL, Temporal and Ollama images keep their existing
+prefix. Third-party PostgreSQL and Ollama images keep their existing
 pins and are not republished.
 
 ## Selecting the next version
@@ -56,15 +56,9 @@ Versions below 1.0.0 are marked as GitHub prereleases. Moving to 1.0.0 should be
 an intentional support decision. There is no floating `latest` container tag;
 use the explicit version or digest from the release notes.
 
-The [quick-start Compose file](../../compose.quickstart.yaml) and
-[TrueNAS examples](../../truenas/README.md) currently pin the published
-[v0.0.10 images](https://github.com/saschTa/domabas/releases/tag/v0.0.10).
-These pins are updated deliberately, not by each release job. Update all four
-Domabas components together using the chosen release's tags and digests, verify
-anonymous pulls, and update the versions documented in the README and hosting
-guides. Keep the quick-start service configuration aligned with the root
-`compose.yaml`, replacing its build definitions with image references and
-`linux/amd64` platforms.
+The [quick-start Compose file](../../compose.quickstart.yaml) currently pins the published v0.0.10 images. Update its four Domabas image references together when promoting a release and verify anonymous pulls. The generic Compose in each release’s notes comes from the root `compose.yaml`.
+
+Release packaging also attaches standalone `compose.cpu.yaml`, `compose.cuda.yaml` and `compose.rocm.yaml` assets for TrueNAS. It substitutes that release’s four immutable image references into the [source templates](../../truenas/README.md), preserving the editable anchors and hardware configuration. The source templates use local tags for deployments built from the checkout.
 
 ## Publication and retries
 
@@ -221,7 +215,7 @@ Coverage depends on scanner support and package metadata. Trivy can detect Go
 modules embedded in binaries, but custom statically linked OCR code and compiled
 Flutter web dependencies are not comprehensively inventoried by this scan. OSV
 remains required for source dependencies. Third-party Compose service images
-(PostgreSQL, Temporal, Ollama and their UI) are not built here and are outside this
+(PostgreSQL and Ollama) are not built here and are outside this
 four-image gate. Changes to those pins still need separate review. Future
 scheduled scans of published digests can detect advisories disclosed between
 releases; this workflow does not yet schedule them.
@@ -248,9 +242,7 @@ releases; this workflow does not yet schedule them.
    repository is linked and its workflow can write each package. See
    [GitHub's registry permissions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 7. From a logged-out Docker configuration, pull all four release images and run
-   a clean Compose install. Keep the quick-start and TrueNAS examples aligned
-   with the published image versions and digests. When using a fork, update their
-   image references to that repository's matching image digests. Verify hosted
+   a clean Compose install. Check each attached TrueNAS template against the release image digests. Refresh the quick-start pins when promoting the release. Verify hosted
    checks, publication, anonymous pulls and installation before advertising the
    release.
 

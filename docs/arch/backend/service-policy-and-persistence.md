@@ -138,8 +138,8 @@ nonmutating; expected revision and capacity facts guard settings writes.
 
 Outbox intent, accepted documents, related links and counters remain in their
 existing transactions. Do not split duplicate recovery, file publication or
-unknown Temporal execution ownership merely to move a policy function. Preserve
-idempotency, generation/OCR/attempt fences, stable registration names, payloads,
+active execution ownership merely to move a policy function. Preserve
+idempotency, generation/OCR/attempt fences, durable job identities,
 command order and retention horizons.
 
 ## Rules that remain in adapters

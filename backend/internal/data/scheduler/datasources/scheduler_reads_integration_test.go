@@ -102,7 +102,7 @@ func TestSchedulerSettingsProjectsNewProviderWithoutWrites(t *testing.T) {
 	f.exec(`UPDATE document_processing_configuration SET scheduler_provider='openai',scheduler_base_url='https://provider.example.test/other'`)
 	id := f.source.ResourceID("https://provider.example.test")
 	projected, err := f.service.Settings(t.Context(), actor)
-	if err != nil || projected.Revision != before.Revision || len(projected.Resources) != 3 {
+	if err != nil || projected.Revision != before.Revision || len(projected.Resources) != len(before.Resources)+1 {
 		t.Fatalf("provider projection: %+v %v", projected, err)
 	}
 	index := slices.IndexFunc(projected.Resources, func(v m.SchedulerResource) bool { return v.ID == id })
@@ -110,12 +110,12 @@ func TestSchedulerSettingsProjectsNewProviderWithoutWrites(t *testing.T) {
 		t.Fatalf("provider defaults: %+v", projected.Resources)
 	}
 	for _, pipeline := range projected.Pipelines {
-		if (pipeline.ID == "document_ai" || pipeline.ID == "chat") && !slices.Contains(pipeline.ResourceIDs, id) {
+		if (pipeline.ID == "invoice" || pipeline.ID == "tags" || pipeline.ID == "chat") && !slices.Contains(pipeline.ResourceIDs, id) {
 			t.Fatalf("provider not shared by pipelines: %+v", projected.Pipelines)
 		}
 	}
 	var count int
-	if err := f.connection.QueryRow(t.Context(), "SELECT count(*) FROM scheduler_resources").Scan(&count); err != nil || count != 2 {
+	if err := f.connection.QueryRow(t.Context(), "SELECT count(*) FROM scheduler_resources").Scan(&count); err != nil || count != len(before.Resources)-1 {
 		t.Fatalf("GET wrote provider resources: %d %v", count, err)
 	}
 	update := m.SchedulerSettingsUpdate{ExpectedRevision: projected.Revision, Resources: []m.SchedulerResourceUpdate{{ID: id, Limit: 7}}}
@@ -147,7 +147,7 @@ func TestSchedulerSettingsRejectsVanishedProjectionAndCapacityOverflow(t *testin
 	if _, err := f.service.UpdateSettings(t.Context(), actor, update); !errors.As(err, &invalid) {
 		t.Fatalf("vanished provider materialized: %v", err)
 	}
-	for i := range 254 {
+	for i := range 256 - len(projected.Resources) + 1 {
 		origin := fmt.Sprintf("https://provider-%d.example.test", i)
 		f.exec(`INSERT INTO scheduler_resources(id,label,origin,concurrency_limit) VALUES($1,$2,$2,2)`, f.source.ResourceID(origin), origin)
 	}
@@ -157,7 +157,7 @@ func TestSchedulerSettingsRejectsVanishedProjectionAndCapacityOverflow(t *testin
 	}
 	var count int
 	var revision int64
-	if err := f.connection.QueryRow(t.Context(), "SELECT revision,(SELECT count(*) FROM scheduler_resources) FROM scheduler_settings").Scan(&revision, &count); err != nil || count != 256 || revision != projected.Revision {
+	if err := f.connection.QueryRow(t.Context(), "SELECT revision,(SELECT count(*) FROM scheduler_resources) FROM scheduler_settings").Scan(&revision, &count); err != nil || count != 255 || revision != projected.Revision {
 		t.Fatalf("invalid save committed partial state: revision %d resources %d %v", revision, count, err)
 	}
 }

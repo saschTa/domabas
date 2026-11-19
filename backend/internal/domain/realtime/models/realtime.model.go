@@ -5,6 +5,7 @@ import identity "github.com/domabas/domabas/backend/internal/domain/identity/mod
 type RealtimeSubject struct {
 	UserID, AccountID, SessionDigest string
 	CredentialRevision               int64
+	WorkloadHints                    bool
 }
 
 type RealtimeSignal struct{ Kind, AccountID, UserID string }
@@ -35,5 +36,6 @@ const (
 	Activity      RealtimeTopic = "activity"
 	Identity      RealtimeTopic = "identity"
 	Members       RealtimeTopic = "members"
+	Workload      RealtimeTopic = "workload"
 	SystemUsers   RealtimeTopic = "system_users"
 )

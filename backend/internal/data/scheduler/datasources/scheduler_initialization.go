@@ -57,7 +57,7 @@ func (s *SchedulerDataSource) Initialize(ctx context.Context) error {
 		rows, err := tx.Query(ctx, `SELECT e.workflow_id,'document_ingestion','', '',j.configuration,NOT e.split_pipeline
  FROM document_processing_executions e LEFT JOIN document_processing_jobs j ON j.id=e.job_id WHERE e.closed_at IS NULL
  UNION ALL SELECT workflow_id,'document_ai','','',configuration,false FROM document_ai_jobs WHERE admitted_at IS NOT NULL AND closed_at IS NULL
- UNION ALL SELECT workflow_id,'document_thumbnail','','',NULL::jsonb,false FROM document_thumbnail_jobs WHERE admitted_at IS NOT NULL AND closed_at IS NULL
+ UNION ALL SELECT workflow_id,'document_thumbnail','','',NULL::jsonb,false FROM document_thumbnail_jobs WHERE task_queue<>'ingestion-preview' AND admitted_at IS NOT NULL AND closed_at IS NULL
  UNION ALL SELECT workflow_id,'email','','',NULL::jsonb,false FROM email_executions WHERE closed_at IS NULL
  UNION ALL SELECT 'domabas-paperless-'||id::text,'paperless','','',NULL::jsonb,false FROM paperless_runs WHERE first_start_at IS NOT NULL AND NOT execution_closed
  UNION ALL SELECT workflow_id,'chat',provider,base_url,NULL::jsonb,false FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed`)
@@ -93,8 +93,15 @@ func (s *SchedulerDataSource) Initialize(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if err = putSchedulerRequest(ctx, tx, execution.WorkflowID, execution.Pipeline, resources, true); err != nil {
+			if err = putSchedulerRequest(ctx, tx, execution.WorkflowID, execution.Pipeline, []string{"pipeline:" + execution.Pipeline, "worker"}, true); err != nil {
 				return err
+			}
+			for _, resource := range resources {
+				if resource != "worker" {
+					if _, err = tx.Exec(ctx, "INSERT INTO scheduler_job_providers VALUES($1,$2) ON CONFLICT DO NOTHING", execution.WorkflowID, resource); err != nil {
+						return err
+					}
+				}
 			}
 			if blocksAdmission {
 				if _, err = tx.Exec(ctx, `UPDATE scheduler_requests SET blocks_admission=true WHERE workflow_id=$1`, execution.WorkflowID); err != nil {

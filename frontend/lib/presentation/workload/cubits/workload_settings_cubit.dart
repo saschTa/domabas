@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 
 import '../../../domain/workload/interfaces/workload_settings_repository.dart';
 import '../../../domain/workload/models/workload_settings.dart';
+import '../../../scheduling/automatic_refresh.dart';
 
 final class WorkloadSettingsState {
   WorkloadSettingsState({
@@ -44,17 +45,72 @@ final class WorkloadSettingsCubit extends Cubit<WorkloadSettingsState> {
   final WorkloadSettingsRepository? _repository;
   final bool allowed;
   bool _active = false;
+  Completer<void>? _sampleCancel;
   int _epoch = 0;
   Completer<void>? _cancel;
+
+  late final _refresh = AutomaticRefresh(
+    read: () => state.settings == null ? load() : sampleUsage(),
+    busy: () => state.loading || state.saving,
+  );
+
+  void invalidateUsage() {
+    if (_active) _refresh.invalidate();
+  }
 
   void setActive(bool value) {
     if (isClosed || !allowed || value == _active) return;
     _active = value;
+    _refresh.setActive(value);
     if (value) {
       unawaited(load());
-    } else if (state.loading) {
-      _stop();
-      emit(_state());
+    } else {
+      _cancelSample();
+      if (state.loading) {
+        _stop();
+        emit(_state());
+      }
+    }
+  }
+
+  Future<void> sampleUsage() async {
+    if (!_active ||
+        isClosed ||
+        _sampleCancel != null ||
+        state.loading ||
+        state.saving ||
+        state.requiresRefresh ||
+        state.settings == null) {
+      return;
+    }
+    final epoch = _epoch;
+    final cancel = _sampleCancel = Completer<void>();
+    try {
+      final fresh = await _repository!.settings(cancel: cancel.future);
+      if (!_active || isClosed || epoch != _epoch) return;
+      if (fresh.revision < state.settings!.revision) return;
+      if (fresh.revision != state.settings!.revision && state.dirty) {
+        emit(
+          _state(
+            error: const WorkloadSettingsFailure('conflict').message,
+            requiresRefresh: true,
+          ),
+        );
+        return;
+      }
+      emit(
+        WorkloadSettingsState(
+          settings: fresh,
+          drafts: state.dirty ? state.drafts : _savedDrafts(fresh),
+          draftGeneration: state.draftGeneration,
+        ),
+      );
+    } on WorkloadSettingsFailure catch (failure) {
+      if (_active && !isClosed && epoch == _epoch) {
+        emit(_state(error: failure.message));
+      }
+    } finally {
+      if (identical(_sampleCancel, cancel)) _sampleCancel = null;
     }
   }
 
@@ -178,7 +234,14 @@ final class WorkloadSettingsCubit extends Cubit<WorkloadSettingsState> {
     error: error,
   );
 
+  void _cancelSample() {
+    final cancel = _sampleCancel;
+    _sampleCancel = null;
+    if (cancel != null && !cancel.isCompleted) cancel.complete();
+  }
+
   void _stop() {
+    _cancelSample();
     _epoch++;
     if (_cancel case final cancel? when !cancel.isCompleted) cancel.complete();
   }
@@ -186,6 +249,7 @@ final class WorkloadSettingsCubit extends Cubit<WorkloadSettingsState> {
   @override
   Future<void> close() {
     _active = false;
+    _refresh.dispose();
     _stop();
     return super.close();
   }

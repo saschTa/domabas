@@ -4,7 +4,6 @@ COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/workflow ./cmd/workflow && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/adopt-legacy ./cmd/adopt-legacy && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/bootstrap-admin ./cmd/bootstrap-admin
 

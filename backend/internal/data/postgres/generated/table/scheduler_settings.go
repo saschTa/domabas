@@ -15,6 +15,7 @@ type schedulerSettingsTable struct {
 	Revision        postgres.ColumnInteger
 	OllamaQueueSize postgres.ColumnInteger
 	Initialized     postgres.ColumnBool
+	ExecutorEpoch   postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -56,9 +57,10 @@ func newSchedulerSettingsTableImpl(schemaName, tableName, alias string) schedule
 		RevisionColumn        = postgres.IntegerColumn("revision")
 		OllamaQueueSizeColumn = postgres.IntegerColumn("ollama_queue_size")
 		InitializedColumn     = postgres.BoolColumn("initialized")
-		allColumns            = postgres.ColumnList{SingletonColumn, RevisionColumn, OllamaQueueSizeColumn, InitializedColumn}
-		mutableColumns        = postgres.ColumnList{RevisionColumn, OllamaQueueSizeColumn, InitializedColumn}
-		defaultColumns        = postgres.ColumnList{SingletonColumn, RevisionColumn, OllamaQueueSizeColumn, InitializedColumn}
+		ExecutorEpochColumn   = postgres.IntegerColumn("executor_epoch")
+		allColumns            = postgres.ColumnList{SingletonColumn, RevisionColumn, OllamaQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
+		mutableColumns        = postgres.ColumnList{RevisionColumn, OllamaQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
+		defaultColumns        = postgres.ColumnList{SingletonColumn, RevisionColumn, OllamaQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
 	)
 
 	return schedulerSettingsTable{
@@ -68,6 +70,7 @@ func newSchedulerSettingsTableImpl(schemaName, tableName, alias string) schedule
 		Revision:        RevisionColumn,
 		OllamaQueueSize: OllamaQueueSizeColumn,
 		Initialized:     InitializedColumn,
+		ExecutorEpoch:   ExecutorEpochColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

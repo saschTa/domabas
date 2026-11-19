@@ -19,6 +19,7 @@ enum RealtimeTopic {
   identity._(r'identity'),
   members._(r'members'),
   systemUsers._(r'system_users'),
+  workload._(r'workload'),
   ;
 
   const RealtimeTopic._(this._value);
@@ -69,6 +70,7 @@ class RealtimeTopicTypeTransformer {
         case r'identity': return RealtimeTopic.identity;
         case r'members': return RealtimeTopic.members;
         case r'system_users': return RealtimeTopic.systemUsers;
+        case r'workload': return RealtimeTopic.workload;
         default:
           if (!allowNull) {
             throw ArgumentError('Unknown enum value to decode: $data');

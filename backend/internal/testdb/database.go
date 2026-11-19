@@ -1,4 +1,4 @@
-//go:build integration || e2e || temporal
+//go:build integration || e2e || jobs
 
 package testdb
 

@@ -9,6 +9,7 @@ enum RealtimeTopic {
   identity,
   members,
   systemUsers,
+  workload,
 }
 
 enum RealtimeEventKind { ready, invalidate, resync, heartbeat, disconnected }

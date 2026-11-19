@@ -16,7 +16,7 @@ test("units need no infrastructure and full local validation retains integration
       expect(calls).toHaveLength(2);
     } else {
       expect(calls).toContainEqual({ args: ["bun", "--no-env-file", "scripts/testing/backend-database-tests.ts", "integration", "--include-units"], cwd: undefined });
-      expect(calls).toContainEqual({ args: ["bun", "--no-env-file", "scripts/testing/backend-database-tests.ts", "temporal"], cwd: undefined });
+      expect(calls).toContainEqual({ args: ["bun", "--no-env-file", "scripts/testing/backend-database-tests.ts", "jobs"], cwd: undefined });
       expect(calls.some(call => call.args[0] === "go" && call.args.includes("./..."))).toBe(false);
     }
     const commands = calls.map(call => call.args.join(" "));

@@ -17,8 +17,7 @@ All images are 1440 × 1040 browser captures. They do not show native apps.
 ## Prepare and capture
 
 Keep the product tour short and focused on populated feature views. Use an
-isolated application instance with a disposable database schema, unique Temporal
-queues and separate storage/key directories. Upload fictional documents through
+isolated application instance with a disposable database schema and separate storage/key directories. Upload fictional documents through
 the real API and wait for processing to finish. Use Playwright MCP to inspect and
 capture the running app. Do not mock UI state or retouch images.
 

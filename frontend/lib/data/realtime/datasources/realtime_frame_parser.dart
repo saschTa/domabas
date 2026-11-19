@@ -11,6 +11,7 @@ const realtimeTopics = {
   'identity',
   'members',
   'system_users',
+  'workload',
 };
 
 Map<String, Object> parseRealtimeFrame(Object? message) {

@@ -13,6 +13,7 @@ class WorkloadPipeline {
     required this.id,
     required this.label,
     this.resourceIds = const [],
+    this.activeSlots = const {},
   });
 
   String id;
@@ -21,27 +22,32 @@ class WorkloadPipeline {
 
   List<String> resourceIds;
 
+  Map<String, int> activeSlots;
+
   @override
   bool operator ==(Object other) => identical(this, other) || other is WorkloadPipeline &&
     other.id == id &&
     other.label == label &&
-    _deepEquality.equals(other.resourceIds, resourceIds);
+    _deepEquality.equals(other.resourceIds, resourceIds) &&
+    _deepEquality.equals(other.activeSlots, activeSlots);
 
   @override
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (id.hashCode) +
     (label.hashCode) +
-    (resourceIds.hashCode);
+    (resourceIds.hashCode) +
+    (activeSlots.hashCode);
 
   @override
-  String toString() => 'WorkloadPipeline[id=$id, label=$label, resourceIds=$resourceIds]';
+  String toString() => 'WorkloadPipeline[id=$id, label=$label, resourceIds=$resourceIds, activeSlots=$activeSlots]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'id'] = this.id;
       json[r'label'] = this.label;
       json[r'resourceIds'] = this.resourceIds;
+      json[r'activeSlots'] = this.activeSlots;
     return json;
   }
 
@@ -66,6 +72,7 @@ class WorkloadPipeline {
         resourceIds: json[r'resourceIds'] is Iterable
             ? (json[r'resourceIds'] as Iterable).cast<String>().toList(growable: false)
             : const [],
+        activeSlots: mapCastOfType<String, int>(json, r'activeSlots') ?? const {},
       );
     }
     return null;

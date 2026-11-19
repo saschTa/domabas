@@ -42,6 +42,12 @@ query parameters are `appearance=dark`, `textScale=2`, `motion=reduced` and
 `opaque=true`.
 The regular catalog remains the default route.
 
+Open the complete workload settings screen in the
+[desktop workspace](http://127.0.0.1:7358/?case=desktop-admin-inline) or the
+[phone workspace](http://127.0.0.1:7358/?case=mobile-workload-ready). Select
+a pipeline to see its resource usage. Move the ingestion slider to change the
+sample load, or edit and save a limit to see the diagram reflect the new capacity.
+
 The catalog test checks unique identities and renders every registered case in
 both themes at wide, short and compact sizes, plus enlarged text. These checks
 detect Flutter exceptions and layout overflow; they supplement visual and

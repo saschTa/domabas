@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -52,8 +51,6 @@ func run(logger *slog.Logger) error {
 		if !errors.Is(err, http.ErrServerClosed) {
 			cause = err
 		}
-	case err := <-app.FatalErrors():
-		cause = fmt.Errorf("Temporal worker failed: %w", err)
 	case <-ctx.Done():
 	}
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)

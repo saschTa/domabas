@@ -261,31 +261,6 @@ final class _DocumentProcessingSettingsScreenState
                     ),
                   ),
                   const SizedBox(height: 20),
-                  AppSurface(
-                    glacier: true,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const AppSectionHeader(
-                          title: 'Temporal dashboard',
-                          description: 'Open the internal workflow dashboard in a separate browser window.',
-                        ),
-                        const SizedBox(height: 16),
-                        if (config.dashboardUrl != null)
-                          GlacierButton(
-                            key: const Key('openTemporalDashboard'),
-                            onPressed: cubit.openDashboard,
-                            label: 'Open Temporal dashboard',
-                            icon: Icons.open_in_new,
-                            kind: GlacierButtonKind.secondary,
-                          )
-                        else
-                          const Text(
-                            'The internal dashboard link has not been configured for this installation.',
-                          ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 24),
                   const AppSectionHeader(
                     title: 'Installation reindex requests',

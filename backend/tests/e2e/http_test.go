@@ -25,9 +25,6 @@ import (
 )
 
 func TestAuthenticatedLibrariesAndPermissionsPersistAcrossRestart(t *testing.T) {
-	if os.Getenv("TEMPORAL_ADDRESS") == "" || os.Getenv("TEMPORAL_NAMESPACE") == "" {
-		t.Fatal("TEMPORAL_ADDRESS and TEMPORAL_NAMESPACE are required for API E2E tests")
-	}
 	databaseURL := testdb.New(t)
 	serverEnvironment := newServerEnvironment(t, databaseURL)
 	name := "server"
@@ -677,9 +674,6 @@ func newServerEnvironment(t *testing.T, databaseURL string) []string {
 		t.Fatal("DOCUMENT_PROCESSOR_URL is required for API E2E tests against the real document processor")
 	}
 	root := t.TempDir()
-	queue := "domabas-api-test-" + uuid.NewString()
-	t.Cleanup(func() { cleanupOwnedIngestion(t, databaseURL, queue) })
-	t.Cleanup(func() { cleanupOwnedPaperless(t, databaseURL, queue) })
 	return []string{
 		"LLM_CREDENTIAL_KEY=",
 		"LLM_CREDENTIAL_KEY_FILE=" + filepath.Join(root, "secrets", "llm.key"),
@@ -690,7 +684,6 @@ func newServerEnvironment(t *testing.T, databaseURL string) []string {
 		"PAPERLESS_CREDENTIAL_KEY_FILE=" + filepath.Join(root, "secrets", "paperless.key"),
 		"DOCUMENT_INGESTION_ROOT=" + filepath.Join(root, "ingestion"),
 		"DOCUMENT_STORAGE_ROOT=" + filepath.Join(root, "documents"),
-		"TEMPORAL_TASK_QUEUE=" + queue,
 	}
 }
 
@@ -705,7 +698,7 @@ func startServer(t *testing.T, binary, databaseURL string, environment []string)
 	command := exec.Command(binary)
 	for _, variable := range os.Environ() {
 		key := strings.SplitN(variable, "=", 2)[0]
-		if key != "DATABASE_URL" && key != "HTTP_ADDR" && key != "DOMABAS_ENV_FILE" && key != "CORS_ORIGINS" && key != "TEMPORAL_TASK_QUEUE" && key != "DOCUMENT_INGESTION_ROOT" && key != "DOCUMENT_STORAGE_ROOT" && key != "PAPERLESS_CREDENTIAL_KEY" && key != "PAPERLESS_CREDENTIAL_KEY_FILE" && key != "LLM_CREDENTIAL_KEY" && key != "LLM_CREDENTIAL_KEY_FILE" {
+		if key != "DATABASE_URL" && key != "HTTP_ADDR" && key != "DOMABAS_ENV_FILE" && key != "CORS_ORIGINS" && key != "DOCUMENT_INGESTION_ROOT" && key != "DOCUMENT_STORAGE_ROOT" && key != "PAPERLESS_CREDENTIAL_KEY" && key != "PAPERLESS_CREDENTIAL_KEY_FILE" && key != "LLM_CREDENTIAL_KEY" && key != "LLM_CREDENTIAL_KEY_FILE" {
 			command.Env = append(command.Env, variable)
 		}
 	}

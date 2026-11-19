@@ -204,7 +204,7 @@ func TestDurableJobsEncryptIsolateCheckpointAndSerializeAdmission(t *testing.T) 
 	exec("UPDATE paperless_runs SET next_check_at=clock_timestamp()-interval '1 hour' WHERE id=$1", id)
 	next, err := jobs.Next(t.Context())
 	if err != nil || next == nil || next.ID != id {
-		t.Fatal("released before Temporal closure", next, err)
+		t.Fatal("released before execution closure", next, err)
 	}
 	if err := jobs.Closed(t.Context(), id); err != nil {
 		t.Fatal(err)

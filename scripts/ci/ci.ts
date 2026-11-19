@@ -16,7 +16,7 @@ export async function runCITests(suite: ReturnType<typeof ciSuite>, run: (args: 
     await run(["go", "test", "-race", "-count=1", "./..."], join(ROOT, "backend"));
   } else {
     await run(["bun", "--no-env-file", "scripts/testing/backend-database-tests.ts", "integration", "--include-units"]);
-    await run(["bun", "--no-env-file", "scripts/testing/backend-database-tests.ts", "temporal"]);
+    await run(["bun", "--no-env-file", "scripts/testing/backend-database-tests.ts", "jobs"]);
   }
   await run(["flutter", "test", "--no-pub"], join(ROOT, "frontend"));
   if (suite === "full") {
@@ -81,7 +81,7 @@ if (import.meta.main) await runCLI(async scope => {
   command("java");
   const dockerHost = await dockerTestHost(scope);
   const project = `domabas-ci-${crypto.randomUUID().replaceAll("-", "")}`;
-  Object.assign(env, { COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", TEMPORAL_PORT: "0", WEB_PORT: "0", TEMPORAL_UI_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", LLM_OLLAMA_PORT: "0" });
+  Object.assign(env, { COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", WEB_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", LLM_OLLAMA_PORT: "0" });
   await withCleanup(async () => {
     await infraUp(scope, env);
     const database = new URL(`postgres://${dockerHost}/domabas?sslmode=disable`);
@@ -90,8 +90,6 @@ if (import.meta.main) await runCLI(async scope => {
     database.pathname = `/${required(env, "POSTGRES_DB")}`;
     database.port = String(await publishedPort(scope, "postgres", 5432, env));
     env.DATABASE_URL = env.TEST_DATABASE_URL = database.toString();
-    env.TEMPORAL_ADDRESS = `${dockerHost}:${await publishedPort(scope, "temporal", 7233, env)}`;
-    env.TEMPORAL_UI_URL = `http://${dockerHost}:${await publishedPort(scope, "temporal-ui", 8080, env)}`;
     env.DOCUMENT_PROCESSOR_URL = `http://${dockerHost}:${await publishedPort(scope, "document-processor", 8091, env)}`;
     env.LLM_OLLAMA_URL = `http://${dockerHost}:${await publishedPort(scope, "ollama", 11434, env)}`;
     const ports = new Set<string>();

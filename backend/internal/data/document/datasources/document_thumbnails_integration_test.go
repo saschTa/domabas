@@ -248,7 +248,7 @@ func TestThumbnailAcceptedIntentSurvivesReindexAndUsesWorkerOnly(t *testing.T) {
 	if _, err := f.source.ThumbnailWorkRecord(t.Context(), j); err != nil {
 		t.Fatalf("same original lost during reindex: %v", err)
 	}
-	if f.count(`SELECT count(*) FROM scheduler_request_resources WHERE workflow_id=$1 AND resource_id='worker'`, j.WorkflowID) != 1 || f.count(`SELECT count(*) FROM scheduler_request_resources WHERE workflow_id=$1`, j.WorkflowID) != 1 {
+	if f.count(`SELECT count(*) FROM scheduler_request_resources WHERE workflow_id=$1 AND resource_id='worker'`, j.WorkflowID) != 1 || f.count(`SELECT count(*) FROM scheduler_request_resources WHERE workflow_id=$1 AND resource_id<>'pipeline:document_thumbnail'`, j.WorkflowID) != 1 {
 		t.Fatal("thumbnail reserved a model resource")
 	}
 	artifact := m.DocumentThumbnailContent{Descriptor: m.DocumentThumbnail{SourceSHA256: j.SourceSHA256, SHA256: fmt.Sprintf("%064d", 2), MediaType: "image/jpeg", Size: 3, Width: 1, Height: 1, RendererRevision: 1}, Bytes: []byte{1, 2, 3}}

@@ -228,12 +228,12 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.byType(GlacierWorkloadResource), findsNWidgets(3));
-    expect(find.text('Saved'), findsNWidgets(3));
-    expect(find.text('Active'), findsNWidgets(3));
+    expect(find.byType(GlacierWorkloadResource), findsNWidgets(16));
+    expect(find.text('At capacity'), findsWidgets);
+    expect(find.text('Draining'), findsWidgets);
     expect(find.text('Allowed: 1–16'), findsOneWidget);
     final first = find.byType(TextFormField).first;
-    await tester.enterText(first, '17');
+    await tester.enterText(first, '257');
     await tester.pump();
     GlacierButton save() => tester.widget<GlacierButton>(
       find.widgetWithText(GlacierButton, 'Save changes'),

@@ -76,19 +76,9 @@ receive the same base64-encoded 32-byte key through environment injection.
 
 ## Execution and publication
 
-`domabas.EnrichDocument.v1` runs after searchable publication and invoice
-processing in the independent AI workflow. Retained ingestion v1 histories keep
-their original placement before embedding.
-The same snapshotted provider connection supports independently enabled
-[invoice detection](invoices.md) for ordinary PDF and email text; structured
-invoice XML does not need either AI switch. A Temporal
-version marker preserves the earlier three-activity command sequence on replay.
-Activities receive only document/account IDs, generation and the optional AI
-attempt identifier. The property service
+After searchable publication, invoice and property extraction can run concurrently. Each branch checkpoints independently and takes its own pipeline slot. Both use the snapshotted connection for inference. Structured invoice XML bypasses inference. The property service
 uses consumer-owned repository and extractor ports; HTTP and encryption stay in
-document data adapters. The activity uses shared provider/worker reservations, heartbeats,
-cancellation, retries and generation fences documented in the
-[document pipeline](document-ingestion.md).
+document data adapters. Actual model calls acquire shared model and provider slots. Generation and OCR revision fence publication as described in the [document pipeline](document-ingestion.md).
 
 The internal adapter checks `/api/show`, pulls missing models through `/api/pull`,
 then uses `/api/chat` with a required six-field JSON schema and a 2,048-token
@@ -183,7 +173,7 @@ integration tests cover ciphertext, key restoration, permission checks, settings
 revisions, SQL/Go fingerprint agreement and metadata/generation publication.
 Compiled API E2E exercises restart, another library's ingestion, searchable
 properties, failure and retry. Browser E2E configures a deterministic provider in
-the real UI and observes enriched properties after real OCR/Temporal processing.
+the real UI and observes enriched properties after OCR and native background processing.
 
 ## Independent follow-up processing
 

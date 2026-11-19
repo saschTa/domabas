@@ -43,6 +43,7 @@ Import `ui/domabas_ui.dart` from app or feature presentation code.
 | Presenter | Responsibility |
 | --- | --- |
 | `GlacierTheme`, `GlacierTokens`, `AppElevation` and `AppLayout` | Production material roles, typography, shape, spacing and width thresholds; `AppTheme` remains a compatibility theme |
+| `GlacierWorkloadFlow` | Selectable live pipeline-to-resource diagram. Connectors stack vertically on narrow screens and at large text sizes. |
 | `AppWorkspaceShell` | Responsive navigation, persistent collection toolbar and account utilities |
 | `GlacierToolbar` and feature-owned search dialogs | Quick filters, sort and collection actions; sidebar Search opens scoped draft criteria |
 | `AppWorkspaceAction` and its button/menu presenters | Immutable action labels and current callbacks supplied by feature owners |

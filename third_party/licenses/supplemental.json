@@ -462,39 +462,6 @@
     "license": "PostgreSQL"
   },
   {
-    "id": "extra:Temporal server / admin tools",
-    "name": "Temporal server / admin tools",
-    "version": "1.32.0",
-    "component": "Workflow infrastructure",
-    "sourceUrl": "https://github.com/temporalio/temporal/tree/v1.32.0",
-    "urls": [
-      "https://raw.githubusercontent.com/temporalio/temporal/v1.32.0/LICENSE"
-    ],
-    "files": []
-  },
-  {
-    "id": "extra:Temporal UI",
-    "name": "Temporal UI",
-    "version": "2.54.1",
-    "component": "Workflow infrastructure",
-    "sourceUrl": "https://github.com/temporalio/ui/tree/v2.54.1",
-    "urls": [
-      "https://raw.githubusercontent.com/temporalio/ui/v2.54.1/LICENSE"
-    ],
-    "files": []
-  },
-  {
-    "id": "extra:Temporal CLI",
-    "name": "Temporal CLI",
-    "version": "1.10.1",
-    "component": "Initialization / tooling",
-    "sourceUrl": "https://github.com/temporalio/cli/tree/v1.10.1",
-    "urls": [
-      "https://raw.githubusercontent.com/temporalio/cli/v1.10.1/LICENSE"
-    ],
-    "files": []
-  },
-  {
     "id": "extra:nginx",
     "name": "nginx",
     "version": "1.30.6",

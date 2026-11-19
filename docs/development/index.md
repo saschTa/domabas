@@ -32,8 +32,6 @@ Repository toolchain and image pins:
 | Chrome for Testing | 153.0.8010.47 | [Chrome availability](https://googlechromelabs.github.io/chrome-for-testing/) |
 | Bun | 1.4.2 | [Bun release](https://github.com/oven-sh/bun/releases/tag/bun-v1.4.2) |
 | TypeScript | 7.0.2 | [TypeScript package](https://www.npmjs.com/package/typescript/v/7.0.2) |
-| Temporal Server / Go SDK | 1.32.0 / 1.49.0 | [Server release](https://github.com/temporalio/temporal/releases/tag/v1.32.0), [SDK release](https://github.com/temporalio/sdk-go/releases/tag/v1.49.0) |
-| Temporal CLI / UI | 1.9.1 / 2.54.1 | [CLI release](https://github.com/temporalio/cli/releases/tag/v1.9.1), [UI release](https://github.com/temporalio/ui/releases/tag/v2.54.1) |
 | Nginx | 1.30.5 | [Nginx releases](https://nginx.org/en/download.html) |
 
 Install Task 3.x, Bun 1.4.2, Docker Engine 25+ and Compose 2.20.2+. The Docker minimums support separate startup and steady health-check intervals. Java 17+ is required only to regenerate the Dart client. On macOS, installed Homebrew OpenJDK 21 is detected automatically. `JAVA_HOME` takes priority. Flutter platform toolchain requirements are reported by `task doctor`.
@@ -58,7 +56,7 @@ Browser archives are streamed and extracted into temporary directories with path
 
 ## Daily loop
 
-Run `task dev` from the repository root. The launcher starts and waits for Compose PostgreSQL, Temporal schemas and namespace, resolves dependencies, starts Air (HTTP and worker), waits for `/readyz`, then starts Flutter at port 7357. Open `http://127.0.0.1:7357` so the browser and API use the same hostname for persistent cookies. Press `r` to reload Flutter or `R` to restart; Air automatically rebuilds on Go/SQL/config changes. Flutter's normal development terminal remains available. `q` or Ctrl+C stops both application process trees. Infrastructure remains running for the next session; `task infra:down` stops it without deleting volumes.
+Run `task dev` from the repository root. The launcher starts and waits for Compose PostgreSQL and the document processor, resolves dependencies, starts Air (HTTP and worker), waits for `/readyz`, then starts Flutter at port 7357. Open `http://127.0.0.1:7357` so the browser and API use the same hostname for persistent cookies. Press `r` to reload Flutter or `R` to restart; Air automatically rebuilds on Go/SQL/config changes. Flutter's normal development terminal remains available. `q` or Ctrl+C stops both application process trees. Infrastructure remains running for the next session; `task infra:down` stops it without deleting volumes.
 
 Managed development now uses Compose consistently. `task infra:up` starts infrastructure alone; `task db:up` and `task db:down` operate only on PostgreSQL and its database initialization. The full web stack uses `task compose:up` or `docker compose up --build --wait`. See the [Compose guide](compose.md) for the service graph, ports and configuration.
 
@@ -70,7 +68,7 @@ the foreground in MLX mode. See the
 [runtime guide](compose.md#select-the-development-ollama-runtime) for prerequisites,
 model selection and lifecycle details.
 
-Earlier native `.cache/postgres` clusters are retained but no longer selected automatically. Their records are not silently migrated into the Compose volume. Stop any native server using the configured port before starting Compose: for a PostgreSQL 18 installation, `pg_ctl -D .cache/postgres -m fast -w stop` from the repository root. To keep using that cluster, start it deliberately and use the external-services option with a separately managed Temporal server. Never delete the cluster to resolve a port conflict.
+Earlier native `.cache/postgres` clusters are retained but no longer selected automatically. Their records are not silently migrated into the Compose volume. Stop any native server using the configured port before starting Compose: for a PostgreSQL 18 installation, `pg_ctl -D .cache/postgres -m fast -w stop` from the repository root. To keep using that cluster, start it deliberately and use the external-services option. Never delete the cluster to resolve a port conflict.
 
 ## Configuration
 
@@ -79,7 +77,7 @@ For encrypted IMAP credentials, key rotation and private mailbox servers, see th
 For per-user source setup and automatic credential encryption, see
 [Paperless import configuration](../arch/backend/paperless-import.md).
 
-`backend/.env` contains checked-in development defaults. The backend and scripts prioritize exported environment variables. The backend also supports `DOMABAS_ENV_FILE` to choose a different file or an empty string to disable file loading. The stack scripts read `backend/.env` plus exported overrides; when using an alternative backend file, export matching database and Temporal settings for the launcher, or use `--external-services`.
+`backend/.env` contains checked-in development defaults. The backend and scripts prioritize exported environment variables. The backend also supports `DOMABAS_ENV_FILE` to choose a different file or an empty string to disable file loading. The stack scripts read `backend/.env` plus exported overrides; when using an alternative backend file, export matching database and document processor settings for the launcher, or use `--external-services`.
 
 Keep real deployment credentials out of `backend/.env`. Follow the
 [private deployment settings](compose.md#private-deployment-settings) workflow
@@ -93,9 +91,6 @@ the [private TrueNAS YAML copy](../../truenas/README.md#3-fill-in-your-settings)
 | `CORS_ORIGINS` | `http://localhost:7357,http://127.0.0.1:7357` | Exact permitted browser origins |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | `domabas` | Compose initialization |
 | `POSTGRES_PORT` | `54329` | Compose host port |
-| `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | Go SDK connection to Temporal |
-| `TEMPORAL_NAMESPACE` | `domabas` | Workflow namespace |
-| `TEMPORAL_TASK_QUEUE` | `domabas-documents` | Task queue polled by the embedded worker |
 | `EMAIL_CREDENTIAL_KEYS` | empty | JSON keyring for encrypted IMAP usernames and passwords |
 | `EMAIL_CREDENTIAL_ACTIVE_KEY_ID` | empty | Active member of the injected email keyring |
 | `EMAIL_IMAP_CA_FILE` | empty | Optional PEM roots for verified private IMAP TLS |
@@ -111,8 +106,6 @@ For externally managed services:
 
 ```sh
 export DATABASE_URL='postgres://user:password@localhost:5432/domabas?sslmode=disable'
-export TEMPORAL_ADDRESS='127.0.0.1:7233'
-export TEMPORAL_NAMESPACE='domabas'
 task dev -- --external-services
 ```
 

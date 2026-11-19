@@ -81,7 +81,7 @@ func (s *InvoiceDataSource) aiSave(ctx context.Context, w m.InvoiceWork, v *r.In
 				}
 			}
 		}
-		_, err := tx.Exec(ctx, `UPDATE document_ai_jobs SET invoice_done=true,stage=$4,updated_at=clock_timestamp() WHERE account_id=$1 AND document_id=$2 AND attempt=$3`, j.AccountID, j.DocumentID, j.AIAttempt, w.ResumeStage)
+		_, err := tx.Exec(ctx, `UPDATE document_ai_jobs SET invoice_done=true,stage=CASE WHEN properties_done THEN 'complete' ELSE $4 END,updated_at=clock_timestamp() WHERE account_id=$1 AND document_id=$2 AND attempt=$3`, j.AccountID, j.DocumentID, j.AIAttempt, w.ResumeStage)
 		return err
 	})
 }

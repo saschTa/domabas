@@ -1,12 +1,6 @@
 # Paperless-ngx import
 
-The deterministic definition is
-`domain/paperless/workflows/paperless_import.workflow.go`.
-`PaperlessImportActivities` and `PaperlessImportDispatcher` live in
-`data/paperless/temporal`, with injected service ports. Explicit registration
-keeps `domabas.PaperlessImport.v1` and its activity names stable.
-
-Paperless import is a durable Temporal pipeline following the
+The native Go worker runs Paperless imports through the Paperless jobs service. It follows the
 [background job guidelines](background-jobs.md). Settings queues a job and reads
 its persisted progress when private WebSocket notifications arrive, without
 polling. Leaving the screen or signing out does not drive or stop
@@ -37,7 +31,7 @@ credential revision and queue intent together. Reusing the same request UUID and
 connection details returns the existing job. One active job per user/library and
 a bounded installation queue prevent accidental resubmission. Tokens use
 AES-256-GCM with job, namespace and owner as associated data, and are cleared on
-terminal outcomes. They never enter Temporal history or API responses.
+terminal outcomes. They never enter execution checkpoints or API responses.
 
 A database coordination row protects admission of up to ten imports across all
 Go instances. Admitted runs retain capacity until execution closure, including
@@ -67,19 +61,7 @@ is checked once per second and remains authoritative at acceptance. A full
 installation or an already claimed item is ordinary waiting and does not consume
 activity retries or complete the run. Database locks never span source or file I/O.
 
-The existing workflow and activity registration names, payloads and command order
-remain unchanged. Replace all old backend workers before relying on the global
-retrieval limit: old binaries do not reserve item claims. Retained executions can
-resume on new workers without a workflow history migration.
-
-The dispatcher reconciles the
-stable workflow identity, rejects reuse, bounds ambiguous-start retries to less
-than Temporal retention and retains admission until execution closure. Discovery
-and each document have independent persisted checkpoints. Activities have a
-60-second operation deadline, a 90-second execution limit and four attempts with
-exponential backoff. Workflows continue as new after 100 steps and have a seven-day
-execution limit. Activities load only the run state needed for their next step;
-they do not recalculate all progress counters and outcome history for every file.
+The worker checkpoints discovery and item progress in PostgreSQL. A run holds a pipeline slot. Active downloads share the installation retrieval limit. Accepted files enter the common document ingestion queue.
 Partial indexes select the next pending item and recent completed outcomes.
 Progress counters are read when a user requests the job's current status.
 
@@ -155,7 +137,7 @@ a cross-request snapshot; refresh the first page to see newly completed results.
 
 ## Automatic credential encryption
 
-Temporal activities must recover the API token after sign-out or a backend
+The background worker must recover the API token after sign-out or a backend
 restart. Domabas therefore encrypts each active job's token instead of storing
 it as plaintext. A hash would not allow the worker to authenticate to Paperless.
 Encryption protects tokens in a database-only backup; it does not protect against

@@ -277,7 +277,7 @@ service locator.
 adapter maps generated API values to immutable pipeline snapshots, jobs and
 reindex batches. `ProcessingCubit` owns the namespace jobs page;
 `ProcessingSettingsCubit` owns installation settings and aggregate batch history.
-Neither imports generated transport types or Temporal SDK concepts.
+Neither imports generated transport types or worker implementation details.
 
 Thumbnail generation joins the same chronological history and full-history
 filter counts. Its pipeline overview and attempt details use the shared

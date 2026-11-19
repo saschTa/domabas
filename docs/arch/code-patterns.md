@@ -19,7 +19,7 @@ Start with [the architecture overview](../../architecture.md). Follow
 | Relational data | Typed columns and child tables store operational entities. Documented immutable protocol snapshots are the narrow JSON exception. Jet builders and pgx remain in adapters. | [Persistence](backend/persistence.md), [PostgreSQL setup](backend/postgresql.md) |
 | Migration safety | Embedded numbered migrations use an advisory lock and exact checksum history; applied files stay immutable. Tests use disposable schemas. | [Boundaries](backend/boundaries.md) |
 | Authorization | Local sessions, namespace roles, explicit claims, ownership and system administration have separate meaning. Every use case checks current authority. | [Identity](backend/identity.md) |
-| Durable jobs | Acceptance and queue intent commit together. Stable workflow IDs, execution ownership, idempotent writes and reconciliation handle retries and uncertain delivery. | [Background jobs](backend/background-jobs.md), [Temporal](backend/temporal.md) |
+| Durable jobs | Acceptance and queue intent commit together. Stable workflow IDs, execution ownership, idempotent writes and reconciliation handle retries and uncertain delivery. | [Background jobs](backend/background-jobs.md), [Native workers](backend/native-jobs.md) |
 | Shared admission | Jobs reserve all worker and model-provider requirements atomically. Limits apply across instances; closure evidence governs release. | [Resource scheduler](backend/resource-scheduler.md) |
 | File and search generations | Upload staging, retained originals, OCR revisions, embedding provenance and publication checks prevent obsolete processing from replacing current content. | [Document ingestion](backend/document-ingestion.md) |
 | Pagination and refresh | Growing lists have bounded pages. Document cursors bind ordering and search criteria; totals and continuation follow each endpoint's contract. | [Document pagination](backend/document-ingestion.md#cursor-pagination), [HTTP contract](../../contracts/backend/openapi.yaml) |
@@ -27,14 +27,14 @@ Start with [the architecture overview](../../architecture.md). Follow
 | Structured invoices | Exact decimals, source evidence, correction references and invoice children have explicit models and tables. | [Invoices](backend/invoices.md) |
 | Small derived artifacts | Thumbnail discovery and rendering have durable jobs and independently bounded CPU work. | [Thumbnails](backend/document-thumbnails.md) |
 | Live updates | Transactional PostgreSQL notifications trigger bounded, authorized WebSocket invalidations; clients fetch the data through the API. | [Realtime](backend/realtime.md) |
-| Resource lifetime | Startup deadlines, runtime cancellation, readiness, worker failures and activity draining have explicit owners. | [Lifecycle](backend/boundaries.md#temporal) |
+| Resource lifetime | Startup deadlines, runtime cancellation, readiness, worker failures and activity draining have explicit owners. | [Lifecycle](backend/native-jobs.md) |
 
 Backend structural enforcement lives in
 [backend/tests/architecture](../../backend/tests/architecture). It checks imports,
 package roles, names, workflow layout and selected service-policy violations,
 including negative fixtures for common bypasses. It cannot prove transaction
 correctness or complete authorization. Domain tests, real database tests,
-[Temporal tests](../../backend/tests/temporal) and
+[Native worker tests](../../backend/tests/jobs) and
 [API E2E tests](../../backend/tests/e2e) check those behaviors.
 
 ## Frontend patterns
@@ -70,7 +70,7 @@ entry point. Runtime application code remains Go and Flutter.
 Generated API, database and icon files are committed so an ordinary checkout can
 build. Change their source and run the relevant generation task rather than
 editing output by hand. Dependency changes update the relevant pins and lockfiles
-deliberately. The testing guide distinguishes `task check`, database/Temporal
+deliberately. The testing guide distinguishes `task check`, database and worker
 integration, API E2E, browser E2E and the CI baseline.
 
 When a new pattern is introduced, update its owning guide and this map when it

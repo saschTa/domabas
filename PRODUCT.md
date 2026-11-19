@@ -57,7 +57,7 @@ Document ingestion, OCR, indexing, imports and optional AI can take time. The
 interface must remain usable while work runs and must distinguish accepted,
 waiting, running, failed and completed work from recorded evidence.
 
-The production system uses a Go API, PostgreSQL, Temporal, a private document
+The production system uses a Go API, PostgreSQL, native Go workers, a private document
 processor and Ollama. The HTML design study is a prototype, not a replacement
 for the Flutter client or an alternate application runtime.
 

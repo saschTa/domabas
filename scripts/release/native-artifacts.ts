@@ -6,7 +6,7 @@ import { type Environment, required } from "../shared/runtime.ts";
 export const NATIVE_TARGETS = ["android", "macos"] as const;
 export type NativeTarget = typeof NATIVE_TARGETS[number];
 export interface NativeReleaseContext { version: string; sha: string; buildNumber: number }
-export interface NativeReleaseAsset { name: string; contentType: string; content: Blob; sha256: string }
+export interface ReleaseAsset { name: string; contentType: string; content: Blob; sha256: string }
 interface NativeArtifactManifest extends NativeReleaseContext { schema: 1; target: NativeTarget; name: string; size: number; sha256: string }
 
 export function nativeReleaseContext(env: Environment): NativeReleaseContext {
@@ -35,8 +35,8 @@ export async function writeNativeManifest(directory: string, target: NativeTarge
   await Bun.write(join(directory, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 }
 
-export async function loadNativeArtifacts(directory: string, context: NativeReleaseContext): Promise<NativeReleaseAsset[]> {
-  const assets: NativeReleaseAsset[] = [];
+export async function loadNativeArtifacts(directory: string, context: NativeReleaseContext): Promise<ReleaseAsset[]> {
+  const assets: ReleaseAsset[] = [];
   for (const target of NATIVE_TARGETS) {
     const manifest: unknown = await Bun.file(join(directory, target, "manifest.json")).json();
     const expectedName = nativeArtifactName(target, context.version);

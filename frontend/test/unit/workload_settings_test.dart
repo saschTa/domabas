@@ -9,6 +9,30 @@ import '../support/fake_workload_settings_repository.dart';
 Future<void> settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  testWidgets(
+    'workload hints refresh only the active view and coalesce bursts',
+    (tester) async {
+      final repository = FakeWorkloadSettingsRepository();
+      final cubit = WorkloadSettingsCubit(repository, allowed: true)
+        ..setActive(true);
+      await tester.pump();
+      expect(repository.reads, 1);
+      await tester.pump(const Duration(seconds: 15));
+      expect(repository.reads, 1);
+      cubit.invalidateUsage();
+      cubit.invalidateUsage();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(repository.reads, 2);
+      await tester.pump(const Duration(seconds: 15));
+      expect(repository.reads, 2);
+      cubit.setActive(false);
+      cubit.invalidateUsage();
+      await tester.pump(const Duration(seconds: 15));
+      expect(repository.reads, 2);
+      await cubit.close();
+    },
+  );
+
   test('only system authority can load or change resource limits', () async {
     final repository = FakeWorkloadSettingsRepository();
     final cubit = WorkloadSettingsCubit(repository, allowed: false);
@@ -104,6 +128,29 @@ void main() {
       cubit.resetDraft();
       expect(cubit.state.drafts['ollama'], '4');
       expect(cubit.state.dirty, isFalse);
+      await cubit.close();
+    },
+  );
+
+  test(
+    'live samples preserve edits and detect an administrator change',
+    () async {
+      final repository = FakeWorkloadSettingsRepository();
+      final cubit = WorkloadSettingsCubit(repository, allowed: true)
+        ..setActive(true);
+      await settle();
+      cubit.edit('worker', '12');
+      repository.current = testWorkloadSettings(activeOllama: 3);
+      await cubit.sampleUsage();
+      expect(cubit.state.settings!.resources[1].activeJobs, 3);
+      expect(cubit.state.drafts['worker'], '12');
+      repository.current = testWorkloadSettings(revision: 2, workerLimit: 7);
+      await cubit.sampleUsage();
+      expect(cubit.state.requiresRefresh, isTrue);
+      expect(cubit.state.canSave, isFalse);
+      await cubit.load();
+      expect(cubit.state.settings!.resources.first.limit, 7);
+      expect(cubit.state.drafts['worker'], '12');
       await cubit.close();
     },
   );

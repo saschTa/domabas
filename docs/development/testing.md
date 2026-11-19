@@ -15,7 +15,7 @@ as compiler/browser headroom on runners that start the complete stack.
 | Monorepo tooling | `task lint:scripts` / `task test:scripts` | TypeScript checking and Bun tests for configuration, process lifecycle, readiness and artifact handling |
 | Backend unit + structure | `task test:backend` | Domain/application behavior, HTTP/config behavior, and import boundaries; race detector enabled |
 | Backend integration | `task test:integration` | Real PostgreSQL migrations and repository persistence in isolated schemas |
-| Temporal integration | `task test:temporal` | Real queue delivery, repository activity and completion after worker restart |
+| Native worker integration | `task test:jobs` | Real queue delivery, repository activity and completion after worker restart |
 | Live language model | `LLM_OLLAMA_URL=http://127.0.0.1:11435 task test:llm` | Concurrent real Qwen property extraction and embeddings, plus invoice tax-currency extraction |
 | Backend E2E | `task test:api-e2e` | Compiled server subprocess with its worker, public HTTP responses and PostgreSQL persistence |
 | Frontend unit + structure + integration | `task test:frontend` | View model/domain behavior, widget interaction, import boundaries, and generated HTTP client/repository against a real local HTTP server |
@@ -57,7 +57,7 @@ with Keychain entitlements. An unsigned build alone does not verify secure
 storage. Existing CI fast-test jobs discover the new unit/integration/widget
 tests; native runtime checks require the corresponding host and running backend.
 
-`task check` runs analysis, generation consistency, and fast tests, including SDK workflow tests. `task test:all` starts PostgreSQL, Temporal and the real CPU document processor and runs all application test levels. `task test:compose` separately builds and verifies a disposable full deployment. Tagged Go tests deliberately fail when their required database/Temporal/processor configuration is missing. Task loads checked-in defaults; exported overrides take priority. A unique task queue accompanies every disposable database schema, so another test's worker cannot consume its tasks.
+`task check` runs analysis, generation consistency, and fast tests, including job policy tests. `task test:all` starts PostgreSQL and the real CPU document processor and runs all application test levels. `task test:compose` separately builds and verifies a disposable full deployment. Tagged Go tests deliberately fail when their required database or processor configuration is missing. Task loads checked-in defaults; exported overrides take priority. Worker election and job claims are scoped to each disposable database schema.
 
 `task check` needs no live database. Run `task generate:db` after adding a migration
 that changes generated tables, then commit its output. Both database generation
@@ -80,13 +80,12 @@ individual disposable schemas share it and never drop it. Migration tests cover
 retained embedding bytes, pending rows, atomic failure and retry. Vector-search
 tests compare indexed recall against exhaustive pgvector ranking and check that
 the production candidate SQL actually selects the HNSW index. The GitHub integration job provisions the pinned pgvector service. Full local
-Linux checks additionally need Temporal and the browser prerequisites.
+Linux checks additionally need the document processor and browser prerequisites.
 
 Identity tests cover credential/session races, forced initial password change,
 scoped claim/delegation checks, first-admin and last-admin concurrency, ownership
 immutability, personal/shared library isolation, invitation capabilities, session
-rotation, revocation and retained migration/adoption. Temporal tests cover queued
-v1 failure without an unscoped read and scoped v2 work. Compose smoke signs into
+rotation, revocation and retained migration/adoption. Native jobs tests exercise restart and takeover. Compose smoke signs into
 the compiled Flutter app and verifies same-origin authenticated requests.
 
 The integration command discovers `internal/data/...`: document and identity
@@ -106,12 +105,12 @@ suite uses the actual generated client, API and database for registration,
 personal libraries, invitation acceptance, namespace switching and document
 persistence, including fresh app/client state.
 
-The Bun browser harness downloads pinned Chrome/ChromeDriver, creates a random schema, queue and document storage roots, and starts Go at `127.0.0.1:18080`, Flutter on port 7357 and WebDriver on port 4444. It cleans up owned processes and data. Use `bun --no-env-file scripts/testing/e2e.ts --external-services` with `TEST_DATABASE_URL`, `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` and `DOCUMENT_PROCESSOR_URL` for externally managed services. External mode requires `psql`; managed Docker mode can use its container client. `E2E_API_PORT`, `E2E_WEB_PORT`, and `E2E_DRIVER_PORT` override test ports. Logs remain in `.logs/`. When a development Flutter process already owns port 7357, use `E2E_WEB_PORT=7358 task test:e2e` or another free port; do not stop that development process.
+The Bun browser harness downloads pinned Chrome/ChromeDriver, creates a random schema and document storage roots, and starts Go at `127.0.0.1:18080`, Flutter on port 7357 and WebDriver on port 4444. It cleans up owned processes and data. Use `bun --no-env-file scripts/testing/e2e.ts --external-services` with `TEST_DATABASE_URL` and `DOCUMENT_PROCESSOR_URL` for externally managed services. External mode requires `psql`; managed Docker mode can use its container client. `E2E_API_PORT`, `E2E_WEB_PORT`, and `E2E_DRIVER_PORT` override test ports. Logs remain in `.logs/`. When a development Flutter process already owns port 7357, use `E2E_WEB_PORT=7358 task test:e2e` or another free port; do not stop that development process.
 
 ### Disposable application inspection
 
 Use `task test:e2e -- --external-services --inspect` to inspect the normal
-production application against prepared PostgreSQL, Temporal and document-processor
+production application against prepared PostgreSQL and document-processor
 services. It uses the same disposable schema, unique queues, storage roots and
 owned-workflow cleanup as the automated E2E suite. It runs `lib/main.dart` in
 release mode without Flutter test fixtures or ChromeDriver, and creates a review
@@ -122,7 +121,7 @@ The command prints the application URL and a private temporary JSON file path.
 That file contains the generated login and test-provider details; do not copy its
 contents into logs or tracked files. Use the real UI to create review documents or
 configure the isolated providers. The LLM, Paperless and email providers are test
-fixtures; PostgreSQL, the Go API, Temporal workers and document processing are
+fixtures; PostgreSQL, the Go API, native workers and document processing are
 real. Do not use the fixture responses to certify a live model or mailbox.
 
 Create the file identified by `stopFile` in the manifest to finish normally, or
@@ -140,33 +139,13 @@ ChromeDriver remains on loopback. This checks HTTP browser behavior without
 localhost's secure-context exception. Only use an address assigned to the test
 host; the fixture schema, queues and storage remain isolated.
 
-The diagnostic workflow has a remote execution deadline as well as a client wait deadline. Queue tests use only owned workflow IDs, and stop workers before dropping their schemas. Tests never delete a shared Temporal namespace. Ordinary developer shutdown retains volumes; the full local and Compose smoke harnesses may remove their own explicitly disposable randomly named projects and volumes.
+The worker restart suite uses a disposable PostgreSQL schema and a deterministic processor fixture. It verifies the upload entry point, model permits and recovery during an interrupted embedding operation.
 
-Document pipeline tests distinguish ingestion readiness from downstream AI
-completion. API acceptance covers a failed AI provider, searchable documents,
-an idempotent AI-only retry, and another upload completing while AI is blocked.
-Browser acceptance checks separate pipeline views and retries failed AI from the
-document details without changing its ingestion generation. The deterministic
-provider fixture needs no external model credentials.
-Pipeline scheduling coverage includes configured admission above ten jobs across
-two repository instances, email/Paperless priority through execution drain,
-provider fifth-attempt recovery and exhaustion, legacy workflow behavior and
-effective scheduling metadata on authorized API responses. Frontend tests cover
-the scheduling summary at 320 pixels with enlarged text and existing pagination.
-The ordinary unit jobs discover the new tests without additional CI services;
-`.github/workflows/ci.yml` runs the fast checks and PostgreSQL integration.
 The API suite has a 20-minute package deadline because configuration changes
 reprocess retained test documents through the bounded AI queue. Individual
 ingestion and AI waits keep their shorter deadlines.
 
-Browser cleanup reads the disposable schema's recorded ingestion, AI, email and Paperless executions,
-verifies their queue, workflow type and exact run, and stops only those still
-running before dropping the schema. It uses an installed `temporal` CLI or the
-pinned CLI in an ephemeral Compose initializer container. For an unrelated external
-Temporal service, install its reachable CLI on the host; cleanup fails clearly
-and retains the schema if execution ownership cannot be verified.
-AI workflows use the disposable queue's `-ai` suffix. Cleanup accepts retained
-ingestion v1 and split ingestion v2 only with their corresponding ID format.
+Browser cleanup stops the application and its embedded worker before dropping the disposable schema.
 
 Email browser acceptance compiles `backend/tests/imapfixture/cmd`, starts a local
 implicit-TLS mailbox on a free loopback port and injects its private CA and a
@@ -192,8 +171,7 @@ The browser test enters the source URL and token, starts an import, leaves Setti
 and verifies imported and unsupported-file outcomes. API E2E additionally verifies
 worker restart, transient source overload, pacing, duplicate originals, metadata,
 separate users' source URLs, owner isolation, automatic key persistence,
-cancellation and credential erasure with real PostgreSQL and
-Temporal. Mock repositories cover domain decisions and frontend request lifetime.
+cancellation and credential erasure with PostgreSQL and the native worker. Mock repositories cover domain decisions and frontend request lifetime.
 These tests use the existing local validation commands and require no additional service.
 
 ## GitHub Actions
@@ -214,7 +192,7 @@ same PR. Main runs are retained; only publication is serialized.
 | `task security:dependencies`: critical-only OSV gate | — | Required | Reused from main |
 | Build Android preview APK and unsigned macOS DMG | — | — | After reserving a version using successful main CI |
 | Build and Trivy-scan four container images, then push and release | — | — | After verifying successful main CI for the same commit |
-| Temporal, focused Chrome, API/browser E2E, live models and Compose smoke | Local | Local | Local |
+| Native workers, focused Chrome, API/browser E2E, live models and Compose smoke | Local | Local | Local |
 
 `task ci:select` compares the pull request's checked-out merge revision with the
 event's base commit. It uses the complete NUL-delimited Git diff, including deleted
@@ -269,7 +247,7 @@ checksum verification before upload to the draft. See
 validation limits. Failed native builds block publication.
 
 `task ci` retains its local units mode. `task ci -- --suite=full` provisions
-an isolated Linux stack and adds analysis, generation, database/Temporal tests,
+an isolated Linux stack and adds analysis, generation, database and worker tests,
 API and system E2E; `--builds` adds local Go, web and Linux builds. This helper is
 separate from GitHub's selected suites and final gate. Full local runners need Docker,
 Java and the dependencies installed by `task ci:setup`; model tests need the
@@ -291,7 +269,7 @@ before the first GHCR push; its reports survive failed publication attempts.
 
 ## Document thumbnails
 
-Document thumbnails use the existing fast, PostgreSQL, real Temporal, API E2E and
+Document thumbnails use the existing fast, PostgreSQL, native worker, API E2E and
 browser tasks. Rendering fixtures cover bounded JPEG output, EXIF orientation,
 transparency, first PDF page, malformed/oversized inputs and child cancellation.
 Persistence tests cover minutely discovery beyond one 100-document page, retained
@@ -319,12 +297,11 @@ Keep tracked guides focused on current behavior, commands and requirements.
 Working notes and test logs may stay locally in Git-ignored `docs/plans/` and
 `.logs/`; never stage or commit them.
 
-Jobs/reindex tests additionally require PostgreSQL, application and Temporal hosts
-to have clocks synchronized within one minute and Temporal retention of at least
-24 hours. The real processor must be built from the same pipeline manifest as the
+Jobs/reindex tests additionally require PostgreSQL and application hosts
+to have clocks synchronized within one minute. The real processor must be built from the same pipeline manifest as the
 backend. Database activity fixtures obtain a real repository admission lease;
 unadmitted work is deliberately fenced and has no running deadline. Tests own
-only their disposable schemas, task queues, workflow executions and storage.
+only their disposable schemas, jobs and storage.
 
 ## Mobile scanner checks
 
@@ -445,8 +422,7 @@ using it. E2E retains the pinned ChromeDriver, so choose a compatible browser.
 
 Database integration tests exercise semantic triggers, rollback silence,
 namespace/private-owner authorization, listener probes and reconnects. Compiled
-API tests start two processes sharing one disposable schema and owned Temporal
-queue, then prove cross-process and workflow hints, REST visibility, revocation
+API tests start two processes sharing one disposable schema, then prove cross-process and workflow hints, REST visibility, revocation
 and shutdown. Compose additionally verifies the actual proxy for more than its
 sixty-five-second timeout. Prompt hint assertions are separate from fallback and
 sixty-second safety resync. No new public service or message broker is required.
@@ -468,15 +444,10 @@ an installed browser instead of the pinned artifact; report that distinction.
 
 ## AI chat checks
 
-AI chat is covered by the same unit, PostgreSQL, Temporal, compiled API and browser
+AI chat is covered by the same unit, PostgreSQL, native worker, compiled API and browser
 commands. The browser model fixture accepts `chat-fixture-model` and exercises
 native search/read callbacks against actual document storage. Its tests need no
-paid provider account or model download. Chat tests own a schema-specific `-chat`
-queue; the test cleanup manifest verifies workflow type, queue and exact run
-before terminating retained work. The existing CI unit job discovers the new
-provider, workflow, repository-mapping and widget tests without new dependencies.
-Full integration remains an explicit local/runner check requiring PostgreSQL,
-Temporal and the document processor. `task test:llm` also includes the optional
+paid provider account or model download. Chat tests own disposable schemas. Full API integration requires PostgreSQL and a running document processor. `task test:llm` also includes the optional
 synthetic Qwen chat protocol check; it requires `LLM_OLLAMA_URL`.
 
 ## Property extraction checks
@@ -510,7 +481,7 @@ browser E2E tasks. The browser harness starts an authenticated local
 OpenAI-compatible fixture and supplies `LLM_FIXTURE_URL` / `LLM_FIXTURE_KEY`
 to Flutter. Provider fixtures are test-only; production uses configured services.
 No external API account, paid inference or Qwen download is required for these
-suites. Real OCR, PostgreSQL, Temporal and generated API transport are used.
+suites. Real OCR, PostgreSQL and generated API transport are used.
 The optional `task test:llm` requires an explicit `LLM_OLLAMA_URL`, a ready Ollama
 runtime and the normal embedding model initialized by `task infra:up`. It pulls
 Qwen if absent and processes four synthetic invoices while requesting embeddings
@@ -524,7 +495,7 @@ This additional live-model suite is separate from `task test:all` because
 it needs the Qwen download and additional inference resources.
 
 The default Ollama container permits up to 8 GiB and two resident models. Allow
-that memory alongside PostgreSQL, Temporal and the 4 GiB processor. CUDA/ROCm
+that memory alongside PostgreSQL and the 4 GiB processor. CUDA/ROCm
 builds need matching hardware and drivers and are separate from the CPU baseline.
 
 AI chat tool-budget regressions include two uploaded PDFs (text and scanned
@@ -534,14 +505,14 @@ scenario uploads a two-page PDF, follows older conversation history, refreshes
 loaded pages and confirms deletion through the UI.
 
 For a separate live Qwen check with actual uploaded PDFs, export
-`TEST_DATABASE_URL`, `DOCUMENT_PROCESSOR_URL`, `TEMPORAL_ADDRESS` and
+`TEST_DATABASE_URL`, `DOCUMENT_PROCESSOR_URL` and
 `LLM_OLLAMA_URL`, then run from `backend`:
 
 ```sh
 go test -race -count=1 -tags=e2e,llm_live -run '^TestAIChatLivePDFDiscoveryAndEvidence$' -timeout=15m -v ./tests/e2e
 ```
 
-This optional test creates a disposable schema, storage and owned task queue,
+This optional test creates a disposable schema and storage,
 uploads two synthetic bills, and checks discovery, both document reads, trusted
 source IDs and the expected amounts. It logs only synthetic answers and tool
 names, offsets and search terms. It requires the installed `qwen3.5:4b` model and real ingestion
@@ -561,7 +532,7 @@ latest contract. The missing-document answer also needs manual review for a clea
 statement that the amount could not be verified. These live checks can fail when
 the installed model makes poor retrieval decisions; they are not baseline CI tests.
 
-Resource scheduling tests run in the existing Go unit, isolated PostgreSQL, compiled API and browser suites. They require no additional runtime dependency. Retained-reservation, concurrent admission, FIFO feasibility and admin revision tests use random disposable schemas. The existing GitHub fast-check job automatically discovers scheduler and workload UI tests; full local verification still needs PostgreSQL/pgvector, Temporal, the document processor and Chrome as described above.
+Resource scheduling tests run in the existing Go unit, isolated PostgreSQL, compiled API and browser suites. They require no additional runtime dependency. Retained-reservation, concurrent admission, FIFO feasibility and admin revision tests use random disposable schemas. The existing GitHub fast-check job automatically discovers scheduler and workload UI tests; full local verification still needs PostgreSQL/pgvector, the document processor and Chrome as described above.
 
 ## Mobile share checks
 

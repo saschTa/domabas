@@ -26,6 +26,7 @@ final class RealtimeWebSocketDataSource {
     required String endpoint,
     required this._token,
     RealtimeSocketAttemptFactory? socketFactory,
+    this.workloadHints = false,
     this.connectTimeout = const Duration(seconds: 10),
   }) : _endpoint = realtimeEndpoint(endpoint),
        _socketFactory = socketFactory ?? createSocketAttempt;
@@ -34,6 +35,8 @@ final class RealtimeWebSocketDataSource {
   final String _token;
   final RealtimeSocketAttemptFactory _socketFactory;
   final Duration connectTimeout;
+  final bool workloadHints;
+  bool _legacyAttempt = false;
   final _events = StreamController<RealtimeRecord>.broadcast(sync: true);
   RealtimeSocketAttempt? _attempt;
   StreamSubscription<Object?>? _subscription;
@@ -45,7 +48,11 @@ final class RealtimeWebSocketDataSource {
     if (_disposed || _attempt != null) return;
     final epoch = ++_epoch;
     try {
-      final attempt = _attempt = _socketFactory(_endpoint);
+      final attempt = _attempt = _socketFactory(
+        workloadHints && !_legacyAttempt
+            ? _endpoint.replace(queryParameters: {'workload': 'true'})
+            : _endpoint,
+      );
       _subscription = attempt.channel.stream.cast<Object?>().listen(
         (value) => _receive(epoch, value),
         onError: (Object _) => _ended(epoch, null),
@@ -102,6 +109,11 @@ final class RealtimeWebSocketDataSource {
 
   void _ended(int epoch, int? code) {
     if (_disposed || epoch != _epoch) return;
+    _legacyAttempt =
+        workloadHints &&
+        !_ready &&
+        (code == null || code == 1006) &&
+        !_legacyAttempt;
     disconnect();
     _events.add(RealtimeRecord('disconnected', closeCode: code));
   }

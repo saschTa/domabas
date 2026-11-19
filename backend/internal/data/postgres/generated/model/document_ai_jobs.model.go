@@ -49,4 +49,5 @@ type DocumentAiJobs struct {
 	InvoiceClassificationPass int32
 	InvoiceInputCharacters    int32
 	InvoiceSourceCharacters   int32
+	PropertiesDone            bool
 }

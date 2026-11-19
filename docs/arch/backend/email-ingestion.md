@@ -1,10 +1,6 @@
 # Email ingestion and personal activity
 
-The deterministic polling definition is
-`domain/email/workflows/email_poll.workflow.go`. `EmailPollActivities` and
-`EmailPollDispatcher` live in `data/email/temporal`, with injected service ports.
-The registered names remain `domabas.EmailPoll.v1` and `domabas.EmailPollPage.v1`;
-payloads retain their original field names and page limits.
+The native worker schedules polls and processes mailbox pages through the email service.
 
 The email domain owns private IMAP providers, scheduling, mailbox progress and
 retrieval outcomes. Its consumer-owned import port receives the injected document
@@ -129,24 +125,11 @@ and insertion, preserving the limit of twenty across libraries.
 Mutations retain narrow provider, run/generation, document coordination, source
 part, document and processing locks for revisions, cancellation and attempt
 ownership. No database locks span IMAP, parsing, bulk file
-I/O or Temporal calls. Document publication and deletion never return to provider
+I/O. Document publication and deletion never return to provider
 locks. Scheduler metadata avoids identity/document foreign keys that would create
 an implicit reverse lock.
 
-The email worker uses a separate schema-specific task queue, ten concurrent
-activities and a durable capacity of ten unclosed executions across Go instances.
-Admission locks the singleton coordination row before counting and reserving
-execution records. One current run per provider and persisted outbox intent prevent overlapping
-schedules from duplicating work. Temporal inputs and heartbeats contain IDs and
-bounded progress only. Attempt tokens and deadlines fence stale retries; each
-unaccepted attempt has its own staging reservation. Conditional cleanup cannot
-remove another attempt's accepted original.
-
-Retained execution ownership, bounded start permits and a retention-aware retry
-horizon handle ambiguous starts. Completion of database work does not release the
-capacity before Temporal closure is established. Document processing retains its
-own independent capacity of ten. Both workers and dispatchers stop and drain before shared Temporal,
-storage and PostgreSQL resources close.
+The email pipeline has an adjustable concurrency limit. The database admits one current run per provider. Persisted outbox intent prevents overlapping schedules from duplicating work. Page attempts have ownership tokens, deadlines and independent staging reservations. Conditional cleanup cannot remove another attempt’s accepted original. Shutdown drains workers before PostgreSQL closes.
 
 ## EML extraction and activity
 

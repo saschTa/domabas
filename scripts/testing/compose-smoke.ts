@@ -60,8 +60,8 @@ export class RealtimeSmokeProbe {
         const keys = frame.type === "heartbeat" ? ["type", "version"] : ["type", "version", "topics"];
         if (Object.keys(frame).length !== keys.length || Object.keys(frame).some(key => !keys.includes(key))) throw new Error("Realtime frame contains undeclared data.");
         const topics = frame.type === "heartbeat" ? [] : frame.topics;
-        const allowed = ["documents", "processing", "processing_configuration", "email", "paperless", "chat", "activity", "identity", "members", "system_users"];
-        if (!Array.isArray(topics) || topics.length > 10 || new Set(topics).size !== topics.length || topics.some(topic => typeof topic !== "string" || !allowed.includes(topic))) throw new Error("Invalid realtime topics.");
+        const allowed = ["documents", "processing", "processing_configuration", "email", "paperless", "chat", "activity", "identity", "members", "system_users", "workload"];
+        if (!Array.isArray(topics) || topics.length > allowed.length || new Set(topics).size !== topics.length || topics.some(topic => typeof topic !== "string" || !allowed.includes(topic))) throw new Error("Invalid realtime topics.");
         if ((!this.ready && frame.type !== "ready") || (this.ready && frame.type === "ready")) throw new Error("Invalid realtime readiness sequence.");
         if (frame.type === "ready") this.ready = true;
         if (frame.type === "heartbeat") this.heartbeats++;
@@ -286,16 +286,7 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
   const temporary = await mkdtemp(join(tmpdir(), "domabas-compose-smoke-"));
   const cachedNetwork = join(temporary, "cached-models.yaml");
   const dockerHost = await dockerTestHost(scope);
-  const env: Environment = environment({ ...process.env, COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", TEMPORAL_PORT: "0", WEB_PORT: "0", TEMPORAL_UI_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", LLM_OLLAMA_PORT: "0", LLM_CREDENTIAL_KEY: "", EMAIL_CREDENTIAL_KEYS: "", EMAIL_CREDENTIAL_ACTIVE_KEY_ID: "", EMAIL_IMAP_ALLOWED_HOSTS: "", EMAIL_IMAP_CA_FILE: "", PAPERLESS_CREDENTIAL_KEY: "" });
-  const startTemporalUI = async (): Promise<void> => {
-    await compose(scope, ["up", "--build", "--wait", "--wait-timeout", "180", "temporal-ui"], env);
-    env.TEMPORAL_UI_URL = `http://${dockerHost}:${await publishedPort(scope, "temporal-ui", 8080, env)}`;
-    await waitHTTP(`${env.TEMPORAL_UI_URL}/`, undefined, 30000, scope.signal);
-  };
-  const verifyDashboardLink = async (base: string, headers: Record<string, string>): Promise<void> => {
-    const configuration = await json(`${base}/api/v1/system/document-processing`, { headers });
-    if (configuration.dashboardUrl !== env.TEMPORAL_UI_URL) throw new Error("Compose did not configure the Temporal dashboard link.");
-  };
+  const env: Environment = environment({ ...process.env, COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", WEB_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", LLM_OLLAMA_PORT: "0", LLM_CREDENTIAL_KEY: "", EMAIL_CREDENTIAL_KEYS: "", EMAIL_CREDENTIAL_ACTIVE_KEY_ID: "", EMAIL_IMAP_ALLOWED_HOSTS: "", EMAIL_IMAP_CA_FILE: "", PAPERLESS_CREDENTIAL_KEY: "" });
   const credentialFingerprint = async (): Promise<string> => {
     const fingerprints: string[] = [];
     for (const name of ["paperless", "email", "llm"]) {
@@ -313,7 +304,6 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
   await mkdir(join(ROOT, ".logs"), { recursive: true });
   await withCleanup(async () => {
     await Bun.write(cachedNetwork, "services:\n  ollama:\n    networks: [cached_models]\n  document-processor:\n    networks: [cached_models]\n  backend:\n    networks: [default, cached_models]\nnetworks:\n  cached_models:\n    internal: true\n");
-    await startTemporalUI();
     await compose(scope, ["up", "--build", "--wait", "--wait-timeout", "900"], env);
     const port = await publishedPort(scope, "web", 8080, env), base = `http://${dockerHost}:${port}`;
     for (const path of ["/", "/flutter_bootstrap.js", "/main.dart.js", "/readyz"]) {
@@ -334,14 +324,13 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
     const recovery = await captureCompose(scope, ["exec", "-T", "backend", "/app/bootstrap-admin", "--user-id", identity.user.id], env);
     if (recovery.code === 0) throw new Error("Operator bootstrap replaced an existing administrator.");
     const headers = { "content-type": "application/json", authorization: `Bearer ${token}` };
-    await verifyDashboardLink(base, headers);
     const paperlessOptions = await json(`${base}/api/v1/paperless-import`, { headers });
     if (paperlessOptions.pageSize !== 100 || Object.keys(paperlessOptions).length !== 1) throw new Error("Paperless requires unexpected operator setup on a fresh installation.");
     const initialCredentialFingerprint = await credentialFingerprint();
     const anonymous = await fetch(`${base}/api/v1/documents`, { signal: AbortSignal.timeout(10000) });
     await anonymous.body?.cancel();
     if (anonymous.status !== 401) throw new Error("Document library accepted an anonymous request.");
-    const created = await json(`${base}/api/v1/documents`, { method: "POST", headers, body: JSON.stringify({ title: "Compose persistence smoke", description: "A real PostgreSQL and Temporal integration." }) });
+    const created = await json(`${base}/api/v1/documents`, { method: "POST", headers, body: JSON.stringify({ title: "Compose persistence smoke", description: "A real PostgreSQL integration." }) });
     const id = created.id;
     if (typeof id !== "string") throw new Error("API creation did not return a document ID.");
     const original = await ingestionSmoke(base, token, scope.signal);
@@ -356,17 +345,6 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
     const beforeRename = realtime.mark();
     await json(`${base}/api/v1/documents/${id}`, { method: "PATCH", headers, body: JSON.stringify({ title: "Compose live update after 65 seconds" }) });
     await realtime.waitDocuments(beforeRename);
-    const workflowID = `compose-${crypto.randomUUID()}`;
-    const workflow = async (args: string[]): Promise<Record<string, unknown>> => {
-      const result = await captureCompose(scope, ["run", "--rm", "--no-deps", "--entrypoint", "/app/workflow", "backend", ...args], env, 180000);
-      if (result.code) throw new Error(`Workflow diagnostic failed: ${result.stderr}`);
-      return JSON.parse(result.stdout.trim()) as Record<string, unknown>;
-    };
-    const shutdown = await Promise.allSettled([compose(scope, ["stop", "backend"], env), realtime.waitShutdown()]);
-    for (const result of shutdown) if (result.status === "rejected") throw result.reason;
-    realtime.dispose();
-    const queued = await workflow(["--account-id", accountID, "--document-id", id, "--workflow-id", workflowID, "--enqueue-only", "--timeout", "2m"]);
-    if (queued.workflowId !== workflowID) throw new Error("Workflow was not queued with the test-owned ID.");
     await compose(scope, ["up", "--no-deps", "--wait", "--wait-timeout", "90", "backend"], env);
     await waitHTTP(`${base}/readyz`, undefined, 30000, scope.signal);
     const reconnected = new RealtimeSmokeProbe(base, token, scope.signal);
@@ -378,37 +356,23 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
     await json(`${base}/api/v1/documents/${id}`, { method: "PATCH", headers, body: JSON.stringify({ title: "Compose live update after reconnect" }) });
     await reconnected.waitDocuments(afterReconnect);
     reconnected.dispose();
-    const result = await workflow(["--wait-workflow-id", workflowID, "--timeout", "60s"]);
-    if (result.id !== id || typeof result.createdAt !== "string") throw new Error("Queued workflow did not read the persisted document.");
-    await compose(scope, ["stop", "temporal"], env);
-    const live = await fetch(`${base}/healthz`, { signal: AbortSignal.timeout(10000) });
-    const unready = await fetch(`${base}/readyz`, { signal: AbortSignal.timeout(10000) });
-    await live.body?.cancel(); await unready.body?.cancel();
-    if (live.status !== 200 || unready.status !== 503) throw new Error("API liveness/readiness did not distinguish Temporal outage.");
-    await compose(scope, ["up", "--no-deps", "--wait", "--wait-timeout", "180", "temporal"], env);
-    await waitHTTP(`${base}/readyz`, undefined, 90000, scope.signal);
-    const persisted = await workflow(["--wait-workflow-id", workflowID, "--timeout", "60s"]);
-    if (persisted.id !== id) throw new Error("Temporal workflow result did not survive restart.");
-    for (const service of ["database-init", "temporal-schema", "temporal-init"]) await compose(scope, ["run", "--rm", "--no-deps", service], env);
+    for (const service of ["database-init"]) await compose(scope, ["run", "--rm", "--no-deps", service], env);
     await compose(scope, ["up", "--no-deps", "--force-recreate", "--wait", "--wait-timeout", "90", "backend"], env);
     await waitHTTP(`${base}/readyz`, undefined, 30000, scope.signal);
     const reloaded = await json(`${base}/api/v1/documents/${id}`, { headers });
     if (reloaded.id !== id) throw new Error("Document/proxy did not survive backend recreation.");
     await compose(scope, ["down"], env);
-    await startTemporalUI();
     await compose(scope, ["--file", cachedNetwork, "up", "--wait", "--wait-timeout", "900"], env);
     const egress = await captureCompose(scope, ["exec", "-T", "document-processor", "curl", "--fail", "--silent", "--max-time", "3", "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/README.md"], env);
     if (egress.code === 0) throw new Error("Cached model restart unexpectedly retained external network access.");
     const restartedBase = `http://${dockerHost}:${await publishedPort(scope, "web", 8080, env)}`;
-    await verifyDashboardLink(restartedBase, headers);
     const afterRestart = await json(`${restartedBase}/api/v1/documents/${id}`, { headers });
     if (await credentialFingerprint() !== initialCredentialFingerprint) throw new Error("Credential encryption keys changed across retained-volume restart.");
     const retainedProvider = await json(`${restartedBase}/api/v1/email-providers/${originalEmail.providerID}`, { headers });
     if (retainedProvider.credentialState !== "ready" || retainedProvider.username !== "compose-mailbox") throw new Error("Email credentials could not decrypt after retained-volume restart.");
     await verifyOriginal(restartedBase, token, original);
     await verifyOriginal(restartedBase, token, originalEmail);
-    const history = await workflow(["--wait-workflow-id", workflowID, "--timeout", "60s"]);
-    if (afterRestart.id !== id || history.id !== id) throw new Error("Application or workflow data was lost across full Compose down/up.");
+    if (afterRestart.id !== id ) throw new Error("Application or workflow data was lost across full Compose down/up.");
     const restoredIdentity = await json(`${restartedBase}/api/v1/auth/session`, { headers });
     if (restoredIdentity.systemRole !== "admin") throw new Error("Administrator authority did not survive retained-volume restart.");
     const other = await json(`${restartedBase}/api/v1/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ accountName: "Separate account", email: invitedEmail, password }) });

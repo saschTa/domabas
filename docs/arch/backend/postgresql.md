@@ -1,42 +1,10 @@
 # PostgreSQL and persistent storage
 
-PostgreSQL is the shared record store. It holds application data and, in separate
-databases, Temporal's execution data. Original documents and encryption keys live
-on persistent disk. The database and those files belong to the same installation.
-For the actual commands and environment variables, use the
-[Compose guide](../../development/compose.md).
+PostgreSQL stores application records, job checkpoints and concurrency settings. Original documents and encryption keys live on persistent disk. Recover the database and files together.
 
 ## Databases and roles
 
-The default [Compose configuration](../../../compose.yaml) uses PostgreSQL 18
-with pgvector 0.8.6. Its initializer creates these databases and roles:
-
-| Database | Default owner | Contents |
-| --- | --- | --- |
-| `domabas` | `domabas` | Application records, search data, settings and durable jobs |
-| `temporal` | `temporal` | Temporal's workflow histories and internal state |
-| `temporal_visibility` | `temporal` | Temporal's execution listing and filtering data |
-
-The `domabas_admin` role initializes databases and privileged extensions. The
-backend uses the application role; Temporal uses its own role. The initializer
-requires all three role names to differ. These are local defaults, not deployment
-secrets. Export deployment credentials or use ignored local configuration as
-explained in the hosting guide.
-
-[infra/init/init.ts](../../../infra/init/init.ts) has three setup modes:
-
-1. `databases` creates missing roles and databases, updates the two service role
-   passwords, and installs or validates pgvector in the application database.
-2. `schemas` runs Temporal's schema tools against its two databases using the
-   Temporal role.
-3. `namespace` waits for Temporal's gRPC health, then creates the configured
-   namespace if needed. A new namespace gets 72-hour history retention; an
-   existing namespace keeps its configuration.
-
-These steps also run against retained volumes. PostgreSQL's first-container
-initialization alone would not cover upgrades to an existing installation.
-Changing a Compose variable does not migrate data from an old database name or
-reset an existing administrative password.
+Compose runs PostgreSQL 18 with pgvector 0.8.6. The database initializer uses a provisioning administrator to create the application role and database, apply its password and install pgvector. On a retained volume it checks existing state before creating missing objects. The API connects as the application role.
 
 ## Schemas and extensions
 

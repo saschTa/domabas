@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease as publishWithAssets, publishScannedImages, releaseCompose, releaseConfiguration, verifyReleaseImageID, type GitHubRelease, type ReleaseBump, type ReleaseConfiguration, type ReleaseImage } from "./release.ts";
+import { GitHubReleaseClient, RELEASE_IMAGES, nextReleaseVersion, publishRelease as publishWithAssets, publishScannedImages, releaseCompose, releaseConfiguration, trueNASReleaseAssets, verifyReleaseImageID, type GitHubRelease, type ReleaseBump, type ReleaseConfiguration, type ReleaseImage } from "./release.ts";
 import { ROOT } from "../shared/runtime.ts";
 import { FLUTTER_SHA256, FLUTTER_VERSION } from "../ci/setup-flutter.ts";
-import { type NativeReleaseAsset, nativeArtifactName, NATIVE_TARGETS } from "./native-artifacts.ts";
+import { type ReleaseAsset, nativeArtifactName, NATIVE_TARGETS } from "./native-artifacts.ts";
 import { prepareRelease } from "./prepare-release.ts";
 
 const env = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_REF: "refs/heads/main", GITHUB_SHA: "a".repeat(40), GITHUB_REPOSITORY: "Example-Owner/Domabas", GITHUB_SERVER_URL: "https://github.com", GITHUB_API_URL: "https://api.github.com", RELEASE_BUMP: "patch" };
 const config = releaseConfiguration(env);
 const source = await Bun.file(`${ROOT}/compose.yaml`).text();
 const images = (version: string): ReleaseImage[] => RELEASE_IMAGES.map(image => ({ name: image.name, tag: `ghcr.io/example-owner/domabas-${image.name}:${version}`, reference: `ghcr.io/example-owner/domabas-${image.name}@sha256:${"b".repeat(64)}`, platform: "linux/amd64" }));
-const nativeAssets = async (version: string): Promise<NativeReleaseAsset[]> => NATIVE_TARGETS.map(target => ({ name: nativeArtifactName(target, version), content: new Blob([target]), contentType: "application/octet-stream", sha256: new Bun.CryptoHasher("sha256").update(target).digest("hex") }));
+const nativeAssets = async (version: string): Promise<ReleaseAsset[]> => NATIVE_TARGETS.map(target => ({ name: nativeArtifactName(target, version), content: new Blob([target]), contentType: "application/octet-stream", sha256: new Bun.CryptoHasher("sha256").update(target).digest("hex") }));
 const publishRelease = (configuration: ReleaseConfiguration, client: GitHubReleaseClient, build: (version: string) => Promise<ReleaseImage[]>, compose: string, assets = nativeAssets) => publishWithAssets(configuration, client, build, compose, assets);
 
 describe("release versions and triggers", () => {
@@ -47,6 +47,26 @@ describe("release deployment", () => {
     expect(compose.services.web!.ports).toContain("${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8088}:8080");
     expect(output).toContain("postgres_data:");
     expect(output).not.toContain("dockerfile:");
+  });
+  test("pins the TrueNAS variants while retaining editable settings and device selection", async () => {
+    const published = images("v0.0.1");
+    const manifests = await trueNASReleaseAssets(published);
+    expect(manifests.map(asset => asset.name)).toEqual(["compose.cpu.yaml", "compose.cuda.yaml", "compose.rocm.yaml"]);
+    for (const asset of manifests) {
+      const yaml = await asset.content.text();
+      expect(yaml).toContain("&dataset-path");
+      expect(yaml).not.toMatch(/native-local|temporal/i);
+      const { services } = Bun.YAML.parse(yaml) as { services: Record<string, { image: string; gpus?: string; devices?: string[]; ports?: unknown[] }> };
+      expect(Object.keys(services).sort()).toEqual(["backend", "database-init", "document-processor", "ollama", "postgres", "storage-init", "web"]);
+      for (const image of published) {
+        for (const name of image.name === "init" ? ["storage-init", "database-init"] : [image.name]) {
+          expect(services[name]!.image).toBe(image.reference);
+        }
+      }
+      expect(Object.keys(services).filter(name => services[name]!.ports)).toEqual(["web"]);
+      expect(services.ollama!.gpus).toBe(asset.name === "compose.cuda.yaml" ? "all" : undefined);
+      expect(services.ollama!.devices).toEqual(asset.name === "compose.rocm.yaml" ? ["/dev/kfd:/dev/kfd", "/dev/dri:/dev/dri"] : undefined);
+    }
   });
   test("fails for incomplete images and unrecognized builds", () => {
     expect(() => releaseCompose(source, images("v0.0.1").slice(1))).toThrow("Missing published image");
@@ -205,6 +225,11 @@ describe("GitHub publication and recovery", () => {
     expect(body.body).toContain("android-preview.apk");
     expect(body.body).toContain("macos-universal-unsigned.dmg");
     expect(body.body).toContain("uninstalling");
+    for (const variant of ["cpu", "cuda", "rocm"]) {
+      const name = `compose.${variant}.yaml`;
+      expect(fake.assets.some(asset => asset.name === name)).toBe(true);
+      expect(body.body).toContain(`/releases/download/v0.0.1/${name}`);
+    }
     expect(body.make_latest).toBe("false");
     expect(fake.calls.find(call => call.method === "POST" && call.path === "/releases")!.body.prerelease).toBe(true);
   });

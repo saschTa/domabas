@@ -5,6 +5,59 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'phone workload navigation previews a saved Paperless download limit',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        CatalogPreview(
+          entry: catalogCases().firstWhere(
+            (entry) => entry.id == 'mobile-more-ready',
+          ),
+          reduceMotion: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final destination = find.text('Workload limits');
+      await tester.ensureVisible(destination);
+      await tester.tap(destination);
+      await tester.pumpAndSettle();
+      final picker = find.byKey(const ValueKey('flow-pipeline-picker'));
+      expect(picker.hitTestable(), findsOneWidget);
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      final paperless = find.text('Paperless imports').last;
+      await tester.ensureVisible(paperless);
+      await tester.tap(paperless);
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 2 total'), findsOneWidget);
+      final field = find.descendant(
+        of: find.widgetWithText(
+          GlacierMobileField,
+          'Paperless downloads maximum parallel',
+        ),
+        matching: find.byType(TextFormField),
+      );
+      await tester.ensureVisible(field);
+      await tester.enterText(field, '11');
+      await tester.pump();
+      expect(find.text('Enter a whole number from 1 to 10.'), findsOneWidget);
+      final save = find.widgetWithText(GlacierButton, 'Save limits');
+      expect(tester.widget<GlacierButton>(save).onPressed, isNull);
+      await tester.enterText(field, '3');
+      await tester.pump();
+      expect(find.text('2 of 2 total'), findsOneWidget);
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(picker);
+      expect(tester.widget<DropdownButton<String>>(picker).value, 'paperless');
+      expect(find.text('2 of 3 total'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final state in ['conflict', 'uncertain']) {
     testWidgets(
       'settings $state checks saved value before enabling retained draft',

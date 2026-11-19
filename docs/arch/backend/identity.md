@@ -294,10 +294,7 @@ transaction. Repeating it cannot move already owned documents. Startup never
 adopts automatically and no HTTP endpoint exposes this operation.
 
 Deploy the new server and client together for the new role vocabulary. Old
-unscoped service/worker binaries must not run with the scoped schema. Temporal v2
-metadata work carries account/document IDs and scoped activity reads. The retained
-v1 workflow keeps its original command sequence for replay, while its activity
-fails without reading unscoped documents. Completed history remains readable.
+unscoped service/worker binaries must not run with the scoped schema. Background metadata work carries account and document IDs and checks access before reading scoped data.
 
 Document job history and namespace reindexing use independent namespace claims
 `documents:jobs:read` and `documents:reindex`. The Admin role bundle and registered

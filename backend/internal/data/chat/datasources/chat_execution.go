@@ -54,7 +54,7 @@ func (s *ChatDataSource) Dispatch(ctx context.Context) ([]m.ChatDispatch, error)
 				return e
 			}
 		}
-		rows, err = tx.Query(ctx, `SELECT id,account_id,workflow_id,task_queue,run_id,first_start_at,status='cancelled' FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed AND next_check_at<=clock_timestamp() AND (delivery_expires_at IS NULL OR delivery_expires_at<clock_timestamp()) ORDER BY next_check_at,created_at LIMIT 3 FOR UPDATE`)
+		rows, err = tx.Query(ctx, `SELECT id,account_id,workflow_id,task_queue,run_id,first_start_at,status='cancelled' FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed AND next_check_at<=clock_timestamp() AND (status<>'running' OR execution_token IS NULL OR execution_expires_at<=clock_timestamp()) AND (delivery_expires_at IS NULL OR delivery_expires_at<clock_timestamp()) ORDER BY next_check_at,created_at LIMIT 3 FOR UPDATE`)
 		if err != nil {
 			return err
 		}

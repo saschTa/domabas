@@ -11,7 +11,11 @@ func schedulerSettingsResponseMapper(settings m.SchedulerSettings) contract.Work
 		response.Resources = append(response.Resources, contract.WorkloadResource{Id: resource.ID, Label: resource.Label, Limit: resource.Limit, MaximumLimit: resource.MaximumLimit, ActiveJobs: resource.ActiveJobs})
 	}
 	for _, pipeline := range settings.Pipelines {
-		response.Pipelines = append(response.Pipelines, contract.WorkloadPipeline{Id: pipeline.ID, Label: pipeline.Label, ResourceIds: append([]string{}, pipeline.ResourceIDs...)})
+		item := contract.WorkloadPipeline{Id: pipeline.ID, Label: pipeline.Label, ResourceIds: append([]string{}, pipeline.ResourceIDs...)}
+		if pipeline.ActiveSlots != nil {
+			item.ActiveSlots = &pipeline.ActiveSlots
+		}
+		response.Pipelines = append(response.Pipelines, item)
 	}
 	return response
 }

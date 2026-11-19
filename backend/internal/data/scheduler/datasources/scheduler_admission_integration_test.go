@@ -113,53 +113,36 @@ func TestSchedulerAdmitsOldestFeasibleWithoutPartialReservations(t *testing.T) {
 	if !f.reserve(running, "ollama") {
 		t.Fatal("initial model job not admitted")
 	}
-	if f.reserve(older, "ollama") {
-		t.Fatal("saturated model admitted")
+	if !f.reserve(bypass, "ollama") || f.active("ollama") != 0 {
+		t.Fatal("provider capacity was charged during admission")
 	}
-	if f.feasible(older) {
-		t.Fatal("candidate hint ignores saturated model resource")
-	}
-	if f.active("worker") != 1 || f.active("ollama") != 1 {
-		t.Fatal("denied model job reserved partial worker capacity")
-	}
-	if !f.reserve(bypass) {
-		t.Fatal("worker-only import blocked behind saturated Ollama")
-	}
-	if f.reserve(younger) {
-		t.Fatal("worker capacity exceeded")
+	if f.reserve(older) || f.reserve(younger) || f.feasible(older) {
+		t.Fatal("worker budget exceeded")
 	}
 	f.close(running)
-	if f.reserve(younger) {
-		t.Fatal("younger feasible job passed older now-feasible waiter")
+	if f.reserve(younger) || !f.feasible(older) {
+		t.Fatal("younger job bypassed an older feasible request")
 	}
-	if !f.feasible(older) || !f.feasible(younger) {
-		t.Fatal("candidate hint does not reflect released capacity")
-	}
-	if !f.reserve(older, "ollama") {
-		t.Fatal("oldest feasible waiter not admitted")
-	}
-	if f.reserve(younger) {
-		t.Fatal("limit ignored after oldest admission")
+	if !f.reserve(older) || f.active("worker") != 2 {
+		t.Fatal("oldest job did not claim freed capacity")
 	}
 	f.close(bypass)
 	if !f.reserve(younger) {
-		t.Fatal("remaining waiter failed to progress")
+		t.Fatal("waiting job did not progress")
 	}
-	if f.active("worker") != 2 || f.active("ollama") != 1 {
-		t.Fatal("unexpected active resource totals")
-	}
+
 }
 
 func TestSchedulerResourceDecreaseAndCancellationKeepRunningOwner(t *testing.T) {
 	f := newSchedulerAdmissionFixture(t)
-	f.exec(`UPDATE scheduler_resources SET concurrency_limit=2 WHERE id='ollama'`)
+	f.exec(`UPDATE scheduler_resources SET concurrency_limit=2 WHERE id='pipeline:paperless'`)
 	first, second, waiting := f.paperless(), f.paperless(), f.paperless()
 	if !f.reserve(first, "ollama") || !f.reserve(second, "ollama") {
 		t.Fatal("initial jobs not admitted")
 	}
-	f.exec(`UPDATE scheduler_resources SET concurrency_limit=1 WHERE id='ollama'`)
+	f.exec(`UPDATE scheduler_resources SET concurrency_limit=1 WHERE id='pipeline:paperless'`)
 	f.exec(`UPDATE paperless_runs SET state='cancelled',cancel_requested=true WHERE 'domabas-paperless-'||id::text=$1`, first)
-	if f.reserve(waiting, "ollama") || f.active("ollama") != 2 {
+	if f.reserve(waiting, "ollama") || f.active("pipeline:paperless") != 2 {
 		t.Fatal("lowered limit or visible cancellation released running reservation")
 	}
 	if !f.reserve(second, "ollama") {

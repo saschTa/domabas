@@ -48,6 +48,7 @@ void main() {
         'id': 'chat',
         'label': 'AI chat',
         'resourceIds': ['worker', 'external:future-provider'],
+        'activeSlots': {'worker': 2, 'external:future-provider': 0},
       },
     ],
   };
@@ -82,6 +83,11 @@ void main() {
       };
       final loaded = await repository.settings();
       expect(loaded.resources.first.activeJobs, 6);
+      expect(loaded.pipelines.first.activeSlots, isEmpty);
+      expect(loaded.pipelines.last.activeSlots, {
+        'worker': 2,
+        'external:future-provider': 0,
+      });
       expect(loaded.pipelines.last.resourceIds, [
         'worker',
         'external:future-provider',

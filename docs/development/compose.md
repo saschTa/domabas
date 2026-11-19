@@ -46,28 +46,17 @@ has no administrator, explicitly choose an existing user with
 The command refuses once an administrator exists. System administrators can then
 promote other users through the app; they do not receive those users' documents.
 
-The web container serves Flutter and proxies `/api/`, `/healthz` and `/readyz` to Go. Flutter uses the browser's current origin, so the image also works at another hostname. The Go process serves HTTP and polls Temporal task queues in the same process. There is no separate application worker container.
+The web container serves Flutter and proxies `/api/`, `/healthz` and `/readyz` to Go. Flutter uses the browser's current origin, so the image also works at another hostname. The Go process serves HTTP and polls PostgreSQL job tables in the same process. There is no separate application worker container.
 
 ```mermaid
 flowchart LR
   Browser --> Web[Flutter / Nginx]
-  Web --> Go[Go HTTP + Temporal worker]
+  Web --> Go[Go HTTP + native worker]
   Go --> AppDB[(Application database)]
-  Go --> Temporal[Temporal server]
-  Temporal --> TemporalDB[(Temporal + visibility databases)]
   AppDB --- PG[One PostgreSQL server]
-  TemporalDB --- PG
 ```
 
-Initialization is ordered and repeatable: PostgreSQL becomes healthy; the Bun database initializer provisions separate application and Temporal roles/databases; matching Temporal tools apply persistence and visibility schemas; Temporal passes a real gRPC health probe; the configured namespace is created/verified; the Go worker/API becomes ready; web becomes healthy. Initialization failures stop dependent startup.
-
-Temporal uses the official `temporalio/server:1.32.0` image pinned by digest.
-Its container health check probes the listening port. The existing initializer
-then waits for real gRPC cluster health before creating or verifying the namespace.
-Backend readiness continues checking Temporal and its namespace during operation.
-`DYNAMIC_CONFIG_FILE_PATH=/dev/null` selects no dynamic overrides. Administrative
-CLI commands run from the existing initializer image; there is no custom Temporal
-server image to build or publish. Existing database volumes and schemas are unchanged.
+The database initializer provisions the application database, role and pgvector. The backend applies migrations and starts its Go worker when dependencies are ready.
 
 ### Health checks
 
@@ -96,24 +85,22 @@ Published ports bind to `127.0.0.1` by default. Go is reached through the web pr
 | --- | --- | --- |
 | Web and proxied API | 8088 | `WEB_PORT` |
 | PostgreSQL | 54329 | `POSTGRES_PORT` |
-| Temporal gRPC | 7233 | `TEMPORAL_PORT` |
 | Private document processor | 8091 | `DOCUMENT_PROCESSOR_PORT` |
-| Temporal UI | 8233 | `TEMPORAL_UI_PORT` |
 
 ```sh
-# Start the downloaded quick-start file and Temporal UI at http://localhost:8233.
+# Start the downloaded quick-start file.
 docker compose up -d
 
 # Inspect service health and logs.
 docker compose ps
-docker compose logs --tail 100 backend temporal
+docker compose logs --tail 100 backend
 
 # Stop and remove containers/network, keeping database/workflow data.
 docker compose down
 ```
 
 From a checkout, use `docker compose up --build --wait` to build and start the
-current source. `task compose:up` and `task compose:down` expose that full-stack lifecycle through Go Task and Bun. `task infra:up` starts PostgreSQL, Temporal and its UI, the private document processor, Ollama and initialization jobs; `task infra:down` stops infrastructure. `task db:down` stops only PostgreSQL. Ordinary commands do not remove volumes. Infrastructure shutdown makes a running API unready; stop the application first when ending a session.
+current source. `task compose:up` and `task compose:down` expose that full-stack lifecycle through Go Task and Bun. `task infra:up` starts PostgreSQL and its UI, the private document processor, Ollama and initialization jobs; `task infra:down` stops infrastructure. `task db:down` stops only PostgreSQL. Ordinary commands do not remove volumes. Infrastructure shutdown makes a running API unready; stop the application first when ending a session.
 
 Run `task dev` for native Air and Flutter hot reload against Compose infrastructure. Stop the packaged backend before starting a native worker on the same queue: otherwise both processes can poll it. `docker compose stop web backend` leaves infrastructure available for development. All workers on a queue must use the same application database/schema and compatible workflow code.
 
@@ -193,7 +180,7 @@ root with three distinct generated passwords. The following optional recipe
 requires a POSIX shell and OpenSSL; it writes the passwords directly to a private
 file without printing them. It refuses to overwrite an existing file and stops
 if password generation fails. Alternatively, use a password manager to generate
-three separate 64-character hexadecimal passwords and save the same three
+two separate 64-character hexadecimal passwords and save the same two
 variable names in that private file.
 
 ```sh
@@ -203,15 +190,13 @@ variable names in that private file.
   set -C
   admin_password="$(openssl rand -hex 32)"
   app_password="$(openssl rand -hex 32)"
-  temporal_password="$(openssl rand -hex 32)"
-  printf 'POSTGRES_ADMIN_PASSWORD=%s\nPOSTGRES_PASSWORD=%s\nTEMPORAL_DB_PASSWORD=%s\n' \
-    "$admin_password" "$app_password" "$temporal_password" > .env.deployment.local
+  printf 'POSTGRES_ADMIN_PASSWORD=%s\nPOSTGRES_PASSWORD=%s\n' \
+    "$admin_password" "$app_password" > .env.deployment.local
   chmod 600 .env.deployment.local
 )
 ```
 
-These settings supply the provisioning administrator, Domabas database role and
-Temporal database role respectively. For an existing database, retain the current
+These settings supply the provisioning administrator and Domabas database role respectively. For an existing database, retain the current
 credentials; changing the administrator setting does not rotate its stored
 password. Plan administrator password rotation in PostgreSQL separately;
 changing this file alone is insufficient.
@@ -221,7 +206,7 @@ Edit only the private file to add deployment settings, such as
 HTTP works directly on the published web port. To use HTTPS, configure a proxy
 separately and use its HTTPS origin. Keep `BIND_ADDRESS=127.0.0.1` and
 `PRIVATE_BIND_ADDRESS=127.0.0.1` in the private file. Changing `BIND_ADDRESS`
-also exposes PostgreSQL, Temporal and Temporal UI; use the
+also exposes PostgreSQL; use the
 [web-only override](#allow-web-access-from-another-machine) for remote web access.
 Compose supplies internal service addresses and passes `POSTGRES_PASSWORD` to
 the backend as `PGPASSWORD`; no deployment `DATABASE_URL` needs to be copied from
@@ -269,7 +254,7 @@ services:
 This requires Docker Compose 2.24.4 or newer. The
 [`!override` tag](https://docs.docker.com/reference/compose-file/merge/#replace-value)
 replaces the web port mapping instead of appending another one. PostgreSQL,
-Temporal, Temporal UI, Ollama and the processor keep their loopback bindings.
+Ollama and the processor keep their loopback bindings.
 The backend remains reachable through the web proxy without its own host port.
 
 Use both files for every command, including shutdown:
@@ -289,9 +274,9 @@ host can reach the default loopback web port without this LAN override.
 
 ### Persistent data
 
-Container connections use service DNS (`postgres`, `temporal`), while native
+Container connections use service DNS (`postgres`), while native
 tools use published localhost ports. If changing a native port, update its
-`DATABASE_URL` or `TEMPORAL_ADDRESS` too. For another machine's web access, use
+`DATABASE_URL` too. For another machine's web access, use
 the [web-only override](#allow-web-access-from-another-machine) and configure TLS
 termination for credentials and sessions.
 
@@ -308,7 +293,7 @@ before new work uses the smaller budget. The oldest waiting job whose complete
 resource requirements fit gets the next available capacity. Running model requests
 continue when new ingestion arrives. See [resource scheduling](../arch/backend/resource-scheduler.md).
 
-PostgreSQL uses a named `postgres_data` volume mounted at the PostgreSQL 18 root `/var/lib/postgresql`. Three databases hold application metadata, Temporal persistence and Temporal visibility. The administrative bootstrap role (`POSTGRES_ADMIN_USER`/`POSTGRES_ADMIN_PASSWORD`) creates the separate application and Temporal roles. Neither runtime role needs superuser or database-creation privileges. The schema job uses the Temporal role only to manage its own tables.
+PostgreSQL uses a named `postgres_data` volume mounted at the PostgreSQL 18 root `/var/lib/postgresql`. The application database holds metadata, checkpoints and queue state. The administrative bootstrap role (`POSTGRES_ADMIN_USER`/`POSTGRES_ADMIN_PASSWORD`) initializes the application database and its unprivileged runtime role.
 
 The pinned `pgvector/pgvector:0.8.6-pg18-trixie` image contains PostgreSQL 18.6.
 It retains the existing PostgreSQL 18 data directory and volume mount. The updated
@@ -380,15 +365,8 @@ for optional property extraction alongside embeddings. Its queue defaults to 128
 requests, configurable with `OLLAMA_MAX_QUEUE`;
 its pinned embedding runtime processes inference in one slot regardless of
 `OLLAMA_NUM_PARALLEL`, which remains one. The shared resource scheduler admits background jobs across all backend replicas. Set limits in administrator Workload settings, keeping the Ollama total at or below half its configured queue. Leave headroom for semantic queries and unrelated clients. Email and Paperless share worker permits but do not reserve Ollama during retrieval. Actual throughput depends on CPU, memory and model
-capacity, not queue length. Model calls have no fixed HTTP deadline; new
-workflows wait while their worker heartbeats. OCR execution and health deadlines
-remain. Temporal requires a finite activity deadline, set to ten years for model
-stages and new extraction activities so CPU queue waiting can continue.
-Stop all backend workers when upgrading migration 020 and rebuild the private
-processor so neither hop retains the previous embedding timeout. Already started
-executions retain their old deadlines; retry failed jobs after the upgrade.
-Missing Temporal history retains unlimited execution reservations for operator
-investigation instead of silently freeing potentially active capacity.
+capacity. Model calls release their permits when the operation ends.
+
 The processor startup budget is ten minutes; Task wrappers allow fifteen minutes
 for infrastructure readiness. Complete retained caches start without downloading
 again. Corrupt caches fail readiness rather than silently selecting another model.
@@ -417,11 +395,10 @@ for large images. OCR allows 120 seconds per Tesseract call and eight minutes pe
 extraction. Rebuild both backend and processor to apply the matching HTTP and
 workflow allowances; retained workflows keep their recorded activity deadlines.
 
-The default admin credentials initialize a **fresh** volume. Changing them does not change an existing PostgreSQL administrator's password. Application and Temporal role credentials are reapplied by the initializer. Use a deliberate migration/backup process when changing database names or adopting existing data; no startup operation drops or renames databases. If adopting an older Compose volume initialized with the application user as superuser, supply its existing administrator credentials and choose distinct runtime roles. The initializer requires admin, application and Temporal role names to differ.
+The default admin credentials initialize a **fresh** volume. Changing them does not change an existing PostgreSQL administrator's password. Application role credentials are reapplied by the initializer. Use a deliberate migration/backup process when changing database names or adopting existing data; no startup operation drops or renames databases. If adopting an older Compose volume initialized with the application user as superuser, supply its existing administrator credentials and choose a distinct application role.
 
-Earlier repository-native `.cache/postgres` data is retained and not automatically imported into Compose. Stop that server before using the same host port, or choose new ports. To continue using an externally managed database, configure both it and a Temporal namespace, then run `task dev -- --external-services`.
+Earlier repository-native `.cache/postgres` data is retained and not automatically imported into Compose. Stop that server before using the same host port, or choose new ports. To continue using an externally managed database, configure the database and document processor, then run `task dev -- --external-services`.
 
-The pinned stack pairs Temporal Server 1.32.0 with PostgreSQL 18.6. Temporal's [published database test matrix](https://docs.temporal.io/temporal-service/persistence#dependency-versions) does not explicitly list PostgreSQL 18. Run `task test:temporal` and `task test:compose` to check schema, workflow and restart behavior before deployment; see the [testing guide](testing.md) for prerequisites.
 
 ## Existing document libraries
 
@@ -436,72 +413,17 @@ this stack does not send email or verify mailbox ownership.
 
 ## Exercise the embedded worker
 
-Create a document through the web app or API, copy its UUID, then:
-
-```sh
-docker compose exec backend /app/workflow --account-id ACCOUNT_UUID --document-id DOCUMENT_UUID
-```
-
-The trusted operator diagnostic requires the account UUID from the authenticated session and starts `domabas.DocumentMetadata.v2`. Its activity reads the persisted document through the injected repository and returns JSON containing only `id` and `createdAt`. Titles/descriptions stay out of workflow history. Missing documents fail without repeated retries; transient storage errors have bounded retries. This is a working queue integration, not an automatic processing step on document creation.
-
-The CLI also supports a caller-selected workflow ID, enqueue-only mode, and waiting for an existing workflow; run `/app/workflow --help` for flags. Workflows have execution deadlines. Use unique IDs for independent diagnostics. For native development run `go run ./cmd/workflow --account-id ACCOUNT_UUID --document-id DOCUMENT_UUID` from `backend/`.
-
-Future document processing that must follow a committed database write needs a transactional outbox and idempotent activities. Do not add an uncoordinated database write followed by a Temporal call and treat it as guaranteed delivery.
+Upload an original and follow its processing in Jobs. Workload limits shows pipeline and resource occupancy.
 
 ## Verification and deployment limits
 
 `task test:compose` builds a separate randomly named stack, checks web/API/workflows and restart behavior, retains diagnostic logs under `.logs/`, and removes only that test's disposable project and volumes. Application integration/E2E tests instead use disposable schemas and unique queues. Normal development volumes and any existing native cluster remain untouched.
 
-This is a persistent single-host baseline for private evaluation and development. It has local authentication and account authorization; public TLS termination, HA and backup policy remain deployment responsibilities. Temporal has explicit no-auth configuration and its administration endpoints/UI must remain on trusted networks. Configure those missing operational features before public or sensitive production use. Native Android/iOS/Linux/Windows packaging remains separate from the Compose web distribution.
+This is a persistent single-host baseline for private evaluation and development. It has local authentication and account authorization; public TLS termination, HA and backup policy remain deployment responsibilities. Native Android/iOS/Linux/Windows packaging remains separate from the Compose web distribution.
 
 ## Processing dashboard and rollout
 
-When deploying the concurrency limit of ten, stop backend instances before migration 016
-and restart them together with the updated processor and Ollama configuration.
-The migration removes obsolete singleton owner columns while preserving all
-execution records and job progress. Old backend binaries must not keep running
-against the migrated schema. No database or model volume reset is needed.
-
-Compose starts Temporal UI by default at `http://localhost:8233`, selects the
-configured `TEMPORAL_NAMESPACE`, and supplies the link shown under
-**Admin > Document processing > Temporal dashboard**. `TEMPORAL_UI_PORT` changes
-both the published port and the default link. A nonempty `TEMPORAL_UI_URL` overrides the
-complete browser-facing HTTP(S) URL for remote browsers or a TLS proxy, for example
-`TEMPORAL_UI_URL=http://nas.example.test:8233`. Replace the fictional hostname
-`nas.example.test` with your browser-reachable NAS hostname or address. Changing
-this URL does not publish the UI port. Keep its binding on loopback and use an
-authenticated proxy or SSH tunnel for remote administration; do not broaden
-`BIND_ADDRESS` just to expose the dashboard.
-A deployment base path is allowed; credentials, query strings and fragments
-are rejected.
-
-`task dev` and `task infra:up` also start the UI. Native backends use the same
-default link: `http://localhost:8233`, following `TEMPORAL_UI_PORT` when set.
-An unset or empty `TEMPORAL_UI_URL` selects this default. Air restarts the backend
-when `.env` changes; refresh the processing settings to load the link. TrueNAS
-templates provide separate UI port, bind address and browser URL settings in
-[their deployment guide](../../truenas/README.md).
-
-The URL is disclosed only to system processing managers. The link does not
-provide Temporal authentication or namespace isolation; keep the published UI on
-a trusted network or behind an authenticated proxy.
-
-For the first jobs/reindex rollout, stop all pre-feature backend dispatchers
-before starting the new backend. Do not run old and new dispatchers concurrently
-on a retained database. The migration adopts known and ambiguous executions with
-a conservative cutover horizon and drains them through Describe; no database
-reset or operator workflow cancellation is required. Upgrade the private document
-processor together with the backend because embedding requests/results now carry
-the complete expected space and extraction revision. A native development setup
-can rebuild only that service with
-`docker compose up -d --build --no-deps --wait document-processor`.
-
-Keep Temporal history retention at least 24 hours. The backend checks retention
-before granting new start permits as well as at startup/readiness. Application,
-PostgreSQL and Temporal hosts must have synchronized clocks within one minute;
-the 23-hour-59-minute start retry window relies on that margin. SQL permit times
-always come from the database clock. Ordinary Compose shutdown retains every
-application, original-file and model-cache volume.
+Open **Workload limits** in the app for live occupancy and concurrency controls. Before upgrading a deployment running Temporal, pause submissions, drain admitted jobs with the previous worker and stop old backends. [Worker migration details](../arch/backend/native-jobs.md)
 
 ## Live connections
 

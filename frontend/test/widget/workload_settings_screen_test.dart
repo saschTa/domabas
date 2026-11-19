@@ -1,6 +1,7 @@
 import 'package:domabas/app/account_workspace.dart';
 import 'package:domabas/app/app_dependencies.dart';
 import 'package:domabas/domain/identity/models/identity.dart';
+import 'package:domabas/domain/realtime/models/realtime.dart';
 import 'package:domabas/presentation/workload/cubits/workload_settings_cubit.dart';
 import 'package:domabas/presentation/workload/views/workload_settings_screen.dart';
 import 'package:domabas/ui/domabas_ui.dart';
@@ -72,6 +73,15 @@ void main() {
               matching: find.byType(Scrollable),
             )
             .first;
+        expect(find.text('Live resource flow'), findsOneWidget);
+        final picker = find.byKey(const ValueKey('flow-pipeline-picker'));
+        await tester.ensureVisible(picker);
+        await tester.tap(picker);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('AI chat').last);
+        await tester.pumpAndSettle();
+        expect(tester.widget<DropdownButton<String>>(picker).value, 'chat');
+        expect(find.text('External AI · example.test'), findsWidgets);
         await revealWorkspaceContent(
           tester,
           field('ollama'),
@@ -92,19 +102,6 @@ void main() {
         await tester.pumpAndSettle();
         expect(repository.writes.single.limits['ollama'], 12);
         expect(repository.writes.single.revision, 1);
-        await revealWorkspaceContent(
-          tester,
-          find.text('What shares these limits'),
-          scrollable: scrollable,
-        );
-        await revealWorkspaceContent(
-          tester,
-          find.text('AI chat'),
-          scrollable: scrollable,
-        );
-        expect(find.text('Paperless retrieval'), findsOneWidget);
-        expect(find.text('Document ingestion'), findsOneWidget);
-        expect(find.text('External AI · example.test'), findsWidgets);
         expect(find.text('High priority'), findsNothing);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
@@ -118,6 +115,7 @@ void main() {
       'workload navigation requires its system claim: $administrator',
       (tester) async {
         viewport(tester, const Size(390, 844));
+        final realtime = FakeRealtimeRepository();
         final repository = FakeWorkloadSettingsRepository();
         await tester.pumpWidget(
           MaterialApp(
@@ -126,11 +124,12 @@ void main() {
               session: testSession(
                 role: AccountRole.admin,
                 extraPermissions: [
+                  IdentityPermission.connectRealtime,
                   if (administrator) IdentityPermission.manageWorkloads,
                 ],
               ),
               dependencies: AuthenticatedDependencies(
-                realtime: FakeRealtimeRepository(),
+                realtime: realtime,
                 email: FakeEmailRepository(),
                 activity: FakeActivityRepository(),
                 documents: FakeDocumentRepository(),
@@ -156,6 +155,17 @@ void main() {
           );
           expect(find.byType(WorkloadSettingsScreen), findsOneWidget);
           expect(repository.reads, 1);
+          await tester.pump(const Duration(seconds: 6));
+          expect(repository.reads, 1);
+          realtime.emit(
+            RealtimeEvent(
+              RealtimeEventKind.ready,
+              topics: [RealtimeTopic.workload],
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 350));
+          expect(repository.reads, 2);
         } else {
           expect(find.byKey(const Key('manageWorkloads')), findsNothing);
           expect(

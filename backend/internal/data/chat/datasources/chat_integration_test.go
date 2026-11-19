@@ -288,6 +288,30 @@ func TestChatAcceptanceRollbackAndImmutableProviderCredentials(t *testing.T) {
 	}
 }
 
+func TestNativeChatDispatchWaitsForPreviousExecutionLease(t *testing.T) {
+	f := newChatFixture(t)
+	ctx := t.Context()
+	turn := f.send(f.conversation().ID, "Recover an interrupted turn").AssistantMessage.TurnID
+	claims, err := f.source.Dispatch(ctx)
+	if err != nil || len(claims) != 1 {
+		t.Fatalf("initial dispatch: %v %v", claims, err)
+	}
+	if err := f.source.Acknowledge(ctx, claims[0], "native-run"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.source.AcquireStep(ctx, turn, uuid.NewString()); err != nil {
+		t.Fatal(err)
+	}
+	f.exec("UPDATE chat_turns SET next_check_at=clock_timestamp() WHERE id=$1", turn)
+	if retry, err := f.source.Dispatch(ctx); err != nil || len(retry) != 0 {
+		t.Fatalf("live lease was redispatched: %v %v", retry, err)
+	}
+	f.exec("UPDATE chat_turns SET execution_expires_at=clock_timestamp()-interval '1 second' WHERE id=$1", turn)
+	if retry, err := f.source.Dispatch(ctx); err != nil || len(retry) != 1 || retry[0].TurnID != turn {
+		t.Fatalf("expired lease was not recovered: %v %v", retry, err)
+	}
+}
+
 func TestChatStepAcquisitionReplaysCompletionWithoutReplacingOwnership(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := t.Context()
@@ -462,11 +486,11 @@ func TestChatConcurrentAcceptanceAndDispatchCapacity(t *testing.T) {
 	for _, batch := range batches {
 		claimed = append(claimed, batch...)
 	}
-	if len(claimed) != 3 {
+	if len(claimed) != 4 {
 		t.Fatal("capacity not deployment bounded", len(claimed))
 	}
 	var internal, external int
-	if err := f.db.QueryRow(ctx, "SELECT count(*) FILTER(WHERE internal_runtime),count(*) FILTER(WHERE NOT internal_runtime) FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed").Scan(&internal, &external); err != nil || internal != 1 || external != 2 {
+	if err := f.db.QueryRow(ctx, "SELECT count(*) FILTER(WHERE internal_runtime),count(*) FILTER(WHERE NOT internal_runtime) FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed").Scan(&internal, &external); err != nil || internal+external != 4 {
 		t.Fatal(internal, external, err)
 	}
 	d := claimed[0]
@@ -643,8 +667,9 @@ func TestChatResourceCandidateScanDiscoversEndpointBeyondBlockedPage(t *testing.
 	}
 	configure("https://endpoint-b.example.test/v1")
 	later := f.send(f.conversation().ID, "Independent endpoint B")
+	f.exec("UPDATE scheduler_resources SET concurrency_limit=24 WHERE id IN ('worker','pipeline:chat')")
 	found := false
-	for range 3 {
+	for range 24 {
 		dispatches, err := f.source.Dispatch(t.Context())
 		if err != nil {
 			t.Fatal(err)
@@ -657,7 +682,7 @@ func TestChatResourceCandidateScanDiscoversEndpointBeyondBlockedPage(t *testing.
 		t.Fatal("twenty blocked turns hid an available independent provider")
 	}
 	var first, second int
-	if err := f.db.QueryRow(t.Context(), `SELECT count(*) FILTER(WHERE base_url='https://endpoint-a.example.test/v1'),count(*) FILTER(WHERE base_url='https://endpoint-b.example.test/v1') FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed`).Scan(&first, &second); err != nil || first != 2 || second != 1 {
+	if err := f.db.QueryRow(t.Context(), `SELECT count(*) FILTER(WHERE base_url='https://endpoint-a.example.test/v1'),count(*) FILTER(WHERE base_url='https://endpoint-b.example.test/v1') FROM chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed`).Scan(&first, &second); err != nil || first != 22 || second != 1 {
 		t.Fatal("endpoint resource limits not preserved", first, second, err)
 	}
 }

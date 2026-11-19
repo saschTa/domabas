@@ -8,12 +8,7 @@ records.
 
 ## Extraction
 
-New document workflows complete extraction, embedding and searchable publication
-before a durable AI job runs invoice extraction and optional property extraction.
-The AI job has its own queue, worker capacity, retries and status. Its invoice
-stage is `invoicing`. Retained combined v1 histories preserve their original
-activity order and version markers. The publication transaction queues follow-up
-work without an uncoordinated database/Temporal dual write.
+Ingestion publishes the searchable document and queues enrichment in one database transaction. Invoice and property extraction can then run concurrently, with separate limits and checkpoints. The structured XML path uses no model capacity. A model call acquires a shared language-model slot and a slot for its provider.
 
 The isolated PDFium WASM processor enumerates embedded files and returns at most
 one recognized invoice XML attachment. Compressed streams are supported.
@@ -280,7 +275,7 @@ there is no snapshot guarantee across pages.
 ## Verification
 
 Unit tests cover CII/legacy/UBL mapping, decimals, hostile XML, compressed PDF
-attachments, AI validation and Temporal versioning. Disposable-schema integration
+attachments, AI validation and extraction decisions. Disposable-schema integration
 tests cover checkpoints, stale OCR, exact numeric storage, correction links,
 cursors, revoked access and deletion. Filter coverage includes multi-page sorting,
 missing dates, exact decimal bounds, long values, literal vocabulary search and

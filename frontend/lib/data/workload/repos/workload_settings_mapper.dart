@@ -26,7 +26,11 @@ WorkloadSettings workloadSettingsMapper(api.WorkloadSettings value) {
         (pipeline) =>
             pipeline.id.trim().isEmpty ||
             pipeline.label.trim().isEmpty ||
-            pipeline.resourceIds.any((id) => !resourceIds.contains(id)),
+            pipeline.resourceIds.any((id) => !resourceIds.contains(id)) ||
+            pipeline.activeSlots.entries.any(
+              (entry) =>
+                  entry.value < 0 || !pipeline.resourceIds.contains(entry.key),
+            ),
       )) {
     throw const FormatException('Invalid workload settings');
   }
@@ -47,6 +51,7 @@ WorkloadSettings workloadSettingsMapper(api.WorkloadSettings value) {
         id: pipeline.id,
         label: pipeline.label,
         resourceIds: pipeline.resourceIds,
+        activeSlots: pipeline.activeSlots,
       ),
     ),
   );

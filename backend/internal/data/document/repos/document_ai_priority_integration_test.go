@@ -114,10 +114,10 @@ func TestAIInvoiceOnlyUsesAcceptedProviderResource(t *testing.T) {
 	}
 	lease := aiIndependentClaim(t, source, doc.ID)
 	var resources []string
-	if err = f.connection.QueryRow(t.Context(), `SELECT ARRAY(SELECT resource_id FROM scheduler_request_resources WHERE workflow_id=$1 ORDER BY resource_id)`, lease.WorkflowID).Scan(&resources); err != nil {
+	if err = f.connection.QueryRow(t.Context(), `SELECT ARRAY(SELECT resource_id FROM scheduler_job_providers WHERE workflow_id=$1 ORDER BY resource_id)`, lease.WorkflowID).Scan(&resources); err != nil {
 		t.Fatal(err)
 	}
-	if len(resources) != 2 || resources[0] != f.scheduler.ResourceID(endpoint) || resources[1] != "worker" {
+	if len(resources) != 1 || resources[0] != f.scheduler.ResourceID(endpoint) {
 		t.Fatalf("invoice-only snapshot used wrong resources: %v", resources)
 	}
 }
@@ -183,7 +183,7 @@ func TestAIResourceCandidateScanDiscoversOtherEndpointsAfterBlockedPage(t *testi
 	f.exec(t, `UPDATE document_processing SET invoice_xml=$2 WHERE document_id=$1`, docs[23].ID, []byte("<Invoice/>"))
 	enqueue(docs[23], cpu)
 	admitted := map[string]bool{}
-	for range 6 {
+	for range len(docs) {
 		leases, err := source.AIClaim(t.Context(), 1, time.Second, m.PlanDocumentDelivery(m.DocumentDeliverySettings{UnlimitedInference: true}), "provider-scan")
 		if err != nil {
 			t.Fatal(err)
@@ -192,10 +192,10 @@ func TestAIResourceCandidateScanDiscoversOtherEndpointsAfterBlockedPage(t *testi
 			admitted[lease.Job.DocumentID] = true
 		}
 	}
-	if !admitted[docs[22].ID] || !admitted[docs[23].ID] || len(admitted) != 4 {
+	if !admitted[docs[22].ID] || !admitted[docs[23].ID] || len(admitted) != len(docs) {
 		t.Fatalf("blocked endpoint hid independent or worker-only AI: %v", admitted)
 	}
-	if active := issue12Count(t, f, `SELECT count(*) FROM scheduler_requests q JOIN scheduler_request_resources r USING(workflow_id) WHERE q.state='active' AND r.resource_id=$1`, f.scheduler.ResourceID("https://endpoint-a.example.test/v1")); active != 2 {
+	if active := issue12Count(t, f, `SELECT count(*) FROM scheduler_requests q JOIN scheduler_request_resources r USING(workflow_id) WHERE q.state='active' AND r.resource_id=$1`, f.scheduler.ResourceID("https://endpoint-a.example.test/v1")); active != 0 {
 		t.Fatalf("blocked provider capacity exceeded: %d", active)
 	}
 }

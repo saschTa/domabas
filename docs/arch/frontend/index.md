@@ -127,8 +127,7 @@ uncertain response.
 The native bootstrap restores the selected server before constructing API
 dependencies, with explicit `API_BASE_URL` as an initial development default.
 Web resolves `API_BASE_URL` first and otherwise uses its browser origin. The
-Compose web server proxies API traffic to Go. No infrastructure hostname or
-Temporal SDK belongs in the frontend domain or presentation.
+Compose web server proxies API traffic to Go. The frontend obtains server configuration through its injected API client.
 
 ## Extending and verifying
 
@@ -147,7 +146,7 @@ conditional imports, and rejects cross-layer and concrete cross-domain bypasses.
 Unit tests cover immutable state, pagination, errors, cancellation and session
 races. Repository tests exercise the real generated client through local HTTP.
 Widget tests cover responsive forms and navigation. The browser integration suite
-uses real Go/PostgreSQL/Temporal with disposable schemas and queues. Inspect the
+uses real Go/PostgreSQL with disposable schemas and queues. Inspect the
 running UI as well. See [test and CI prerequisites](../../development/testing.md)
 and the [code pattern map](../code-patterns.md).
 

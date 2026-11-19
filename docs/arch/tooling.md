@@ -67,7 +67,7 @@ still fail. Containerized local CI runners can use `--init` to reap orphans.
 
 A capture timeout covers process exit and output pipes: a descendant can keep a pipe open after its parent exits. Cleanup preserves the original operation's error and reports a separate cleanup failure. Error messages do not include full command arguments because those may contain credentials.
 
-The Go service needs time to drain Temporal work. Air, Bun and Compose allow enough shutdown time for that drain. A test covers a parent process exiting while its child is still finishing work.
+The Go service needs time to drain background work. Air, Bun and Compose allow enough shutdown time for that drain. A test covers a parent process exiting while its child is still finishing work.
 
 The web server resolves the Go service through Docker's DNS repeatedly, so a recreated API container can receive requests at its new address.
 
@@ -109,15 +109,9 @@ See [application branding](frontend/branding.md) for platform handling.
 
 ## Infrastructure and tests
 
-Compose owns local PostgreSQL and Temporal. The administrative initializer creates separate databases and roles. The Temporal role then applies only its own schemas. The namespace initializer runs as a checked one-shot command after Temporal is healthy; Compose's wait mode expects a running service when that service is the direct target.
+Compose owns local PostgreSQL. The database initializer runs as a one-shot process after PostgreSQL is ready. The API starts its native background executor after applying application migrations.
 
-Temporal runs the digest-pinned official server image. Its container probe checks
-the listening port; the namespace initializer waits for real gRPC cluster health
-before registration, and backend readiness continues checking Temporal and its
-namespace. Empty dynamic overrides use `/dev/null`. Test cleanup runs the CLI
-from the existing initializer image, so no custom Temporal server image is needed.
-
-The browser test harness uses a unique database schema and Temporal queue. PostgreSQL clients receive the connection URL explicitly through `--dbname`. Cleanup uses a fresh process scope so cancellation cannot prevent removal of the test schema. Full local checks and Compose smoke tests generate their own project names and remove only those disposable projects and volumes.
+The browser test harness uses a unique database schema. PostgreSQL clients receive the connection URL explicitly through `--dbname`. Cleanup uses a fresh process scope so cancellation cannot prevent removal of the test schema. Full local checks and Compose smoke tests generate their own project names and remove only those disposable projects and volumes.
 
 Full browser E2E uses Chrome's temporary-directory shared-memory fallback so
 Docker's default 64 MiB shared-memory mount cannot prevent Dart modules from
@@ -148,7 +142,7 @@ isolated PostgreSQL checks run independently on GitHub-hosted Ubuntu runners.
 including failures and unexpected skips. Main pushes retain all configured
 suites. Manual releases on main reuse those successful checks for the exact
 release commit. `task check` keeps its complete local sequence. See the
-[selection rules](../development/testing.md#github-actions). Full Temporal,
+[selection rules](../development/testing.md#github-actions). Full native worker,
 browser, API E2E, model and Compose checks remain explicit local tasks.
 The local full harness retains Docker gateway discovery and unique projects.
 

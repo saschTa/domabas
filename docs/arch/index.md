@@ -18,7 +18,7 @@ shows where implementation conventions are documented and checked. Use the
 | [Boundaries and lifecycle](backend/boundaries.md) | Migration integrity, startup and safe shutdown |
 | [PostgreSQL and storage](backend/postgresql.md) | Databases, roles, schemas, extensions, migrations and persistent files |
 | [Relational persistence](backend/persistence.md) | Typed records, child tables and permitted JSON snapshots |
-| [Temporal](backend/temporal.md) | Workflows, activities, task queues, retries and worker lifetime |
+| [Native workers](backend/native-jobs.md) | Execution checkpoints, retries and worker lifetime |
 | [Background jobs](backend/background-jobs.md) | Durable acceptance, progress, cancellation and recoverable pipelines |
 | [Resource scheduler](backend/resource-scheduler.md) | Shared worker/provider limits and fair admission |
 | [Identity and access](backend/identity.md) | Authentication, libraries, scoped claims, invitations and administration |

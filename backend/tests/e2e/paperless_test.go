@@ -5,7 +5,6 @@ package e2e_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,9 +22,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	enums "go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/serviceerror"
-	"go.temporal.io/sdk/client"
 )
 
 func TestPaperlessDurableImportRestartDuplicatesFailuresIsolationAndPacing(t *testing.T) {
@@ -216,7 +212,7 @@ func TestPaperlessDurableImportRestartDuplicatesFailuresIsolationAndPacing(t *te
 	seen := metadataRead
 	mu.Unlock()
 	if !seen {
-		t.Fatal("Temporal did not begin import")
+		t.Fatal("worker did not begin import")
 	}
 	stop()
 	base, stop = startServer(t, binary, databaseURL, environment)
@@ -308,76 +304,6 @@ func TestPaperlessDurableImportRestartDuplicatesFailuresIsolationAndPacing(t *te
 	}
 	assertPaperlessPagination(t, api, db, token, otherToken, id)
 	stop()
-}
-
-func cleanupOwnedPaperless(t *testing.T, databaseURL, queue string) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	db, err := pgx.Connect(ctx, databaseURL)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer db.Close(ctx)
-	var present bool
-	if err = db.QueryRow(ctx, "SELECT to_regclass('paperless_runs') IS NOT NULL").Scan(&present); err != nil || !present {
-		return
-	}
-	rows, err := db.Query(ctx, "SELECT id,task_queue FROM paperless_runs WHERE NOT execution_closed")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	var ids []string
-	for rows.Next() {
-		var id, storedQueue string
-		if err = rows.Scan(&id, &storedQueue); err != nil {
-			break
-		}
-		if storedQueue != queue+"-paperless" {
-			t.Error("foreign Paperless queue left untouched")
-			continue
-		}
-		ids = append(ids, id)
-	}
-	err = errors.Join(err, rows.Err())
-	rows.Close()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if len(ids) == 0 {
-		return
-	}
-	remote, err := client.DialContext(ctx, client.Options{HostPort: os.Getenv("TEMPORAL_ADDRESS"), Namespace: os.Getenv("TEMPORAL_NAMESPACE")})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer remote.Close()
-	for _, id := range ids {
-		workflowID := "domabas-paperless-" + id
-		info, err := remote.DescribeWorkflowExecution(ctx, workflowID, "")
-		var missing *serviceerror.NotFound
-		if errors.As(err, &missing) {
-			continue
-		}
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		e := info.GetWorkflowExecutionInfo()
-		if e.GetTaskQueue() != queue+"-paperless" || e.GetType().GetName() != "domabas.PaperlessImport.v1" {
-			t.Error("foreign execution left untouched")
-			continue
-		}
-		if e.GetStatus() == enums.WORKFLOW_EXECUTION_STATUS_RUNNING {
-			if err := remote.TerminateWorkflow(ctx, workflowID, e.GetExecution().GetRunId(), "owned Paperless API test cleanup"); err != nil {
-				t.Error(err)
-			}
-		}
-	}
 }
 
 func assertPaperlessPagination(t *testing.T, api *ingestionAPI, db *pgx.Conn, token, otherToken, id string) {

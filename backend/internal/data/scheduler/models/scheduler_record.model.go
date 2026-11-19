@@ -8,6 +8,7 @@ type SchedulerResourceRecord struct {
 type SchedulerPipelineRecord struct {
 	ID, Label   string
 	ResourceIDs []string
+	ActiveSlots map[string]int
 }
 
 type SchedulerSettingsRecord struct {

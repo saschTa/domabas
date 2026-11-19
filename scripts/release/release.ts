@@ -3,13 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { scanImage } from "../security/scan-image.ts";
 import { type Environment, ROOT, ProcessScope, command, required, runCLI } from "../shared/runtime.ts";
-import { type NativeReleaseAsset, loadNativeArtifacts, nativeReleaseContext } from "./native-artifacts.ts";
+import { type ReleaseAsset, loadNativeArtifacts, nativeReleaseContext } from "./native-artifacts.ts";
 
 export const RELEASE_IMAGES = [
   { name: "backend", dockerfile: "backend/Dockerfile", services: ["backend"] },
   { name: "web", dockerfile: "frontend/Dockerfile", services: ["web"] },
   { name: "document-processor", dockerfile: "infra/document-processor/Dockerfile", services: ["document-processor"] },
-  { name: "init", dockerfile: "infra/init/Dockerfile", services: ["database-init", "temporal-schema", "temporal-init"] },
+  { name: "init", dockerfile: "infra/init/Dockerfile", services: ["database-init"] },
 ] as const;
 
 export interface ReleaseConfiguration { repository: string; sha: string; bump: ReleaseBump }
@@ -116,7 +116,7 @@ export class GitHubReleaseClient {
     await this.api(`/releases/${release.id}`, "PATCH", { body, draft: false, make_latest: "false" });
   }
 
-  async uploadAssets(release: GitHubRelease, assets: readonly NativeReleaseAsset[]): Promise<void> {
+  async uploadAssets(release: GitHubRelease, assets: readonly ReleaseAsset[]): Promise<void> {
     if (!release.draft) throw new Error("Cannot replace assets of a published release.");
     await this.verifyTag(release.tag_name);
     const existing = await this.list<GitHubReleaseAsset>(`/releases/${release.id}/assets`);
@@ -151,7 +151,24 @@ export function releaseCompose(source: string, images: readonly ReleaseImage[]):
   return Bun.YAML.stringify(document);
 }
 
-export async function publishRelease(config: ReleaseConfiguration, client: GitHubReleaseClient, buildImages: (version: string) => Promise<ReleaseImage[]>, source: string, nativeAssets: (version: string) => Promise<NativeReleaseAsset[]>): Promise<string> {
+export async function trueNASReleaseAssets(images: readonly ReleaseImage[]): Promise<ReleaseAsset[]> {
+  return Promise.all(["cpu", "cuda", "rocm"].map(async variant => {
+    const name = `compose.${variant}.yaml`;
+    let yaml = await Bun.file(join(ROOT, "truenas", name)).text();
+    for (const definition of RELEASE_IMAGES) {
+      const image = images.find(image => image.name === definition.name);
+      const local = `image: domabas-${definition.name}:native-local\n`;
+      if (!image || !/@sha256:[a-f0-9]{64}$/.test(image.reference) || yaml.split(local).length !== 2) {
+        throw new Error(`Cannot pin the ${definition.name} image in ${name}.`);
+      }
+      yaml = yaml.replace(local, `image: ${image.reference}\n`);
+    }
+    const contentType = "application/yaml";
+    return { name, contentType, content: new Blob([yaml], { type: contentType }), sha256: new Bun.CryptoHasher("sha256").update(yaml).digest("hex") };
+  }));
+}
+
+export async function publishRelease(config: ReleaseConfiguration, client: GitHubReleaseClient, buildImages: (version: string) => Promise<ReleaseImage[]>, source: string, nativeAssets: (version: string) => Promise<ReleaseAsset[]>): Promise<string> {
   const mainCI = await client.verifyMainCI();
   const release = await client.prepare();
   if (!release.draft) return release.html_url;
@@ -163,10 +180,13 @@ export async function publishRelease(config: ReleaseConfiguration, client: GitHu
     if (image.tag !== `${repository}:${release.tag_name}` || !image.reference.startsWith(`${repository}@sha256:`)) throw new Error("Built image does not belong to this release.");
   }
   const compose = releaseCompose(source, images);
+  const trueNAS = await trueNASReleaseAssets(images);
+  await client.uploadAssets(release, trueNAS);
   const notes = [
     `Built from [${config.sha.slice(0, 12)}](https://github.com/${config.repository}/commit/${config.sha}). Source tests, PostgreSQL integration, generation consistency and OSV dependency scanning passed in [main CI](${mainCI}) and were reused for this release. Built images passed Trivy scanning. Both vulnerability gates block critical findings.`,
-    "Containers target linux/amd64. The web image contains Flutter web. Versions below 1.0.0 are previews. Temporal, browser E2E, live-model and complete Compose smoke tests are separate local validation, not guarantees of this release.",
+    "Containers target linux/amd64. The web image contains Flutter web. Versions below 1.0.0 are previews. Native worker, browser E2E, live-model and complete Compose smoke tests are separate local validation, not guarantees of this release.",
     ["Native downloads:", ...assets.map(asset => `- [${asset.name}](https://github.com/${config.repository}/releases/download/${release.tag_name}/${asset.name})`)].join("\n"),
+    ["TrueNAS templates for this release", ...trueNAS.map(asset => `- [${asset.name}](https://github.com/${config.repository}/releases/download/${release.tag_name}/${asset.name})`)].join("\n"),
     "Android APKs are release-mode previews signed with an ephemeral development key. Updating between releases may require uninstalling the previous app, which removes its local data. macOS DMGs contain a universal Intel/Apple silicon app and an Applications shortcut. They have no Developer ID signature or Apple notarization; macOS may block opening them. The app retains an ad hoc signature for Apple silicon. These builds have not been device-tested or scanned as native binaries. Verify downloads using SHA256SUMS.txt. Native apps connect to your existing Domabas server.",
     "Version tags are immutable after publication. Failed builds remain drafts; retry the same workflow run to reuse its version. No floating latest image tag is published.",
     ["| Image | Version | Immutable image |", "| --- | --- | --- |", ...images.map(image => `| ${image.name} | \`${image.tag}\` | \`${image.reference}\` |`)].join("\n"),

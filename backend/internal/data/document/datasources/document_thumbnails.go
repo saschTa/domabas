@@ -135,7 +135,7 @@ func (s *DocumentDataSource) ReleaseThumbnail(ctx context.Context, j m.DocumentT
 func (s *DocumentDataSource) PendingThumbnailRecords(ctx context.Context) ([]r.DocumentThumbnailJobRecord, error) {
 	result := []r.DocumentThumbnailJobRecord{}
 	err := pgx.BeginFunc(ctx, s.database, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `UPDATE document_thumbnail_jobs SET next_check_at=clock_timestamp()+interval '15 seconds' WHERE id IN (SELECT id FROM document_thumbnail_jobs WHERE admitted_at IS NOT NULL AND closed_at IS NULL AND next_check_at<=clock_timestamp() ORDER BY next_check_at,id LIMIT 20 FOR UPDATE SKIP LOCKED) RETURNING `+thumbnailJobColumns)
+		rows, err := tx.Query(ctx, `UPDATE document_thumbnail_jobs SET next_check_at=clock_timestamp()+interval '15 seconds' WHERE id IN (SELECT id FROM document_thumbnail_jobs WHERE task_queue<>'ingestion-preview' AND admitted_at IS NOT NULL AND closed_at IS NULL AND next_check_at<=clock_timestamp() ORDER BY next_check_at,id LIMIT 20 FOR UPDATE SKIP LOCKED) RETURNING `+thumbnailJobColumns)
 		if err != nil {
 			return err
 		}
@@ -243,14 +243,14 @@ func (s *DocumentDataSource) PublishThumbnail(ctx context.Context, j m.DocumentT
 		if _, err := tx.Exec(ctx, `INSERT INTO document_thumbnails(account_id,document_id,source_sha256,renderer_revision,sha256,media_type,width,height,size,content) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(account_id,document_id) DO UPDATE SET source_sha256=EXCLUDED.source_sha256,renderer_revision=EXCLUDED.renderer_revision,sha256=EXCLUDED.sha256,media_type=EXCLUDED.media_type,width=EXCLUDED.width,height=EXCLUDED.height,size=EXCLUDED.size,content=EXCLUDED.content,created_at=clock_timestamp()`, j.AccountID, j.DocumentID, d.SourceSHA256, d.RendererRevision, d.SHA256, d.MediaType, d.Width, d.Height, d.Size, c.Bytes); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `UPDATE document_thumbnail_jobs SET status='succeeded',retryable=false,failure_code='' WHERE id=$1`, j.ID)
+		_, err := tx.Exec(ctx, `UPDATE document_thumbnail_jobs SET status='succeeded',closed_at=CASE WHEN task_queue='ingestion-preview' THEN clock_timestamp() ELSE closed_at END,retryable=false,failure_code='' WHERE id=$1`, j.ID)
 		return err
 	})
 }
 func (s *DocumentDataSource) FinishThumbnail(ctx context.Context, j m.DocumentThumbnailJob, outcome m.DocumentThumbnailOutcome) error {
 	status := outcome.Status
 	return pgx.BeginFunc(ctx, s.database, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE document_thumbnail_jobs SET status=$2,retryable=$3,failure_code=$4 WHERE id=$1 AND status IN ('queued','running') AND closed_at IS NULL`, j.ID, status, outcome.Retryable, outcome.FailureCode)
+		_, err := tx.Exec(ctx, `UPDATE document_thumbnail_jobs SET status=$2,closed_at=CASE WHEN task_queue='ingestion-preview' THEN clock_timestamp() ELSE closed_at END,retryable=$3,failure_code=$4 WHERE id=$1 AND status IN ('queued','running') AND closed_at IS NULL`, j.ID, status, outcome.Retryable, outcome.FailureCode)
 		return err
 	})
 }
@@ -264,4 +264,28 @@ func (s *DocumentDataSource) ReadThumbnailRecord(ctx context.Context, a m.Docume
 		return result, fmt.Errorf("read document thumbnail: %w", err)
 	}
 	return result, nil
+}
+
+func (s *DocumentDataSource) IngestionThumbnailJob(ctx context.Context, job m.DocumentJob) (m.DocumentThumbnailJob, error) {
+	var j m.DocumentThumbnailJob
+	j.AccountID, j.DocumentID, j.RendererRevision = job.AccountID, job.DocumentID, m.ThumbnailRendererRevision
+	err := pgx.BeginFunc(ctx, s.database, func(tx pgx.Tx) error {
+		id := uuid.NewString()
+		err := tx.QueryRow(ctx, `INSERT INTO document_thumbnail_jobs(id,account_id,document_id,source_sha256,renderer_revision,workflow_id,task_queue,status,admitted_at)
+ SELECT $3,f.account_id,f.document_id,f.sha256,$4,$5,'ingestion-preview','running',clock_timestamp() FROM document_files f JOIN document_processing p USING(account_id,document_id)
+ WHERE f.account_id=$1 AND f.document_id=$2 AND p.generation=$6 AND f.media_type IN ('application/pdf','image/jpeg','image/png')
+ AND NOT EXISTS(SELECT 1 FROM document_thumbnails t WHERE t.account_id=f.account_id AND t.document_id=f.document_id AND t.source_sha256=f.sha256 AND t.renderer_revision=$4)
+ ON CONFLICT(account_id,document_id,source_sha256,renderer_revision,attempt) DO UPDATE SET id=document_thumbnail_jobs.id WHERE document_thumbnail_jobs.task_queue='ingestion-preview' AND document_thumbnail_jobs.closed_at IS NULL RETURNING id,source_sha256`, job.AccountID, job.DocumentID, id, m.ThumbnailRendererRevision, "document-thumbnail-v1/"+id, job.Generation).Scan(&j.ID, &j.SourceSHA256)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return err
+	})
+	return j, err
+}
+func (s *DocumentDataSource) CloseIngestionThumbnail(ctx context.Context, j m.DocumentThumbnailJob) error {
+	return pgx.BeginFunc(ctx, s.database, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, "UPDATE document_thumbnail_jobs SET closed_at=clock_timestamp() WHERE id=$1 AND task_queue='ingestion-preview' AND status IN ('succeeded','failed','obsolete')", j.ID)
+		return err
+	})
 }

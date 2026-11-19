@@ -3,7 +3,7 @@
 ## Start here
 
 Domabas is a document library with a Flutter client, a Go API with embedded
-Temporal workers, PostgreSQL, a private document processor and Ollama. Read the
+Go workers, PostgreSQL, a private document processor and Ollama. Read the
 files below before choosing where a change belongs. The README is for people
 evaluating or hosting the app; this file is the working guide for coding agents.
 
@@ -36,8 +36,7 @@ task dev
 ```
 
 `task dev` starts infrastructure, Go hot reload and Flutter web development.
-Open `http://127.0.0.1:7357`; the API defaults to port 8080 and Temporal UI to
-8233. Press `r` for Flutter reload, `R` for restart, or `q` to stop the apps.
+Open `http://127.0.0.1:7357`; the API defaults to port 8080. Press `r` for Flutter reload, `R` for restart, or `q` to stop the apps.
 Infrastructure remains running. `task infra:down` stops it while retaining data.
 
 | Work | Command |
@@ -87,7 +86,7 @@ changing database ports, API origins, model runtimes or external services.
 | TypeScript tooling | `task lint:scripts` and `task test:scripts` |
 | Database persistence or migrations | `task test:integration`; `task generate:db:check` when generated tables change |
 | Public API behavior | `task test:api-e2e` |
-| Temporal execution or worker lifetime | `task test:temporal` |
+| Native execution or worker lifetime | `task test:jobs` |
 | UI/API/storage workflow | `task test:e2e` |
 | Complete Compose deployment | `task test:compose` |
 | Full baseline | `task test:all` (Compose smoke and live-model tests are separate) |
@@ -118,7 +117,7 @@ the separate live-model suite, browser prerequisites and the CI/full-suite split
 - In Flutter, use immutable domain objects, instantiable data source/repository classes, and view models separate from widgets. Wire concrete implementations in `frontend/lib/app/`. Dispose clients and notifiers. Never import generated API types into domain or presentation.
 - Production application paths must use the real API and PostgreSQL; test doubles belong in tests. Avoid singletons, service locators, global mutable dependencies, and persistence logic in handlers/widgets.
 - Paginate every list that can grow. Use bounded API pages with usable UI continuation controls or infinite scrolling; do not hide older records behind a fixed history cutoff. Preserve pagination during background refresh.
-- Group backend core code in `domain/<domain>/{models,interfaces,services}`, deterministic workflows in `domain/<domain>/workflows/*.workflow.go`, data code in `data/<domain>/{models,repos,datasources}`, Temporal activities and dispatchers in `data/<domain>/temporal`, and HTTP code in `presentation/<domain>/{models,handlers,routes}`. Keep concrete containers in `bootstrap/<domain>`. Each domain routes package exports one registration function that returns its request decorator and groups together; generated routing remains the single endpoint registry.
+- Group backend core code in `domain/<domain>/{models,interfaces,services}`, data code in `data/<domain>/{models,repos,datasources}`, and HTTP code in `presentation/<domain>/{models,handlers,routes}`. Keep concrete containers in `bootstrap/<domain>`. Each domain routes package exports one registration function that returns its request decorator and groups together; generated routing remains the single endpoint registry.
 - Cross-domain business calls use injected, consumer-owned service ports. Repository/data-source joins use the shared schema or injected consumer-owned data ports, with explicit transaction ownership. Do not import foreign concrete services, repositories, data sources, containers or presentation. Only data repositories/sources may consume foreign data value records; core remains independent of storage.
 - Every new feature defines scoped claims in the identity catalog and enforces them at its entry points. Namespace owners receive all registered namespace claims by default; unknown and system claims never follow from ownership. Keep role bundles, explicit grants and system administration separate, and keep claim IDs forward-compatible in clients.
 - Keep architecture boundary tests aligned with these rules; do not weaken a test just to bypass a dependency violation.
@@ -134,8 +133,8 @@ the separate live-model suite, browser prerequisites and the CI/full-suite split
 - `backend/.env` is intentionally checked in with local development credentials. Exported variables override it. Never replace these defaults with real deployment secrets; use environment injection or ignored local files for those.
 - Keep all six Flutter platforms: Android, iOS, web, Linux, macOS, Windows. Native builds require their own host/toolchain; do not claim unexecuted builds passed.
 - `task dev` starts Compose infrastructure plus native Go/Flutter hot reload. `task infra:down` stops infrastructure and `task db:down` stops only PostgreSQL; both retain data. Never delete a development database volume or local cluster as routine troubleshooting. Test harnesses may remove only their own explicitly disposable, randomly named Compose projects and volumes.
-- Temporal is the queue system. Its worker runs inside the Go service. Within `domain`, only workflow packages may import the SDK's `workflow` and `temporal` packages. Other SDK/API use belongs in Temporal data adapters and bootstrap. Core models, interfaces and services remain independent of workflows and infrastructure. Workflows perform deterministic orchestration; activities perform I/O through injected ports. Keep worker lifetime separate from startup deadlines. Coordinate shutdown so activities drain before the Temporal client and database close. Preserve explicit registered names, payload fields and command order when moving or renaming workflows. Do not promise post-commit jobs through an uncoordinated database/Temporal dual write; introduce a transactional outbox when that feature is needed.
-- Isolate test workers with a unique task queue for each database schema. Bound workflow executions and clean up only workflows owned by the test. Readiness must account for PostgreSQL, Temporal, the namespace, and worker health.
+- Go workers run inside the service. Store job intent, capacity reservations and checkpoints in PostgreSQL. Keep worker lifetime separate from startup deadlines and drain workers before closing the database.
+- Isolate workers with disposable PostgreSQL schemas. Readiness includes worker health.
 - Keep `docker compose up --build --wait` usable with Docker alone. The distributable web build resolves its API from the browser origin; native/local overrides remain supported. Schema and namespace initialization must work on retained volumes. Ordinary Compose shutdown preserves volumes.
 - Keep scripts cross-platform when practical. Generated artifacts and dependency locks must make a clean checkout buildable without generation first.
 - Implement all repository-owned monorepo automation in TypeScript executed with Bun. Keep Go Task as the command entry point; do not introduce Python helpers. Pin Bun and tooling dependencies, commit `bun.lock`, and use `bun install --frozen-lockfile` in CI. Keep backend/frontend application runtimes Go/Flutter.

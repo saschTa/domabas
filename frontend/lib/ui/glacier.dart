@@ -19,6 +19,7 @@ export 'glacier/glacier_reader.dart';
 export 'glacier/glacier_search.dart';
 export 'glacier/glacier_settings.dart';
 export 'glacier/glacier_workflows.dart';
+export 'glacier/glacier_workload_flow.dart';
 export 'glacier/glacier_chat.dart';
 export 'glacier/glacier_native_values.dart';
 export 'glacier/glacier_native_frame.dart';

@@ -3,6 +3,7 @@ package document
 import (
 	"context"
 	"fmt"
+	documentmodels "github.com/domabas/domabas/backend/internal/domain/document/models"
 	"log/slog"
 	"path/filepath"
 	"sync"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/domabas/domabas/backend/internal/data/document/datasources/llm"
 	records "github.com/domabas/domabas/backend/internal/data/document/models"
-	documentworkflows "github.com/domabas/domabas/backend/internal/domain/document/workflows"
 
 	documentsources "github.com/domabas/domabas/backend/internal/data/document/datasources"
 	"github.com/domabas/domabas/backend/internal/data/document/datasources/filesystem"
@@ -22,11 +22,6 @@ import (
 
 	documentinterfaces "github.com/domabas/domabas/backend/internal/domain/document/interfaces"
 	documentservices "github.com/domabas/domabas/backend/internal/domain/document/services"
-
-	documenttemporal "github.com/domabas/domabas/backend/internal/data/document/temporal"
-	"go.temporal.io/sdk/activity"
-	"go.temporal.io/sdk/worker"
-	"go.temporal.io/sdk/workflow"
 )
 
 type DocumentOptions struct {
@@ -38,22 +33,18 @@ type DocumentOptions struct {
 	IngestionRoot, StorageRoot, ProcessorURL, DashboardURL, LLMOllamaURL, LLMCredentialKey, LLMCredentialKeyFile string
 }
 type DocumentContainer struct {
-	thumbnails          *documentservices.DocumentThumbnailService
-	thumbnailActivities *documenttemporal.DocumentThumbnailActivities
-	ai                  *documentservices.DocumentAIService
-	aiActivities        *documenttemporal.DocumentAIActivities
-	llm                 *llm.DocumentPropertyRemoteDataSource
-	source              *documentsources.DocumentDataSource
-	service             *documentservices.DocumentService
-	ingestion           *documentservices.DocumentIngestionService
-	imports             *documentservices.DocumentImportService
-	vocabulary          *documentservices.DocumentVocabularyService
-	activities          *documenttemporal.DocumentMetadataActivities
-	properties          *documentservices.DocumentPropertyService
-	ingestionActivities *documenttemporal.DocumentIngestionActivities
-	files               *filesystem.DocumentFileSystemDataSource
-	processor           *processor.RemoteDocumentProcessorDataSource
-	closeOnce           sync.Once
+	thumbnails *documentservices.DocumentThumbnailService
+	ai         *documentservices.DocumentAIService
+	llm        *llm.DocumentPropertyRemoteDataSource
+	source     *documentsources.DocumentDataSource
+	service    *documentservices.DocumentService
+	ingestion  *documentservices.DocumentIngestionService
+	imports    *documentservices.DocumentImportService
+	vocabulary *documentservices.DocumentVocabularyService
+	properties *documentservices.DocumentPropertyService
+	files      *filesystem.DocumentFileSystemDataSource
+	processor  *processor.RemoteDocumentProcessorDataSource
+	closeOnce  sync.Once
 }
 
 func NewDocumentContainer(ctx context.Context, database *postgres.PostgresDatabase, authority documentinterfaces.DocumentAuthority, options DocumentOptions, now func() time.Time) (*DocumentContainer, error) {
@@ -107,7 +98,7 @@ func NewDocumentContainer(ctx context.Context, database *postgres.PostgresDataba
 	vocabulary := documentservices.NewDocumentVocabularyService(documentrepos.NewDocumentVocabularyRepository(source), authority)
 	properties := documentservices.NewDocumentPropertyService(documentrepos.NewDocumentPropertyRepository(source), documentrepos.NewDocumentPropertyExtractionRepository(languageModel))
 	thumbnails := documentservices.NewDocumentThumbnailService(documentrepos.NewDocumentThumbnailRepository(source), documentrepos.NewDocumentContentRepository(files), documentrepos.NewDocumentThumbnailProcessorRepository(remote), authority)
-	container := &DocumentContainer{thumbnails: thumbnails, ai: documentservices.NewDocumentAIService(documentrepos.NewDocumentAIRepository(source)), llm: languageModel, source: source, service: service, ingestion: ingestion, imports: imports, vocabulary: vocabulary, activities: documenttemporal.NewDocumentMetadataActivities(service), properties: properties, files: files, processor: remote}
+	container := &DocumentContainer{thumbnails: thumbnails, ai: documentservices.NewDocumentAIService(documentrepos.NewDocumentAIRepository(source)), llm: languageModel, source: source, service: service, ingestion: ingestion, imports: imports, vocabulary: vocabulary, properties: properties, files: files, processor: remote}
 	if err := files.Ready(ctx); err != nil {
 		container.Close()
 		return nil, fmt.Errorf("document storage readiness: %w", err)
@@ -156,61 +147,29 @@ func (container *DocumentContainer) Ping(ctx context.Context) error {
 	}
 	return nil
 }
-func (container *DocumentContainer) RegisterWorker(registry worker.Registry, invoices documenttemporal.DocumentInvoiceService) {
-	container.ingestionActivities = documenttemporal.NewDocumentIngestionActivities(container.ingestion, container.properties, invoices)
-	registry.RegisterWorkflowWithOptions(documentworkflows.LegacyDocumentMetadataWorkflow, workflow.RegisterOptions{Name: documentworkflows.LegacyDocumentMetadataWorkflowName})
-	registry.RegisterActivityWithOptions(documenttemporal.LegacyReadDocumentMetadata, activity.RegisterOptions{Name: documentworkflows.LegacyReadDocumentMetadataActivity})
-	registry.RegisterWorkflowWithOptions(documentworkflows.DocumentMetadataWorkflow, workflow.RegisterOptions{Name: documentworkflows.DocumentMetadataWorkflowName})
-	registry.RegisterActivityWithOptions(container.activities.ReadDocumentMetadata, activity.RegisterOptions{Name: documentworkflows.ReadDocumentMetadataActivity})
-	registry.RegisterWorkflowWithOptions(documentworkflows.DocumentSearchableWorkflow, workflow.RegisterOptions{Name: documentworkflows.DocumentSearchableWorkflowName})
-	registry.RegisterWorkflowWithOptions(documentworkflows.DocumentIngestionWorkflow, workflow.RegisterOptions{Name: documentworkflows.DocumentIngestionWorkflowName})
-	registry.RegisterActivityWithOptions(container.ingestionActivities.Extract, activity.RegisterOptions{Name: documentworkflows.ExtractDocumentActivity})
-	registry.RegisterActivityWithOptions(container.ingestionActivities.Invoice, activity.RegisterOptions{Name: documentworkflows.InvoiceDocumentActivity})
-	registry.RegisterActivityWithOptions(container.ingestionActivities.Enrich, activity.RegisterOptions{Name: documentworkflows.EnrichDocumentActivity})
-	registry.RegisterActivityWithOptions(container.ingestionActivities.Embed, activity.RegisterOptions{Name: documentworkflows.EmbedDocumentActivity})
-	registry.RegisterActivityWithOptions(container.ingestionActivities.Finalize, activity.RegisterOptions{Name: documentworkflows.FinalizeDocumentActivity})
-	registry.RegisterActivityWithOptions(container.ingestionActivities.Fail, activity.RegisterOptions{Name: documentworkflows.FailDocumentActivity})
+func (c *DocumentContainer) Close() {
+	c.closeOnce.Do(func() { c.processor.Close(); c.llm.Close(); _ = c.files.Close() })
 }
-func (container *DocumentContainer) Close() {
-	container.closeOnce.Do(func() {
-		container.DrainThumbnails()
-		container.DrainAI()
-		container.activities.Close()
-		if container.ingestionActivities != nil {
-			container.ingestionActivities.Close()
-		}
-		container.processor.Close()
-		container.llm.Close()
-		_ = container.files.Close()
-	})
+func (c *DocumentContainer) AI() *documentservices.DocumentAIService { return c.ai }
+func (c *DocumentContainer) Properties() *documentservices.DocumentPropertyService {
+	return c.properties
 }
-
-func (container *DocumentContainer) AI() *documentservices.DocumentAIService { return container.ai }
-func (container *DocumentContainer) RegisterAIWorker(registry worker.Registry, invoices documenttemporal.DocumentInvoiceService) {
-	container.aiActivities = documenttemporal.NewDocumentAIActivities(container.ai, container.properties, invoices)
-	registry.RegisterWorkflowWithOptions(documentworkflows.DocumentAIWorkflow, workflow.RegisterOptions{Name: documentworkflows.DocumentAIWorkflowName})
-	registry.RegisterActivityWithOptions(container.aiActivities.Invoice, activity.RegisterOptions{Name: documentworkflows.InvoiceDocumentActivity})
-	registry.RegisterActivityWithOptions(container.aiActivities.Enrich, activity.RegisterOptions{Name: documentworkflows.EnrichDocumentActivity})
-	registry.RegisterActivityWithOptions(container.aiActivities.Complete, activity.RegisterOptions{Name: documentworkflows.CompleteDocumentAIActivity})
-	registry.RegisterActivityWithOptions(container.aiActivities.Fail, activity.RegisterOptions{Name: documentworkflows.FailDocumentAIActivity})
-}
-func (container *DocumentContainer) DrainAI() {
-	if container.aiActivities != nil {
-		container.aiActivities.Close()
-	}
-}
-
 func (c *DocumentContainer) Thumbnails() *documentservices.DocumentThumbnailService {
 	return c.thumbnails
 }
-func (c *DocumentContainer) RegisterThumbnailWorker(registry worker.Registry) {
-	c.thumbnailActivities = documenttemporal.NewDocumentThumbnailActivities(c.thumbnails)
-	registry.RegisterWorkflowWithOptions(documentworkflows.DocumentThumbnailWorkflow, workflow.RegisterOptions{Name: documentworkflows.DocumentThumbnailWorkflowName})
-	registry.RegisterActivityWithOptions(c.thumbnailActivities.Render, activity.RegisterOptions{Name: documentworkflows.RenderDocumentThumbnailActivity})
-	registry.RegisterActivityWithOptions(c.thumbnailActivities.Finish, activity.RegisterOptions{Name: documentworkflows.FinishDocumentThumbnailActivity})
-}
-func (c *DocumentContainer) DrainThumbnails() {
-	if c.thumbnailActivities != nil {
-		c.thumbnailActivities.Close()
+
+func (c *DocumentContainer) IngestionThumbnail(ctx context.Context, job documentmodels.DocumentJob) error {
+	j, err := c.source.IngestionThumbnailJob(ctx, job)
+	if err != nil || j.ID == "" {
+		return err
 	}
+	if err = c.thumbnails.Render(ctx, j); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err = c.thumbnails.Finish(ctx, j, documentmodels.DocumentThumbnailFailure(err)); err != nil {
+			return err
+		}
+	}
+	return c.source.CloseIngestionThumbnail(ctx, j)
 }

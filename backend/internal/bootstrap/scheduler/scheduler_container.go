@@ -37,3 +37,11 @@ func (c *SchedulerContainer) Admission() SchedulerAdmission       { return c.sou
 func (c *SchedulerContainer) Handler() *handlers.SchedulerHandler {
 	return handlers.NewSchedulerHandler(c.service)
 }
+
+func (c *SchedulerContainer) RunStep(ctx context.Context, id, stage string, work func(context.Context) error) error {
+	return c.source.RunStep(ctx, id, stage, work)
+}
+
+func (c *SchedulerContainer) Inference(ctx context.Context, id, branch, endpoint string, work func(context.Context) error) error {
+	return c.source.RunResources(ctx, id, branch+"/inference", []string{"stage:llm", c.source.ResourceID(endpoint)}, work)
+}

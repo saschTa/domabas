@@ -37,6 +37,9 @@ func (s *PaperlessJobsDataSource) UpdateSettings(ctx context.Context, actor d.Do
 		if settings.RetrievalConcurrency == update.RetrievalConcurrency {
 			return nil
 		}
+		if _, err := tx.Exec(ctx, "UPDATE scheduler_settings SET revision=revision+1 WHERE singleton"); err != nil {
+			return err
+		}
 		return tx.QueryRow(ctx, "UPDATE paperless_admission SET retrieval_concurrency=$1,settings_revision=settings_revision+1 WHERE singleton RETURNING retrieval_concurrency,settings_revision", update.RetrievalConcurrency).Scan(&settings.RetrievalConcurrency, &settings.Revision)
 	})
 	return settings, err

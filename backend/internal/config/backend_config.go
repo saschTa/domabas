@@ -27,10 +27,6 @@ type BackendConfig struct {
 	DatabaseURL                      string
 	HTTPAddress                      string
 	CORSOrigins                      []string
-	TemporalUIURL                    string
-	TemporalAddress                  string
-	TemporalNamespace                string
-	TemporalTaskQueue                string
 	DocumentProcessorURL             string
 	DocumentIngestionRoot            string
 	DocumentStorageRoot              string
@@ -77,35 +73,6 @@ func Load() (BackendConfig, error) {
 	if capacityErr != nil {
 		return BackendConfig{}, capacityErr
 	}
-	config.TemporalUIURL = value("TEMPORAL_UI_URL", "")
-	if config.TemporalUIURL == "" {
-		port := value("TEMPORAL_UI_PORT", "8233")
-		if port == "" {
-			port = "8233"
-		}
-		if number, err := strconv.Atoi(port); err != nil || number < 1 || number > 65535 {
-			return BackendConfig{}, errors.New("TEMPORAL_UI_PORT must be between 1 and 65535")
-		}
-		config.TemporalUIURL = "http://localhost:" + port
-	}
-	if config.TemporalUIURL != "" {
-		u, e := url.Parse(config.TemporalUIURL)
-		if e != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || strings.Contains(config.TemporalUIURL, "#") {
-			return BackendConfig{}, errors.New("TEMPORAL_UI_URL must be an absolute HTTP(S) URL without credentials, query or fragment")
-		}
-		if port := u.Port(); port != "" {
-			n, e := strconv.Atoi(port)
-			if e != nil || n < 1 || n > 65535 {
-				return BackendConfig{}, errors.New("TEMPORAL_UI_URL has an invalid port")
-			}
-		}
-		if strings.HasSuffix(u.Host, ":") {
-			return BackendConfig{}, errors.New("TEMPORAL_UI_URL has an invalid port")
-		}
-	}
-	config.TemporalAddress = value("TEMPORAL_ADDRESS", "127.0.0.1:7233")
-	config.TemporalNamespace = value("TEMPORAL_NAMESPACE", "domabas")
-	config.TemporalTaskQueue = value("TEMPORAL_TASK_QUEUE", "domabas-documents")
 	config.EmailCredentialKeys = value("EMAIL_CREDENTIAL_KEYS", "")
 	config.LLMOllamaURL = value("LLM_OLLAMA_URL", "http://127.0.0.1:11435")
 	config.LLMCredentialKey = value("LLM_CREDENTIAL_KEY", "")
@@ -157,12 +124,6 @@ func Load() (BackendConfig, error) {
 	}
 	if _, _, err := net.SplitHostPort(config.HTTPAddress); err != nil {
 		return BackendConfig{}, fmt.Errorf("HTTP_ADDR must be host:port: %w", err)
-	}
-	if host, port, err := net.SplitHostPort(config.TemporalAddress); err != nil || host == "" || port == "" {
-		return BackendConfig{}, errors.New("TEMPORAL_ADDRESS must be host:port")
-	}
-	if strings.TrimSpace(config.TemporalNamespace) == "" || strings.TrimSpace(config.TemporalTaskQueue) == "" {
-		return BackendConfig{}, errors.New("TEMPORAL_NAMESPACE and TEMPORAL_TASK_QUEUE must not be empty")
 	}
 	for _, origin := range strings.Split(value("CORS_ORIGINS", "http://localhost:7357,http://127.0.0.1:7357"), ",") {
 		origin = strings.TrimSpace(origin)

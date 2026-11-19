@@ -169,6 +169,41 @@ void main() {
       await controller.close();
     },
   );
+  for (final activated in [false, true]) {
+    test(
+      'prolonged geometry mismatch can settle with client active=$activated',
+      () async {
+        final port = WindowPortFake();
+        final controller = DesktopWindowController(port);
+        await controller.initialize();
+        if (activated) {
+          controller.layoutChanged(layout());
+          await flush();
+        }
+        port.pendingLayout = true;
+        for (var i = 0; i < 22; i++) {
+          controller.layoutChanged(layout());
+          await flush();
+        }
+        expect(port.calls, isNot(contains('decoration:false')));
+        expect(controller.available, isTrue);
+        port.pendingLayout = false;
+        port.events.add(port.snapshot(client: activated));
+        controller.layoutChanged(layout());
+        await flush();
+        expect(
+          controller.snapshot!.state.decoration,
+          GlacierNativeDecoration.client,
+        );
+        expect(
+          port.calls.where((call) => call == 'decoration:true'),
+          hasLength(1),
+        );
+        await controller.close();
+      },
+    );
+  }
+
   test('stale queued layouts cannot enable client decoration', () async {
     final port = WindowPortFake()..layoutGate = Completer<void>();
     final controller = DesktopWindowController(port);

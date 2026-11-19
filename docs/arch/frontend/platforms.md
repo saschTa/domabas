@@ -113,13 +113,13 @@ App delegates, storyboard files and Xcode project settings supply the native
 host. Store distribution needs signing and application identifiers.
 
 macOS uses a sandboxed Cocoa host and Swift Package Manager plugin integration.
-Debug/profile and release builds permit outgoing API connections and read access
-to user-selected files. Only debug/profile permits incoming debugger connections
-and JIT execution. Session storage uses the local, non-shared macOS Keychain
-with `usesDataProtectionKeychain: false`; no Keychain Sharing provisioning profile
-is required. The file chooser supports uploads; drag-and-drop and camera scanning
-are not enabled on macOS. See the [frontend commands](../../../frontend/README.md)
-for host-specific builds.
+All build modes permit outgoing API connections. The sandbox grants read and
+write access to user-selected files so users can upload files and save originals.
+Debug/profile also permits incoming debugger connections and JIT execution.
+Session storage uses the local macOS Keychain with `usesDataProtectionKeychain: false`
+and works without a Keychain Sharing provisioning profile.
+The macOS runner also accepts file drops. See the
+[frontend commands](../../../frontend/README.md) for host-specific builds.
 
 Linux uses a GTK host. It selects a header bar for GNOME and Wayland, and a normal title bar for other X11 environments. It shows the window after Flutter renders its first frame. Run the installed application bundle: its libraries and assets must keep their relative locations.
 
@@ -216,8 +216,7 @@ interaction require their respective Linux/Windows hosts.
 
 macOS registers file-URL drops in the AppKit runner and sends entered, updated,
 exited and completed events through the same owned Dart dispatcher. Pasteboard
-object reads use file URLs only and retain the existing user-selected read-only
-sandbox entitlement. Copy-only negotiation ignores web links and text. The runner
+object reads use file URLs only. Copy-only negotiation ignores web links and text. The runner
 rejects batches above 20 items before extracting paths; common acquisition checks
 reject directories, symlinks, special files and oversized originals. No dropped
 directory is traversed. The overlay clears on exit, rejection or completion;
@@ -240,7 +239,9 @@ Glacier layout before switching to client decoration. A briefly missing startup
 handler is retried up to ten times at 100ms intervals. A native geometry change
 during layout or decoration activation requests fresh Flutter measurements at
 50ms intervals, up to twenty retries, even when no further resize event arrives.
-Only an accepted current layout can hide the system titlebar. Initialization or command
+After those retries, the controller waits for another layout or native window event.
+A geometry mismatch keeps the current decoration. Only an accepted current
+layout can hide the system titlebar. Initialization or command
 failure requests restoration of system decoration. Missing handlers retain the
 ordinary native window; unsupported commands do not acquire simulated callbacks.
 During fullscreen recovery, Exit, F11 and Close remain available until native
@@ -262,8 +263,9 @@ The application Navigator sits below the native titlebar. Its native content
 scope has no remaining top inset, so documents, content dialogs and compact
 navigation do not apply the titlebar spacing twice. Caption controls stay outside
 the content Navigator, its modal barrier and the file-drop invitation. On macOS,
-native caption visibility is reapplied after focus, resize and fullscreen events;
-the operating system's menu bar remains available. The catalog retains its independent
+native caption visibility is reapplied after focus and resize, and the runner
+reapplies the client titlebar style when a fullscreen transition completes.
+The operating system's menu bar remains available. The catalog retains its independent
 nested-Navigator arrangement for isolated component demonstrations.
 
 Platform acceptance requires real native builds and interaction checks on each

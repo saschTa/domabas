@@ -69,8 +69,9 @@ to finish or discard the first; it does not replace those files.
 
 `MobileShareCubit` belongs to the selected-server app scope. Shared files wait
 through initial server setup and sign-in, then show a confirmation naming the
-current library. The Flutter host uses a bounded Glacier panel: file details
-scroll independently of the visible Discard and authorized Upload actions. It
+current library. When Android signals a change during a pending share lookup,
+the client reads again for the library that received the signal. The Flutter
+host keeps Discard and Upload visible while the file details scroll. It
 shows only staged filenames and the actual current destination; sign-in and
 permission blocks never expose a working upload callback. The native iOS
 extension remains its own system share sheet. Upload feeds `DocumentUploadCoordinator` and the existing

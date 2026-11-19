@@ -26,7 +26,13 @@ final class MobileShareCubit extends Cubit<MobileShareState> {
     required this.platform,
   }) : super(const MobileShareState()) {
     if (platform == TargetPlatform.android) {
-      source.listen(refresh);
+      source.listen(() {
+        if (_refreshing) {
+          _pendingChangeGeneration = _generation;
+        } else {
+          refresh();
+        }
+      });
       refresh();
     }
   }
@@ -56,6 +62,7 @@ final class MobileShareCubit extends Cubit<MobileShareState> {
   DocumentUploadsCubit? _target;
   bool _busy = true;
   bool _refreshing = false;
+  int? _pendingChangeGeneration;
   bool _closed = false;
   int _generation = 0;
   final _active = <String>{};
@@ -95,10 +102,11 @@ final class MobileShareCubit extends Cubit<MobileShareState> {
     }
   }
 
-  void refresh() {
+  void refresh() => _readPending(_generation);
+
+  void _readPending(int generation) {
     if (_closed || _refreshing || platform != TargetPlatform.android) return;
     _refreshing = true;
-    final generation = _generation;
     unawaited(() async {
       try {
         final batch = await source.pending();
@@ -118,6 +126,10 @@ final class MobileShareCubit extends Cubit<MobileShareState> {
         // A failed platform read leaves the native batch available for resume.
       } finally {
         _refreshing = false;
+        if (_pendingChangeGeneration case final next?) {
+          _pendingChangeGeneration = null;
+          _readPending(next);
+        }
       }
     }());
   }
@@ -188,6 +200,7 @@ final class MobileShareCubit extends Cubit<MobileShareState> {
     if (_closed) return;
     discard();
     _closed = true;
+    source.dispose();
     unawaited(source.setSession(null).catchError((Object _) {}));
     for (final subscription in _subscriptions.toList()) {
       await subscription.cancel();
@@ -195,7 +208,6 @@ final class MobileShareCubit extends Cubit<MobileShareState> {
     for (final id in _active.toList()) {
       unawaited(source.release(id).catchError((Object _) {}));
     }
-    source.dispose();
     return super.close();
   }
 }

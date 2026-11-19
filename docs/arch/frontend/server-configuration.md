@@ -27,7 +27,9 @@ from overtaking it. Completions after Cubit disposal cannot select a server.
 
 `NativeServerApp` is the native composition root. It owns the configuration and
 appearance Cubits for the entire app lifetime. A canonical server address keys
-the child that owns `AppDependencies` and `DomabasApp`. Changing the address
+`DomabasApp`. When the address changes, the server host disposes the previous
+endpoint's dependencies before creating the next ones. This keeps desktop file
+drops and Android share notifications connected to the new server. The switch
 replaces public transport, authentication, protected navigators, realtime,
 document resources, uploads and scanner coordination. No existing client's
 base URL or bearer is mutated. Old callbacks cannot install a session in the

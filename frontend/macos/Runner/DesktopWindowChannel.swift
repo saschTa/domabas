@@ -40,7 +40,11 @@ final class DesktopWindowChannel {
         if notification.name == NSWindow.didEnterFullScreenNotification || notification.name == NSWindow.didExitFullScreenNotification {
           self.fullscreenTransition = false
           self.fullscreenConfirmed = notification.name == NSWindow.didEnterFullScreenNotification
-          if self.restoreAfterFullscreen { self.restoreHostDecoration() }
+          if self.restoreAfterFullscreen {
+            self.restoreHostDecoration()
+          } else if self.clientDecoration {
+            self.decoration(true)
+          }
         }
         self.emit()
       })
@@ -68,8 +72,10 @@ final class DesktopWindowChannel {
     clientDecoration = enabled
     window.titleVisibility = enabled ? .hidden : .visible
     window.titlebarAppearsTransparent = enabled
-    if enabled { window.styleMask.insert(.fullSizeContentView) }
-    else { window.styleMask.remove(.fullSizeContentView) }
+    if enabled != window.styleMask.contains(.fullSizeContentView) {
+      if enabled { window.styleMask.insert(.fullSizeContentView) }
+      else { window.styleMask.remove(.fullSizeContentView) }
+    }
     updateCaptionVisibility()
     layoutValid = false
   }

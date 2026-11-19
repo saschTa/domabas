@@ -25,7 +25,7 @@
     "frontend/assets/licenses/frontend-pdfium.txt": "20a1e99ff88bc20b94e690abb7fdf7773712915dcddbf34dfeab18a63b7c9dba",
     "frontend/assets/licenses/lora-ofl.txt": "6d6bc7bbb828514925dabcaf89e4771398d12c60dd1cb2bbb90eea129535d0f4",
     "frontend/assets/licenses/scanner-opencv.txt": "505492e552a5fdbe892f0cba95266fd7b28c2d4f477bf7db09bf0489bdb87fda",
-    "frontend/Dockerfile": "6d1b90e374abc4f9565221a93b143da503caee204924dad3b224e72a63ed27d1",
+    "frontend/Dockerfile": "563c63372dbaef165b8c60fef9558e6b7c391cd1067140800e0b018c59e5f56c",
     "frontend/linux/CMakeLists.txt": "ca0318d00ee631547aaf9aaa418efda88368e07efa59d30072f384feb2ac490d",
     "frontend/linux/flutter/CMakeLists.txt": "8dc84f8aa2563f86372bac7fcbe1d005500e39c85f72e4c1ac856e00a120d7f5",
     "frontend/linux/runner/CMakeLists.txt": "3e4dbd2df693995e50e58992085adfbf33a734ea787a6dff180781e3b2e0c6a6",
@@ -69,7 +69,7 @@
     "third_party/licenses/native/ml-kit-TERMS.txt": "c4a63622ff74b27e7b2481aba5dfd8480c15bd2f7c01bd963ee55b831e47e7d6",
     "third_party/licenses/sources/dbus/0.7.15/LICENSE": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
     "third_party/licenses/sources/dbus/0.7.15/retrieval.txt": "9fe258600df998cbcbcd4ebdd922fceccf7f387a0d721468f7de158cda513d1c",
-    "third_party/licenses/supplemental.json": "87c9ba2d7732a2a92325aab9b31228c213b1173e101ab856814aaefac322f708",
+    "third_party/licenses/supplemental.json": "8c64cb0e167db521fae9bb7208ef9f12d2d425ef173263778e0521a21188859b",
     "third_party/models/NOMIC-LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
     "third_party/models/OLLAMA-LICENSE": "5934ed2ce0d15154bcdb9c85203210abac0da4314af34081e36df4599f90b226",
     "third_party/models/TESSDATA-LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
@@ -2976,13 +2976,13 @@
     {
       "id": "extra:nginx",
       "name": "nginx",
-      "version": "1.30.6",
+      "version": "1.30.7",
       "component": "Web server",
       "license": "BSD (see notices)",
-      "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.6",
+      "sourceUrl": "https://github.com/nginx/nginx/tree/release-1.30.7",
       "notices": [
         {
-          "title": "https://raw.githubusercontent.com/nginx/nginx/release-1.30.6/LICENSE",
+          "title": "https://raw.githubusercontent.com/nginx/nginx/release-1.30.7/LICENSE",
           "textId": "08845fe39e06b51dad7685c28140ab49577a86e947523e16b536a46caf89ad5c"
         }
       ]

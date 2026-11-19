@@ -9,6 +9,7 @@ import 'package:domabas/domain/server/models/server_failure.dart';
 import 'package:domabas/presentation/server/cubits/server_configuration_cubit.dart';
 import 'package:domabas/presentation/server/views/server_configuration_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_activity_repository.dart';
@@ -126,6 +127,44 @@ void main() {
       expect(scopesClosed, 2);
     },
   );
+
+  testWidgets('replacement server receives Android share notifications', (
+    tester,
+  ) async {
+    const channel = MethodChannel('dev.domabas/mobile_share');
+    final messenger = tester.binding.defaultBinaryMessenger;
+    var reads = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'pending') reads++;
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final repository = FakeServerRepository()
+      ..stored = ServerAddress.parse('https://one.example.com');
+    await tester.pumpWidget(
+      NativeServerApp(
+        repository: repository,
+        appearance: FakeAppearanceRepository(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final app = tester.widget<DomabasApp>(find.byType(DomabasApp));
+    await app.serverConfiguration!.connect('https://two.example.com');
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<DomabasApp>(find.byType(DomabasApp)).shares!.endpoint,
+      'https://two.example.com',
+    );
+    final before = reads;
+    await messenger.handlePlatformMessage(
+      channel.name,
+      channel.codec.encodeMethodCall(const MethodCall('changed')),
+      (_) {},
+    );
+    await tester.pump();
+    expect(reads, before + 1);
+    await tester.pumpWidget(const SizedBox());
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('a late restore cannot reopen an old server after replacement', (
     tester,

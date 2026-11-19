@@ -153,6 +153,42 @@ void main() {
     expect(repository.calls, 1);
   });
 
+  test(
+    'a share arriving during a pending read appears without resuming',
+    () async {
+      await _settle();
+      final first = source.delayed = Completer<MobileShareBatch?>();
+      shares.refresh();
+      source.batch = MobileShareBatch(
+        id: 'incoming',
+        paths: ['/cache/new.pdf'],
+      );
+      source.changed!();
+      source.changed!();
+      source.delayed = null;
+      first.complete(null);
+      await _settle();
+      expect(shares.state.batch?.id, 'incoming');
+      expect(repository.calls, 0);
+    },
+  );
+
+  test('a queued change keeps its original library generation', () async {
+    uploads.attach(target, busy: false);
+    shares.attach(_session(), target, busy: false);
+    await _settle();
+    final first = source.delayed = Completer<MobileShareBatch?>();
+    shares.refresh();
+    source.batch = MobileShareBatch(id: 'previous', paths: ['/cache/old.pdf']);
+    source.changed!();
+    shares.attach(_session(account: 'Other'), target, busy: false);
+    source.delayed = null;
+    first.complete(null);
+    await _settle();
+    expect(shares.state.batch, isNull);
+    expect(source.released, ['previous']);
+  });
+
   test('scope replacement and logout discard a pending batch', () async {
     uploads.attach(target, busy: false);
     final session = _session();

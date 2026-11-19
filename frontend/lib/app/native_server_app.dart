@@ -35,7 +35,7 @@ final class NativeServerApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.appearance,
-    required this.applicationBuilder,
+    this.applicationBuilder,
     this.initialAddress = '',
   });
 
@@ -46,18 +46,12 @@ final class NativeServerApp extends StatefulWidget {
     ),
     appearance: LocalAppearanceRepository(PreferencesAppearanceDataSource()),
     initialAddress: const String.fromEnvironment('API_BASE_URL'),
-    applicationBuilder: (address, configuration, appearance) =>
-        _ServerApplication(
-          address: address,
-          configuration: configuration,
-          appearance: appearance,
-        ),
   );
 
   final ServerRepository repository;
   final AppearanceRepository appearance;
   final String initialAddress;
-  final ServerApplicationBuilder applicationBuilder;
+  final ServerApplicationBuilder? applicationBuilder;
 
   @override
   State<NativeServerApp> createState() => _NativeServerAppState();
@@ -96,13 +90,17 @@ final class _NativeServerAppState extends State<NativeServerApp> {
             previous.loading != current.loading,
         builder: (context, state) {
           if (state.address case final address?) {
+            final builder = widget.applicationBuilder;
+            if (builder == null) {
+              return _ServerApplication(
+                address: address,
+                configuration: _configuration,
+                appearance: _appearance,
+              );
+            }
             return KeyedSubtree(
               key: ValueKey(address),
-              child: widget.applicationBuilder(
-                address,
-                _configuration,
-                _appearance,
-              ),
+              child: builder(address, _configuration, _appearance),
             );
           }
           return BlocBuilder<AppearanceCubit, AppearanceState>(
@@ -172,9 +170,19 @@ final class _ServerApplication extends StatefulWidget {
 }
 
 final class _ServerApplicationState extends State<_ServerApplication> {
-  late final _dependencies = AppDependencies.production(
-    baseUrl: widget.address.value,
-  );
+  late AppDependencies _dependencies = _connect();
+
+  AppDependencies _connect() =>
+      AppDependencies.production(baseUrl: widget.address.value);
+
+  @override
+  void didUpdateWidget(_ServerApplication oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.address != widget.address) {
+      _dependencies.dispose();
+      _dependencies = _connect();
+    }
+  }
 
   @override
   void dispose() {
@@ -184,6 +192,7 @@ final class _ServerApplicationState extends State<_ServerApplication> {
 
   @override
   Widget build(BuildContext context) => DomabasApp(
+    key: ValueKey(widget.address),
     appearance: _dependencies.appearance,
     appearanceCubit: widget.appearance,
     serverConfiguration: widget.configuration,

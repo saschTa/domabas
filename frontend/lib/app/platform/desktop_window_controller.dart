@@ -61,6 +61,7 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   void _accept(DesktopWindowSnapshot value) {
     if (_disposed || value.revision < (_snapshot?.revision ?? -1)) return;
     _snapshot = value;
+    _pendingLayouts = 0;
     _layoutRevision++;
     _publish();
     if (!value.ready && !_failed) unawaited(_recover());
@@ -119,14 +120,14 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
         final geometryChanged =
             error.code == 'layout_pending' ||
             _enabling && error.code == 'not_ready';
-        if (geometryChanged && ++_pendingLayouts <= 20) {
+        if (!geometryChanged) {
+          await _recover();
+        } else if (++_pendingLayouts <= 20) {
           _layoutRetry = Timer(const Duration(milliseconds: 50), () {
             if (_disposed || !available || sequence != _sequence) return;
             _layoutRevision++;
             _publish();
           });
-        } else {
-          await _recover();
         }
       } catch (_) {
         await _recover();

@@ -124,7 +124,9 @@ class _GlacierNativeFrameState extends State<GlacierNativeFrame>
         return null;
       }
       final result = box.localToGlobal(Offset.zero, ancestor: frame) & box.size;
-      return result.overlaps(viewport) ? result.intersect(viewport) : null;
+      return result.isFinite && result.overlaps(viewport)
+          ? result.intersect(viewport)
+          : null;
     }
 
     final exclusions = <Rect>[];
@@ -149,7 +151,10 @@ class _GlacierNativeFrameState extends State<GlacierNativeFrame>
       element.visitChildElements(walk);
     }
 
-    (_frame.currentContext! as Element).visitChildElements(walk);
+    final regionRoot = widget.state.platform == GlacierNativePlatform.macos
+        ? _titlebar
+        : _frame;
+    (regionRoot.currentContext as Element?)?.visitChildElements(walk);
     final reservations = <Rect>[
       if (rect(_captions.currentContext) case final Rect r) r,
       if (rect(_exit.currentContext) case final Rect r) r,
@@ -231,7 +236,9 @@ class _GlacierNativeFrameState extends State<GlacierNativeFrame>
                   onLayout: _scheduleLayout,
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (_) {
-                      _scheduleLayout();
+                      if (state.platform != GlacierNativePlatform.macos) {
+                        _scheduleLayout();
+                      }
                       return false;
                     },
                     child: Stack(

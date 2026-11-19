@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:domabas/app/native_desktop_frame.dart';
 import 'package:domabas/app/platform/desktop_window_controller.dart';
 import 'package:domabas/ui/glacier.dart';
@@ -8,7 +10,76 @@ import 'package:flutter_test/flutter_test.dart';
 import '../unit/desktop_window_controller_test.dart' show WindowPortFake;
 
 void main() {
-  for (final platform in GlacierNativePlatform.values) {
+  testWidgets(
+    'macOS keeps its title bar through startup, scrolling and a stalled layout',
+    (tester) async {
+      final port = WindowPortFake(platform: GlacierNativePlatform.macos)
+        ..missingInitializations = 1
+        ..layoutGate = Completer<void>();
+      final controller = DesktopWindowController.macos(port);
+      final navigator = GlobalKey<NavigatorState>();
+      final observer = DesktopWindowRouteObserver();
+      await tester.pumpWidget(
+        NativeDesktopHost(
+          controller: controller,
+          child: MaterialApp(
+            navigatorKey: navigator,
+            navigatorObservers: [observer],
+            theme: GlacierTheme.light(),
+            builder: (_, child) => NativeDesktopFrame(
+              navigatorKey: navigator,
+              observer: observer,
+              child: child!,
+            ),
+            home: Scaffold(
+              body: ListView.builder(
+                itemCount: 60,
+                itemBuilder: (_, i) =>
+                    TextButton(onPressed: () {}, child: Text('Row $i')),
+              ),
+            ),
+          ),
+        ),
+      );
+      final titleBar = find.byType(GlacierNativeTitleBar);
+      final bar = tester.getRect(titleBar);
+      expect(controller.available, isFalse);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+      expect(controller.available, isTrue);
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Minimize window'));
+      await tester.pump();
+      expect(port.calls.last, 'minimize');
+      await tester.pump(const Duration(seconds: 4));
+      port.layoutGate!.complete();
+      port.layoutGate = null;
+      port.failLayout = true;
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump();
+      port.failLayout = false;
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(titleBar), bar);
+      expect(controller.available, isTrue);
+      expect(
+        port.calls.where((call) => call.startsWith('decoration:')),
+        isEmpty,
+      );
+      final calls = [...port.calls];
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(port.calls, calls);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(controller.close);
+      observer.dispose();
+    },
+  );
+  for (final platform in [
+    GlacierNativePlatform.windows,
+    GlacierNativePlatform.linux,
+  ]) {
     testWidgets(
       'titlebar activates after host startup and geometry settle on $platform',
       (tester) async {

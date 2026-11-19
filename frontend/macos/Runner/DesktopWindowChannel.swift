@@ -7,13 +7,11 @@ final class DesktopWindowChannel {
   private var observers: [NSObjectProtocol] = []
   private var revision = 0
   private var initialized = false
-  private var clientDecoration = false
   private var sequence = -1
   private var viewport = CGSize.zero
   private var dragRegions: [CGRect] = []
   private var exclusions: [CGRect] = []
   private var layoutValid = false
-  private var restoreAfterFullscreen = false
   private var fullscreenTransition = false
   private var fullscreenConfirmed = false
   private var transitionGeneration = 0
@@ -22,6 +20,7 @@ final class DesktopWindowChannel {
     self.window = window
     self.fullscreenConfirmed = window.styleMask.contains(.fullScreen)
     channel = FlutterMethodChannel(name: "dev.domabas/desktop_window", binaryMessenger: messenger)
+    applyClientDecoration()
     channel.setMethodCallHandler { [weak self] call, result in
       self?.handle(call, result: result)
     }
@@ -40,11 +39,7 @@ final class DesktopWindowChannel {
         if notification.name == NSWindow.didEnterFullScreenNotification || notification.name == NSWindow.didExitFullScreenNotification {
           self.fullscreenTransition = false
           self.fullscreenConfirmed = notification.name == NSWindow.didEnterFullScreenNotification
-          if self.restoreAfterFullscreen {
-            self.restoreHostDecoration()
-          } else if self.clientDecoration {
-            self.decoration(true)
-          }
+          self.applyClientDecoration()
         }
         self.emit()
       })
@@ -59,7 +54,7 @@ final class DesktopWindowChannel {
     revision += 1
     return ["protocolVersion": 1, "revision": revision, "ready": initialized,
             "platform": "macos", "mode": fullscreenConfirmed ? "fullscreen" : window.isZoomed ? "maximized" : "restored",
-            "active": window.isKeyWindow, "clientDecoration": clientDecoration,
+            "active": window.isKeyWindow, "clientDecoration": true,
             "devicePixelRatio": window.backingScaleFactor, "controlLayout": "standard",
             "commands": ["close", "minimize", "maximize", "restore", "enterFullscreen", "exitFullscreen", "titlebarDoubleClick"]]
   }
@@ -67,21 +62,20 @@ final class DesktopWindowChannel {
     updateCaptionVisibility()
     if initialized { channel.invokeMethod("windowChanged", arguments: snapshot()) }
   }
-  private func decoration(_ enabled: Bool) {
+  private func applyClientDecoration() {
     guard let window else { return }
-    clientDecoration = enabled
-    window.titleVisibility = enabled ? .hidden : .visible
-    window.titlebarAppearsTransparent = enabled
-    if enabled != window.styleMask.contains(.fullSizeContentView) {
-      if enabled { window.styleMask.insert(.fullSizeContentView) }
-      else { window.styleMask.remove(.fullSizeContentView) }
+    window.titleVisibility = .hidden
+    window.titlebarAppearsTransparent = true
+    window.titlebarSeparatorStyle = .none
+    if !window.styleMask.contains(.fullSizeContentView) {
+      window.styleMask.insert(.fullSizeContentView)
     }
     updateCaptionVisibility()
     layoutValid = false
   }
   private func updateCaptionVisibility() {
     for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-      window?.standardWindowButton(button)?.isHidden = clientDecoration
+      window?.standardWindowButton(button)?.isHidden = true
     }
   }
   private func beginFullscreenTransition() {
@@ -94,18 +88,6 @@ final class DesktopWindowChannel {
       self.emit()
     }
   }
-  private func restoreHostDecoration() {
-    guard let window else { return }
-    restoreAfterFullscreen = true
-    if fullscreenTransition { return }
-    if window.styleMask.contains(.fullScreen) {
-      beginFullscreenTransition()
-      window.toggleFullScreen(nil)
-    } else {
-      restoreAfterFullscreen = false
-      decoration(false)
-    }
-  }
   private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let window, let args = call.arguments as? [String: Any] else {
       result(FlutterError(code: "unavailable", message: "Window unavailable", details: nil)); return
@@ -113,19 +95,21 @@ final class DesktopWindowChannel {
     switch call.method {
     case "initialize":
       guard args["protocolVersion"] as? Int == 1 else { result(FlutterError(code: "protocol", message: "Unsupported window protocol", details: nil)); return }
-      if clientDecoration { restoreHostDecoration() }
       sequence = -1
       layoutValid = false
       initialized = true
       result(snapshot())
     case "setLayoutRegions":
-      guard let next = args["sequence"] as? Int, next > sequence,
-            let size = args["viewport"] as? [Double], size.count == 2,
+      guard let next = args["sequence"] as? Int, next > sequence else {
+        result(FlutterError(code: "layout", message: "Stale window layout", details: nil)); return
+      }
+      sequence = next
+      layoutValid = false
+      guard let size = args["viewport"] as? [Double], size.count == 2,
             size.allSatisfy({ $0.isFinite && $0 > 0 }),
             let drags = rectangles(args["dragRegions"]), let blocked = rectangles(args["exclusions"]) else {
         result(FlutterError(code: "layout", message: "Invalid window layout", details: nil)); return
       }
-      sequence = next
       viewport = CGSize(width: size[0], height: size[1])
       dragRegions = drags
       exclusions = blocked
@@ -133,11 +117,6 @@ final class DesktopWindowChannel {
       layoutValid = abs(actual.width - viewport.width) < 2 && abs(actual.height - viewport.height) < 2
       if layoutValid { result(nil) } else { result(FlutterError(code: "layout_pending", message: "Window size changed", details: nil)) }
     case "setClientDecoration":
-      let enabled = args["enabled"] as? Bool == true
-      guard !enabled || (initialized && layoutValid && !dragRegions.isEmpty) else {
-        result(FlutterError(code: "not_ready", message: "Window layout is not ready", details: nil)); return
-      }
-      if enabled { decoration(true) } else { restoreHostDecoration() }
       result(snapshot())
     case "request":
       guard initialized, let command = args["command"] as? String else { result(FlutterError(code: "not_ready", message: "Window not initialized", details: nil)); return }
@@ -169,7 +148,7 @@ final class DesktopWindowChannel {
     }
   }
   func handleEvent(_ event: NSEvent) -> Bool {
-    guard clientDecoration, layoutValid, let window, let content = window.contentView,
+    guard layoutValid, let window, let content = window.contentView,
           event.type == .leftMouseDown, !window.styleMask.contains(.fullScreen) else { return false }
     let local = content.convert(event.locationInWindow, from: nil)
     let point = CGPoint(x: local.x, y: content.isFlipped ? local.y : content.bounds.height - local.y)

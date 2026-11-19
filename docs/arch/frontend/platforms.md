@@ -233,7 +233,16 @@ server replacement. An injected `DesktopWindowPort` separates application state
 from the `dev.domabas/desktop_window` method channel and the AppKit, Win32 and
 GTK3 runner handlers. Web, Android and iOS do not initialize this channel.
 
-The host starts with its operating-system decoration. It reports supported
+On macOS the runner hides the native title and traffic lights at startup and
+extends the Flutter view across the title area. Glacier draws the bar from the
+first app frame and enables its buttons when AppKit reports supported commands.
+The original window keeps its native resize, zoom, fullscreen and menu behavior.
+Only controls in the title bar affect its drag regions. Scrolling a page or
+receiving a late or rejected layout report keeps the bar and its controls in
+place. The runner uses valid geometry for dragging, and Flutter sends caption
+commands independently of pending layout reports.
+
+On Windows and Linux the host starts with its operating-system decoration. It reports supported
 commands and authoritative activation/window mode, then accepts the current
 Glacier layout before switching to client decoration. A briefly missing startup
 handler is retried up to ten times at 100ms intervals. A native geometry change

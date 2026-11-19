@@ -15,6 +15,16 @@ class DesktopWindowStatus {
 
 class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   DesktopWindowController(this._port) : super(const DesktopWindowStatus());
+  DesktopWindowController.macos(this._port)
+    : _snapshot = DesktopWindowSnapshot(
+        revision: -1,
+        ready: false,
+        state: GlacierNativeWindowState(
+          platform: GlacierNativePlatform.macos,
+          supportedCommands: const {},
+        ),
+      ),
+      super(const DesktopWindowStatus());
   final DesktopWindowPort _port;
   StreamSubscription<DesktopWindowSnapshot>? _subscription;
   DesktopWindowSnapshot? _snapshot;
@@ -24,10 +34,13 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   int _sequence = 0;
   int _layoutRevision = 0, _pendingLayouts = 0;
   Timer? _layoutRetry;
+  Timer? _initializationRetry;
   int get layoutRevision => _layoutRevision;
   Future<void> _pending = Future.value();
   bool get available => !_failed && _snapshot?.ready == true;
+  bool get _macos => _snapshot?.state.platform == GlacierNativePlatform.macos;
   bool get frameVisible =>
+      _macos ||
       available ||
       (_failed &&
           _snapshot != null &&
@@ -61,6 +74,10 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
   void _accept(DesktopWindowSnapshot value) {
     if (_disposed || value.revision < (_snapshot?.revision ?? -1)) return;
     _snapshot = value;
+    if (_macos && value.ready) {
+      _initializationRetry?.cancel();
+      error = null;
+    }
     _pendingLayouts = 0;
     _layoutRevision++;
     _publish();
@@ -69,6 +86,14 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
 
   Future<void> _recover() async {
     if (_disposed || _failed) return;
+    if (_macos) {
+      if (!available && _initializationRetry?.isActive != true) {
+        _initializationRetry = Timer(const Duration(seconds: 1), initialize);
+      }
+      error = 'Window controls could not reach macOS.';
+      _publish();
+      return;
+    }
     _failed = true;
     _layoutRetry?.cancel();
     error = 'Restoring system window controls…';
@@ -105,7 +130,8 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
             .setLayout(sequence, layout)
             .timeout(const Duration(seconds: 3));
         if (_disposed || sequence != _sequence || !available) return;
-        if (_snapshot!.state.decoration == GlacierNativeDecoration.host &&
+        if (!_macos &&
+            _snapshot!.state.decoration == GlacierNativeDecoration.host &&
             !_enabling) {
           _enabling = true;
           _accept(
@@ -120,20 +146,34 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
         final geometryChanged =
             error.code == 'layout_pending' ||
             _enabling && error.code == 'not_ready';
-        if (!geometryChanged) {
+        if (!geometryChanged && !_macos) {
           await _recover();
-        } else if (++_pendingLayouts <= 20) {
-          _layoutRetry = Timer(const Duration(milliseconds: 50), () {
-            if (_disposed || !available || sequence != _sequence) return;
-            _layoutRevision++;
-            _publish();
-          });
+        } else {
+          _retryLayout(sequence);
         }
       } catch (_) {
-        await _recover();
+        if (_macos) {
+          _retryLayout(sequence);
+        } else {
+          await _recover();
+        }
       } finally {
         _enabling = false;
       }
+    });
+  }
+
+  void _retryLayout(int sequence) {
+    if (_disposed ||
+        !available ||
+        sequence != _sequence ||
+        ++_pendingLayouts > 20) {
+      return;
+    }
+    _layoutRetry = Timer(const Duration(milliseconds: 50), () {
+      if (_disposed || !available || sequence != _sequence) return;
+      _layoutRevision++;
+      _publish();
     });
   }
 
@@ -153,14 +193,24 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
       return;
     }
     if (!available) return;
-    _pending = _pending.then((_) async {
+    Future<void> send() async {
       if (_disposed || !available) return;
       try {
         await _port.request(command).timeout(const Duration(seconds: 3));
+        if (_macos && !_disposed && error != null) {
+          error = null;
+          _publish();
+        }
       } catch (_) {
         await _recover();
       }
-    });
+    }
+
+    if (_macos) {
+      unawaited(send());
+    } else {
+      _pending = _pending.then((_) => send());
+    }
   }
 
   Future<void> _closeDuringRecovery() async {
@@ -181,6 +231,7 @@ class DesktopWindowController extends Cubit<DesktopWindowStatus> {
     if (_disposed) return;
     _disposed = true;
     _layoutRetry?.cancel();
+    _initializationRetry?.cancel();
     await _subscription?.cancel();
     await _port.dispose();
     return super.close();

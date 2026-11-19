@@ -312,7 +312,7 @@ The platform contracts remain explicit:
 
 | Platform | Caption and reservation contract |
 | --- | --- |
-| macOS | Leading traffic-light reservation; separate fullscreen intent; system-owned controls can replace the simulated presenter. |
+| macOS | Glacier draws the title and leading traffic lights throughout the window lifetime. AppKit handles their commands and native dragging. |
 | Windows | Trailing minimize, maximize/restore and close controls; measured interactive exclusions take precedence over draggable space. |
 | Linux | Caller-selected standard, close-only or leading control layout; host decoration mode removes client captions. |
 

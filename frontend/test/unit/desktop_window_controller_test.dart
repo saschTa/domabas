@@ -45,7 +45,7 @@ class WindowPortFake implements DesktopWindowPort {
     if (failInitialize || missingInitializations-- > 0) {
       throw MissingPluginException();
     }
-    return snapshot();
+    return snapshot(client: platform == GlacierNativePlatform.macos);
   }
 
   @override
@@ -100,6 +100,29 @@ Future<void> flush() async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'macOS command failure keeps fullscreen and the next command usable',
+    () async {
+      final port = WindowPortFake(platform: GlacierNativePlatform.macos);
+      final controller = DesktopWindowController.macos(port);
+      await controller.initialize();
+      port.events.add(
+        port.snapshot(client: true, mode: GlacierNativeWindowMode.fullscreen),
+      );
+      port.failCommand = true;
+      controller.request(GlacierNativeCommand.exitFullscreen);
+      await flush();
+      expect(controller.error, isNotNull);
+      expect(controller.snapshot!.state.fullscreen, isTrue);
+      expect(controller.frameVisible, isTrue);
+      port.failCommand = false;
+      controller.request(GlacierNativeCommand.exitFullscreen);
+      await flush();
+      expect(controller.error, isNull);
+      expect(port.calls, ['initialize', 'exitFullscreen', 'exitFullscreen']);
+      await controller.close();
+    },
+  );
   test(
     'decoration waits for current accepted layout and native state',
     () async {

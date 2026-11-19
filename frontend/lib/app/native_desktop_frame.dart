@@ -21,16 +21,17 @@ class _NativeDesktopHostState extends State<NativeDesktopHost> {
   @override
   void initState() {
     super.initState();
-    final desktop =
-        !kIsWeb &&
-        const {
-          TargetPlatform.macOS,
-          TargetPlatform.windows,
-          TargetPlatform.linux,
-        }.contains(defaultTargetPlatform);
-    _controller =
-        widget.controller ??
-        (desktop ? DesktopWindowController(DesktopWindowChannel()) : null);
+    _controller = widget.controller;
+    if (_controller == null && !kIsWeb) {
+      _controller = switch (defaultTargetPlatform) {
+        TargetPlatform.macOS => DesktopWindowController.macos(
+          DesktopWindowChannel(),
+        ),
+        TargetPlatform.windows ||
+        TargetPlatform.linux => DesktopWindowController(DesktopWindowChannel()),
+        _ => null,
+      };
+    }
     if (_controller != null) unawaited(_controller!.initialize());
   }
 
@@ -140,7 +141,7 @@ class NativeDesktopFrame extends StatelessWidget {
                 devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
                 reduceMotion: MediaQuery.disableAnimationsOf(context),
               ),
-              feedback: controller.recovering ? controller.error : null,
+              feedback: controller.error,
               layoutRevision: controller.layoutRevision,
               contentNavigatorKey: navigatorKey,
               contentModalOpen: modalOpen,

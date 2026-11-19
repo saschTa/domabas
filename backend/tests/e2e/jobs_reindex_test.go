@@ -24,7 +24,7 @@ import (
 func TestIssue12JobsReindexStrictHTTPHistoryAndOriginalRetention(t *testing.T) {
 	databaseURL := testdb.New(t)
 	environment := newServerEnvironment(t, databaseURL)
-	environment = append(environment, "TEMPORAL_UI_URL=", "TEMPORAL_UI_PORT=", "OLLAMA_MAX_QUEUE=9")
+	environment = append(environment, "OLLAMA_MAX_QUEUE=9")
 	binary := filepath.Join(t.TempDir(), "server")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
@@ -63,8 +63,8 @@ func TestIssue12JobsReindexStrictHTTPHistoryAndOriginalRetention(t *testing.T) {
 	if _, present := configuration["scheduling"]; present {
 		t.Fatal("runtime scheduling was mixed into immutable processing provenance")
 	}
-	if system["dashboardUrl"] != "http://localhost:8233" {
-		t.Fatalf("default Temporal dashboard URL is missing: %v", system["dashboardUrl"])
+	if system["dashboardUrl"] != nil {
+		t.Fatalf("obsolete dashboard URL: %v", system["dashboardUrl"])
 	}
 	if value, present := system["automaticBatchId"]; !present || value != nil {
 		t.Fatalf("initial explicit nullable automaticBatchId is not null: %v", system)

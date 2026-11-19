@@ -32,7 +32,7 @@ import, document-read and upload claims in the connected namespace and belongs
 only to the run owner. Chat conversations, turns, messages, tool results and
 sources emit the private chat topic under chat:use. Bookkeeping leases and checks
 remain silent. Reindex changes notify namespace processing readers and system
-processing administrators. Up to ten distinct topics fit the existing 512-byte
+processing administrators. Clients can opt into the workload topic with the literal query `?workload=true`. Delivery requires the system workload-management claim. Committed slot and limit changes produce a single installation-wide hint without job or library identifiers. Clients using the plain endpoint continue to receive the original topics. Up to eleven distinct topics fit the existing 512-byte
 frame limit.
 
 ## Publication and recovery
@@ -77,8 +77,7 @@ minutes. Slow or malformed clients close rather than accumulating payloads.
 
 The supervisor owns hijacked sockets independently of HTTP Shutdown. Shutdown
 starts socket closure before ordinary HTTP draining, forces noncooperative peers
-closed after one second, joins socket tasks, and stops the listener before worker,
-Temporal and database cleanup. Startup context cancellation does not own the live
+closed after one second, joins socket tasks, and stops the listener before worker and database cleanup. Startup context cancellation does not own the live
 listener or sockets. Domain ports, SQL sources, transport and bootstrap retain the
 normal [architecture boundaries](boundaries.md).
 

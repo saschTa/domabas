@@ -550,6 +550,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
 
   void _invalidate(Set<RealtimeTopic> topics) {
     _jobActivity.invalidate(topics);
+    if (topics.contains(RealtimeTopic.workload)) _workloadSettings.invalidateUsage();
     final identity = widget.session.identity;
     if (topics.contains(RealtimeTopic.documents) &&
         identity.allows(IdentityPermission.readDocuments)) {

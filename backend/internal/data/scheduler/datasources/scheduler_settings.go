@@ -47,6 +47,12 @@ func (s *SchedulerDataSource) UpdateSettings(ctx context.Context, actor m.Schedu
 			added += tag.RowsAffected()
 		}
 		for _, resource := range plan.Changes {
+			if resource.ID == "stage:paperless" {
+				if _, err = tx.Exec(ctx, "UPDATE paperless_admission SET retrieval_concurrency=$1,settings_revision=settings_revision+1 WHERE singleton", resource.Limit); err != nil {
+					return err
+				}
+				continue
+			}
 			if _, err = tx.Exec(ctx, "UPDATE scheduler_resources SET concurrency_limit=$2 WHERE id=$1", resource.ID, resource.Limit); err != nil {
 				return err
 			}
@@ -70,24 +76,48 @@ func (s *SchedulerDataSource) settings(ctx context.Context, tx pgx.Tx) (r.Schedu
 	if err != nil {
 		return settings, err
 	}
-	rows, err := tx.Query(ctx, `SELECT rr.resource_id,count(*) FROM scheduler_requests q
- JOIN scheduler_request_resources rr ON rr.workflow_id=q.workflow_id
- WHERE q.state='active' AND NOT `+schedulerClosedExecution+` GROUP BY rr.resource_id`)
+	rows, err := tx.Query(ctx, `WITH slots AS (
+ SELECT q.pipeline, rr.resource_id FROM scheduler_requests q
+ JOIN scheduler_request_resources rr USING(workflow_id)
+ WHERE q.state='active' AND NOT `+schedulerClosedExecution+`
+ UNION ALL
+ SELECT CASE p.scope WHEN 'pipeline:invoice/inference' THEN 'invoice'
+                     WHEN 'pipeline:tags/inference' THEN 'tags' ELSE q.pipeline END, p.resource_id
+ FROM scheduler_step_permits p JOIN scheduler_requests q USING(workflow_id)
+ UNION ALL
+ SELECT 'paperless','stage:paperless' FROM paperless_items WHERE claim_token IS NOT NULL
+ ) SELECT pipeline,resource_id,count(*) FROM slots GROUP BY pipeline,resource_id ORDER BY pipeline,resource_id`)
 	if err != nil {
 		return settings, err
 	}
 	defer rows.Close()
+	pipelines := make(map[string]*r.SchedulerPipelineRecord, len(settings.Pipelines))
+	for i := range settings.Pipelines {
+		p := &settings.Pipelines[i]
+		pipelines[p.ID] = p
+		p.ActiveSlots = make(map[string]int, len(p.ResourceIDs))
+		for _, id := range p.ResourceIDs {
+			p.ActiveSlots[id] = 0
+		}
+	}
+	resources := make(map[string]*r.SchedulerResourceRecord, len(settings.Resources))
+	for i := range settings.Resources {
+		resources[settings.Resources[i].ID] = &settings.Resources[i]
+	}
 	for rows.Next() {
-		var id string
+		var pipeline, id string
 		var active int
-		if err := rows.Scan(&id, &active); err != nil {
+		if err := rows.Scan(&pipeline, &id, &active); err != nil {
 			return settings, err
 		}
-		for index := range settings.Resources {
-			if settings.Resources[index].ID == id {
-				settings.Resources[index].ActiveJobs = active
-				break
+		if resource := resources[id]; resource != nil {
+			resource.ActiveJobs += active
+		}
+		if p := pipelines[pipeline]; p != nil && id != "pipeline:"+pipeline {
+			if _, configured := p.ActiveSlots[id]; !configured {
+				p.ResourceIDs = append(p.ResourceIDs, id)
 			}
+			p.ActiveSlots[id] = active
 		}
 	}
 	return settings, rows.Err()
@@ -103,7 +133,7 @@ func (s *SchedulerDataSource) settingsMetadata(ctx context.Context, tx pgx.Tx) (
 	if err = tx.QueryRow(ctx, `SELECT revision,ollama_queue_size FROM scheduler_settings WHERE singleton`).Scan(&settings.Revision, &settings.OllamaQueueSize); err != nil {
 		return settings, err
 	}
-	rows, err := tx.Query(ctx, `SELECT r.id,r.label,r.concurrency_limit FROM scheduler_resources r
+	rows, err := tx.Query(ctx, `SELECT r.id,r.label,r.concurrency_limit FROM (SELECT id,label,concurrency_limit FROM scheduler_resources UNION ALL SELECT 'stage:paperless','Paperless downloads',retrieval_concurrency FROM paperless_admission WHERE singleton) r
  ORDER BY CASE r.id WHEN 'worker' THEN 0 WHEN 'ollama' THEN 1 ELSE 2 END,r.label,r.id`)
 	if err != nil {
 		return settings, err

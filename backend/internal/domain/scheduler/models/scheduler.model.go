@@ -25,6 +25,7 @@ type SchedulerResource struct {
 type SchedulerPipeline struct {
 	ID, Label   string
 	ResourceIDs []string
+	ActiveSlots map[string]int
 }
 
 type SchedulerSettings struct {

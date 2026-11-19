@@ -60,7 +60,7 @@ func TestSchedulerSettingsAuthorityRevisionAndLimits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if settings.OllamaQueueSize != 16 || len(settings.Pipelines) != 6 || len(settings.Resources) != 2 {
+	if settings.OllamaQueueSize != 16 || len(settings.Pipelines) != 8 || len(settings.Resources) != 15 {
 		t.Fatalf("settings %+v", settings)
 	}
 	update := m.SchedulerSettingsUpdate{ExpectedRevision: settings.Revision, Resources: []m.SchedulerResourceUpdate{{ID: "worker", Limit: 12}, {ID: "ollama", Limit: 8}}}

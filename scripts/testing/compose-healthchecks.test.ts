@@ -8,8 +8,8 @@ interface ComposeHealthService {
 }
 
 const startup = {
-  postgres: ["2s", "5s"], temporal: ["3s", "20s"], ollama: ["3s", "30s"],
-  "document-processor": ["5s", "10m"], backend: ["3s", "10m"], web: ["3s", "30s"], "temporal-ui": ["3s", "30s"],
+  postgres: ["2s", "5s"], ollama: ["3s", "30s"],
+  "document-processor": ["5s", "10m"], backend: ["3s", "10m"], web: ["3s", "30s"],
 };
 
 for (const file of ["compose.yaml", "compose.quickstart.yaml", "truenas/compose.cpu.yaml", "truenas/compose.cuda.yaml", "truenas/compose.rocm.yaml"]) {

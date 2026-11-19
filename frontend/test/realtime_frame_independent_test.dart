@@ -12,7 +12,7 @@ void main() {
           parseRealtimeFrame(
             '{"ty\\u0070e":"$type","version":1,"topics":'
             '["documents","processing","processing_configuration",'
-            '"email","paperless","chat","activity","identity","members","system_users"]}',
+            '"email","paperless","chat","activity","identity","members","system_users","workload"]}',
           ),
           {'type': type, 'version': 1, 'topics': realtimeTopics.toList()},
         );

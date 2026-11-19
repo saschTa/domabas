@@ -5,6 +5,7 @@ package e2e_test
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 )
 
 func verifyWorkloadSettings(api *ingestionAPI, admin, namespaceOwner string) {
@@ -30,16 +31,21 @@ func verifyWorkloadSettings(api *ingestionAPI, admin, namespaceOwner string) {
 	for _, item := range settings["pipelines"].([]any) {
 		pipeline := item.(map[string]any)
 		requirements[pipeline["id"].(string)] = pipeline["resourceIds"].([]any)
-	}
-	for _, pipeline := range []string{"email", "paperless"} {
-		ids := requirements[pipeline]
-		if len(ids) != 1 || ids[0] != "worker" {
-			api.t.Fatal("retrieval requires provider capacity", pipeline, ids)
+		counts := pipeline["activeSlots"].(map[string]any)
+		for _, id := range pipeline["resourceIds"].([]any) {
+			if count, ok := counts[id.(string)].(float64); !ok || count < 0 {
+				api.t.Fatalf("missing slot count for %s: %v", id, pipeline)
+			}
 		}
 	}
-	ids := requirements["document_ingestion"]
-	if len(ids) != 2 {
-		api.t.Fatal("ingestion resource requirements missing", ids)
+	for pipeline, expected := range map[string][]any{
+		"email":              {"worker"},
+		"paperless":          {"worker", "stage:paperless"},
+		"document_ingestion": {"worker", "stage:thumbnail", "stage:ocr", "stage:embedding", "ollama"},
+	} {
+		if !reflect.DeepEqual(requirements[pipeline], expected) {
+			api.t.Fatalf("unexpected resource requirements for %s: %v", pipeline, requirements[pipeline])
+		}
 	}
 	revision := settings["revision"]
 	changed := api.request(admin, "PUT", path, fmt.Sprintf(`{"expectedRevision":%.0f,"resources":[{"id":"worker","limit":11},{"id":"ollama","limit":2}]}`, revision), 200, "WorkloadSettings")

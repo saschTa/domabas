@@ -218,6 +218,7 @@ final class AppDependencies {
           endpoint: _endpoint,
           token: session.token,
           socketFactory: createRealtimeSocketAttempt,
+          workloadHints: session.identity.allows(IdentityPermission.manageWorkloads),
         ),
       ),
       processing: RemoteDocumentProcessingRepository(

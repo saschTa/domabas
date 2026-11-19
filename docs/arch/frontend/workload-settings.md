@@ -3,7 +3,7 @@
 Admin settings includes Workload limits for users with `system:workloads:manage`.
 The screen reads the shared scheduler API through a domain repository and Cubit.
 It shows each resource's editable active-job limit, supported maximum and current
-reserved usage, plus a server-provided pipeline-to-resource matrix.
+reserved usage. The active view fetches a baseline, then refreshes on authorized workload WebSocket hints. Ready and resync repair gaps after reconnect. During a disconnect, manual refresh remains available. Select a pipeline to see the slots it holds on each resource alongside the total in use across the installation. A wide view connects the selected pipeline on the left to the resources on the right. Phone widths and large text use a vertical layout.
 
 Worker capacity is measured in admitted background jobs. Ollama explains the
 half-queue ceiling and external providers use safe origin labels. Starting and
@@ -33,11 +33,9 @@ and pipeline requirements; generated API models remain in data adapters. The
 screen uses the server's safe resource labels and verifies that every pipeline
 resource reference is present before displaying the response. It does not infer
 a specific job's blocked resource or its queue position from these requirements.
-The matrix describes current configured pipeline requirements. Accepted jobs keep
-their original requirements, and provider resource rows from earlier settings can
-remain visible independently of the current matrix.
+The diagram shows configured resources and any other provider still serving an active request for the selected pipeline. A missing attribution field from an older backend is displayed as unavailable. Capacity changes animate unless the device requests reduced motion.
 
-Paperless retrieval parallelism remains in its own settings as source protection.
+Paperless download capacity can be edited here or in Paperless settings.
 That settings form also supports pull-to-refresh and preserves an unsaved choice.
 Paperless and email retrieval reserve worker capacity; accepted originals enter
 the separate ingestion pipeline. Document AI and chat use the selected provider

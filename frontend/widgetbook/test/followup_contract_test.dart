@@ -104,7 +104,7 @@ void main() {
       );
     }
     final cases = catalogCases();
-    expect(widgets, hasLength(138));
+    expect(widgets, hasLength(140));
     expect(
       widgets.difference(cases.map((entry) => entry.widgetType).toSet()),
       isEmpty,

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'catalog_case.dart';
 import 'mobile_catalog.dart';
+import 'workload_flow_case.dart';
 
 const _screens = <(String, String, String, List<String>)>[
   (
@@ -239,6 +240,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
   final controllers = <String, TextEditingController>{};
   final choices = <String, bool>{};
   final selections = <String, String>{};
+  final workload = SampleWorkload(ingestions: 1, workerLimit: 4);
   bool recovered = false;
   late String mode = state == 'dark' ? 'dark' : 'system';
   String background = 'activity';
@@ -307,7 +309,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
               'paperless-outcomes' => 'Import outcomes',
               'ai' => 'AI chat',
               'processing-settings' => 'Document processing',
-              'workload' => 'Workload limits',
+              'workload' => 'Pipelines',
               'paperless-limits' => 'Paperless retrievals',
               'users' => 'System users',
               'user-access' => 'System role',
@@ -1309,84 +1311,66 @@ class _SettingsExampleState extends State<_SettingsExample> {
               ]),
             ]),
           ),
-          actions([
-            button(
-              'Open Temporal dashboard',
-              () => preview(
-                'The configured dashboard opens externally in production.',
-              ),
-            ),
-          ]),
         ]);
       case 'workload':
+        TextEditingController limitField(String id) =>
+            controller('workload-$id', '${workload.limits[id]}');
+        final valid = workload.limits.keys.every(
+          (id) => workload.validate(id, limitField(id).text) == null,
+        );
         return stack([
-          section(
-            'Workload limits',
-            stack([
-              text(
-                'Jobs share resources across this installation. Limits apply to background work; reducing a limit lets active work finish.',
-              ),
-              form([
-                GlacierMobileFieldGroup(
-                  children: [
-                    field(
-                      'Worker maximum active jobs',
-                      '4',
-                      TextInputType.number,
-                    ),
-                    field(
-                      'Ollama maximum active jobs',
-                      '1',
-                      TextInputType.number,
-                    ),
-                    field(
-                      'External provider maximum active jobs',
-                      '1',
-                      TextInputType.number,
-                    ),
-                  ],
-                ),
-                text(
-                  'Example server-reported bounds: Worker 1–16, Ollama 1–4, external provider 1–8. Worker: saved 4 · active 2. Ollama: saved 1 · active 1. External provider: saved 1 · active 0.',
-                ),
-              ], 'Save limits'),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: button(
-                  'Use saved limits',
-                  () => setState(() {
-                    controller('Worker maximum active jobs').text = '4';
-                    controller('Ollama maximum active jobs').text = '1';
-                    controller('External provider maximum active jobs').text =
-                        '1';
-                    recovered = true;
-                  }),
-                ),
-              ),
-            ]),
+          ?recovery(),
+          WorkloadFlowPreview(
+            sample: workload,
+            onLoad: (value) => setState(() => workload.ingestions = value),
           ),
-          section(
-            'What shares these limits',
-            stack([
-              row(
-                'Worker',
-                'All background pipelines: ingestion, thumbnails, AI, email and Paperless',
-                null,
-                icon: Icons.monitor_heart_outlined,
-              ),
-              row(
-                'Ollama',
-                'Embedding and AI pipelines using internal Ollama',
-                null,
-                icon: Icons.description_outlined,
-              ),
-              row(
-                'External provider',
-                'Jobs using the same provider address, across models and API paths',
-                null,
-                icon: Icons.chat_bubble_outline,
-              ),
-            ]),
+          GlacierMobileSettingsForm(
+            enabled: !pending,
+            submitLabel: 'Save limits',
+            onSubmit: pending || !valid
+                ? null
+                : () {
+                    setState(
+                      () => workload.limits.updateAll(
+                        (id, _) => int.parse(limitField(id).text),
+                      ),
+                    );
+                    preview('Sample limits saved.');
+                  },
+            children: [
+              for (final pipelines in [true, false])
+                section(
+                  pipelines ? 'Pipelines' : 'Shared resources',
+                  GlacierMobileFieldGroup(
+                    children: [
+                      for (final id in workload.limits.keys.where(
+                        (id) => id.startsWith('pipeline:') == pipelines,
+                      ))
+                        GlacierMobileField(
+                          label: '${workload.label(id)} maximum parallel',
+                          controller: limitField(id),
+                          keyboardType: TextInputType.number,
+                          enabled: !pending,
+                          errorText: workload.validate(id, limitField(id).text),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: button(
+              'Use saved limits',
+              pending
+                  ? null
+                  : () => setState(() {
+                      for (final entry in workload.limits.entries) {
+                        limitField(entry.key).text = '${entry.value}';
+                      }
+                    }),
+            ),
           ),
         ]);
       case 'users':
@@ -1533,6 +1517,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
           builder: (context) => mobileCatalogShell(
             context,
             title: title,
+            subtitle: widget.screen == 'workload' ? 'All libraries' : 'Personal library',
             selectedId: 'more',
             showNavigation: widget.screen != 'signin',
             showLibrary: widget.screen == 'more',

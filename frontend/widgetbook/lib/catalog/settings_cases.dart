@@ -6,6 +6,7 @@ import 'package:domabas/ui/glacier/glacier_surfaces.dart';
 import 'package:flutter/material.dart';
 
 import 'catalog_case.dart';
+import 'workload_flow_case.dart';
 
 Widget settingsLeaf(
   String kind, {
@@ -299,7 +300,7 @@ List<CatalogCase> settingsCases() => [
     (
       'workload',
       'Workload',
-      'Resource limits and active work',
+      'Pipeline and resource load',
       'GlacierWorkloadResource',
     ),
     (
@@ -355,6 +356,38 @@ List<CatalogCase> settingsCases() => [
       description: 'Fictional local example. No account, server, secret or configuration is changed.',
       builder: (_) => _SettingsExample(kind: entry.$1),
     ),
+  for (final phone in [false, true])
+    CatalogCase(
+      id: phone ? 'settings-workload-flow-phone' : 'settings-workload-flow',
+      domain: 'Identity and settings',
+      component: 'Workload',
+      name: phone ? 'Live resource flow · phone' : 'Live resource flow',
+      widgetType: 'GlacierWorkloadFlow',
+      builder: (_) => WorkloadFlowExample(phone: phone),
+    ),
+  CatalogCase(
+    id: 'settings-capacity-meter',
+    domain: 'Identity and settings',
+    component: 'Workload',
+    name: 'Capacity states',
+    widgetType: 'GlacierCapacityMeter',
+    description: 'Idle, busy, saturated and draining resource slots.',
+    builder: (_) => const Padding(
+      padding: EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GlacierCapacityMeter(active: 0, limit: 4),
+          SizedBox(height: 24),
+          GlacierCapacityMeter(active: 2, limit: 4),
+          SizedBox(height: 24),
+          GlacierCapacityMeter(active: 4, limit: 4),
+          SizedBox(height: 24),
+          GlacierCapacityMeter(active: 5, limit: 4),
+        ],
+      ),
+    ),
+  ),
   for (final kind in [
     'appearance',
     'libraries',
@@ -406,7 +439,7 @@ class _SettingsExample extends StatefulWidget {
 
 class _SettingsExampleState extends State<_SettingsExample> {
   final Map<String, TextEditingController> fields = {};
-  final workloadSaved = {'Worker': 4, 'Ollama': 1, 'External provider': 1};
+  final workload = SampleWorkload();
   final Map<String, bool> choices = {};
   String? message;
   String role = 'Viewer',
@@ -1494,85 +1527,69 @@ class _SettingsExampleState extends State<_SettingsExample> {
             button('View installation reindex requests'),
           ]),
         ),
-        section('Temporal dashboard', button('Open Temporal dashboard')),
       ], save: true);
     }
     if (kind == 'workload') {
-      const resources = [
-        (
-          label: 'Worker',
-          saved: 4,
-          active: 2,
-          maximum: 16,
-          description:
-              'One slot per active background job across all pipelines.',
-        ),
-        (
-          label: 'Ollama',
-          saved: 1,
-          active: 1,
-          maximum: 4,
-          description: 'Shared by background embedding jobs and AI pipelines configured to use Ollama.',
-        ),
-        (
-          label: 'External provider',
-          saved: 1,
-          active: 0,
-          maximum: 8,
-          description: 'Shared by background jobs using this provider address, including different models and API paths.',
-        ),
-      ];
-      bool valid() => resources.every((resource) {
-        final value = int.tryParse(
-          controller('workload-${resource.label}', '${resource.saved}').text,
-        );
-        return value != null && value >= 1 && value <= resource.maximum;
-      });
+      TextEditingController limitField(String id) =>
+          controller('workload-$id', '${workload.limits[id]}');
+      final valid = workload.limits.keys.every(
+        (id) => workload.validate(id, limitField(id).text) == null,
+      );
       return pageLayout(
         [
+          WorkloadFlowPreview(
+            sample: workload,
+            onLoad: (value) => setState(() => workload.ingestions = value),
+          ),
           const AppNotice(
-            message: 'Jobs share resources. Lowering a limit lets active work finish before admitting new work.',
+            message: 'Lowering a limit lets active work finish before new work starts.',
             tone: AppTone.info,
           ),
-          for (final resource in resources)
-            GlacierWorkloadResource(
-              label: resource.label,
-              description: resource.description,
-              limitField: TextFormField(
-                controller: controller(
-                  'workload-${resource.label}',
-                  '${resource.saved}',
-                ),
-                onChanged: (_) => setState(() {}),
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Maximum active background jobs',
-                ),
-                validator: (value) {
-                  final number = int.tryParse(value ?? '');
-                  return number == null ||
-                          number < 1 ||
-                          number > resource.maximum
-                      ? 'Enter a whole number from 1 to ${resource.maximum}.'
-                      : null;
-                },
-              ),
-              active: resource.active,
-              savedLimit: workloadSaved[resource.label]!,
-              maximumLimit: resource.maximum,
-              notice: resource.label == 'Ollama'
-                  ? 'Configured Ollama queue: 8. At most 4 active background jobs, capped at 50% of the queue. Ollama controls how many requests run inference at once.'
-                  : 'New jobs wait until active usage falls below the saved limit.',
+          for (final pipelines in [true, false]) ...[
+            Text(
+              pipelines ? 'Pipelines' : 'Shared resources',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
+            for (final id in workload.limits.keys.where(
+              (id) => id.startsWith('pipeline:') == pipelines,
+            ))
+              GlacierWorkloadResource(
+                label: workload.label(id),
+                description: switch (id) {
+                  'worker' =>
+                    'One slot per active background job across all pipelines.',
+                  'pipeline:document_ingestion' => 'Generate a thumbnail, recognize text and embed the document.',
+                  'stage:paperless' =>
+                    'Simultaneous downloads before ingestion.',
+                  'ollama' => 'Shared by embeddings and AI pipelines configured to use Ollama.',
+                  'external' => 'Shared by background jobs using the same provider address.',
+                  _ => null,
+                },
+                active: workload.active(id),
+                savedLimit: workload.limits[id]!,
+                maximumLimit: workload.maximum(id),
+                limitField: TextFormField(
+                  controller: limitField(id),
+                  onChanged: (_) => setState(() {}),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Maximum parallel',
+                  ),
+                  validator: (value) => workload.validate(id, value ?? ''),
+                ),
+                notice: id == 'ollama'
+                    ? 'Ollama queue size 8. The maximum is half the configured queue.'
+                    : null,
+              ),
+          ],
         ],
         actions: [
           GlacierButton(
             label: 'Use saved values',
             onPressed: () => setState(() {
-              for (final resource in resources) {
-                controller('workload-${resource.label}').text =
-                    '${workloadSaved[resource.label]}';
+              for (final entry in workload.limits.entries) {
+                limitField(entry.key).text = '${entry.value}';
               }
               message = 'Saved sample values restored.';
             }),
@@ -1580,13 +1597,11 @@ class _SettingsExampleState extends State<_SettingsExample> {
           GlacierButton(
             label: 'Save changes',
             kind: GlacierButtonKind.primary,
-            onPressed: valid()
+            onPressed: valid
                 ? () => setState(() {
-                    for (final resource in resources) {
-                      workloadSaved[resource.label] = int.parse(
-                        controller('workload-${resource.label}').text,
-                      );
-                    }
+                    workload.limits.updateAll(
+                      (id, _) => int.parse(limitField(id).text),
+                    );
                     message = 'Sample settings saved. No server configuration changed.';
                   })
                 : null,

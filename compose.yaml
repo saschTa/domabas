@@ -12,10 +12,6 @@ x-database-environment: &database-environment
   POSTGRES_DB: ${POSTGRES_DB:-domabas}
   POSTGRES_USER: ${POSTGRES_USER:-domabas}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-domabas}
-  TEMPORAL_DB: ${TEMPORAL_DB:-temporal}
-  TEMPORAL_VISIBILITY_DB: ${TEMPORAL_VISIBILITY_DB:-temporal_visibility}
-  TEMPORAL_DB_USER: ${TEMPORAL_DB_USER:-temporal}
-  TEMPORAL_DB_PASSWORD: ${TEMPORAL_DB_PASSWORD:-temporal_local}
 
 services:
   postgres:
@@ -44,56 +40,6 @@ services:
     environment: *database-environment
     depends_on:
       postgres: {condition: service_healthy}
-
-  temporal-schema:
-    <<: *init
-    command: [schemas]
-    environment:
-      <<: *database-environment
-      SQL_PASSWORD: ${TEMPORAL_DB_PASSWORD:-temporal_local}
-    depends_on:
-      database-init: {condition: service_completed_successfully}
-
-  temporal:
-    mem_limit: ${TEMPORAL_MEMORY_LIMIT:-2g}
-    image: temporalio/server:1.32.0@sha256:c3e752127759616bb1615e0f9ba0e21635aeb5fdeb922de4f371c350955f46ae
-    environment:
-      DB: postgres12
-      GOMEMLIMIT: ${TEMPORAL_GOMEMLIMIT:-1536MiB}
-      POSTGRES_SEEDS: postgres
-      DB_PORT: "5432"
-      POSTGRES_USER: ${TEMPORAL_DB_USER:-temporal}
-      POSTGRES_PWD: ${TEMPORAL_DB_PASSWORD:-temporal_local}
-      DBNAME: ${TEMPORAL_DB:-temporal}
-      VISIBILITY_DBNAME: ${TEMPORAL_VISIBILITY_DB:-temporal_visibility}
-      SQL_MAX_CONNS: "5"
-      SQL_MAX_IDLE_CONNS: "2"
-      SQL_VIS_MAX_CONNS: "2"
-      SQL_VIS_MAX_IDLE_CONNS: "1"
-      BIND_ON_IP: 0.0.0.0
-      TEMPORAL_ALLOW_NO_AUTH: "true"
-      DYNAMIC_CONFIG_FILE_PATH: /dev/null
-    ports:
-      - "${BIND_ADDRESS:-127.0.0.1}:${TEMPORAL_PORT:-7233}:7233"
-    depends_on:
-      temporal-schema: {condition: service_completed_successfully}
-    healthcheck:
-      test: [CMD, nc, -z, -w, "2", 127.0.0.1, "7233"]
-      interval: 30s
-      start_interval: 3s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    stop_grace_period: 30s
-
-  temporal-init:
-    <<: *init
-    command: [namespace]
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-domabas}
-    depends_on:
-      temporal: {condition: service_healthy}
 
   ollama:
     image: ollama/ollama:0.34.1@sha256:0c0a83210471fb50226bcdc2d6611d20ab13ae87e024cc304c94a6a5765c5e65
@@ -162,10 +108,6 @@ services:
       HTTP_ADDR: 0.0.0.0:8080
       GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-1536MiB}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:7357,http://127.0.0.1:7357}
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-domabas}
-      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-domabas-documents}
-      TEMPORAL_UI_URL: ${TEMPORAL_UI_URL:-http://localhost:${TEMPORAL_UI_PORT:-8233}}
       LLM_OLLAMA_URL: http://ollama:11434
       DOCUMENT_INGESTION_CONCURRENCY: ${DOCUMENT_INGESTION_CONCURRENCY:-1}
       DOCUMENT_AI_CONCURRENCY: ${DOCUMENT_AI_CONCURRENCY:-1}
@@ -187,7 +129,7 @@ services:
       - document_storage:/data/documents
       - credential_keys:/var/lib/domabas/secrets
     depends_on:
-      temporal-init: {condition: service_completed_successfully}
+      database-init: {condition: service_completed_successfully}
       document-processor: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8080/readyz]
@@ -209,26 +151,6 @@ services:
       backend: {condition: service_healthy}
     healthcheck:
       test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/healthz]
-      interval: 30s
-      start_interval: 3s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-  temporal-ui:
-    mem_limit: ${TEMPORAL_UI_MEMORY_LIMIT:-256m}
-    image: temporalio/ui:2.54.1@sha256:ff0943fe532b8e33c46cd28b29e81e0ce0b6f55b9ee50a38ef1b437cc4de3fa5
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_UI_PORT: "8080"
-      GOMEMLIMIT: ${TEMPORAL_UI_GOMEMLIMIT:-192MiB}
-      TEMPORAL_DEFAULT_NAMESPACE: ${TEMPORAL_NAMESPACE:-domabas}
-    ports:
-      - "${BIND_ADDRESS:-127.0.0.1}:${TEMPORAL_UI_PORT:-8233}:8080"
-    depends_on:
-      temporal-init: {condition: service_completed_successfully}
-    healthcheck:
-      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/]
       interval: 30s
       start_interval: 3s
       timeout: 5s

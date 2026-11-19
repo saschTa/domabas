@@ -52,6 +52,7 @@ type documentAiJobsTable struct {
 	InvoiceClassificationPass postgres.ColumnInteger
 	InvoiceInputCharacters    postgres.ColumnInteger
 	InvoiceSourceCharacters   postgres.ColumnInteger
+	PropertiesDone            postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -130,9 +131,10 @@ func newDocumentAiJobsTableImpl(schemaName, tableName, alias string) documentAiJ
 		InvoiceClassificationPassColumn = postgres.IntegerColumn("invoice_classification_pass")
 		InvoiceInputCharactersColumn    = postgres.IntegerColumn("invoice_input_characters")
 		InvoiceSourceCharactersColumn   = postgres.IntegerColumn("invoice_source_characters")
-		allColumns                      = postgres.ColumnList{IDColumn, AccountIDColumn, DocumentIDColumn, GenerationColumn, AttemptColumn, OcrRevisionColumn, ReasonColumn, ConfigurationRevisionColumn, ConfigurationFingerprintColumn, ConfigurationColumn, StatusColumn, StageColumn, TextSourceColumn, InvoiceDoneColumn, FailureCodeColumn, InitiatedByUserIDColumn, ParentBatchIDColumn, CreatedAtColumn, UpdatedAtColumn, StartedAtColumn, FinishedAtColumn, WorkflowIDColumn, TaskQueueColumn, RunIDColumn, AdmittedAtColumn, DeliveryDeadlineColumn, FirstPermitAtColumn, StartRetryUntilColumn, LatestPermitEndColumn, LeaseTokenColumn, LeaseExpiresAtColumn, NextCheckAtColumn, ClosedAtColumn, SchedulerProviderColumn, SchedulerBaseURLColumn, InvoiceClassifierVersionColumn, InvoiceDecisionColumn, InvoiceDecisionReasonColumn, InvoiceClassificationPassColumn, InvoiceInputCharactersColumn, InvoiceSourceCharactersColumn}
-		mutableColumns                  = postgres.ColumnList{AccountIDColumn, DocumentIDColumn, GenerationColumn, AttemptColumn, OcrRevisionColumn, ReasonColumn, ConfigurationRevisionColumn, ConfigurationFingerprintColumn, ConfigurationColumn, StatusColumn, StageColumn, TextSourceColumn, InvoiceDoneColumn, FailureCodeColumn, InitiatedByUserIDColumn, ParentBatchIDColumn, CreatedAtColumn, UpdatedAtColumn, StartedAtColumn, FinishedAtColumn, WorkflowIDColumn, TaskQueueColumn, RunIDColumn, AdmittedAtColumn, DeliveryDeadlineColumn, FirstPermitAtColumn, StartRetryUntilColumn, LatestPermitEndColumn, LeaseTokenColumn, LeaseExpiresAtColumn, NextCheckAtColumn, ClosedAtColumn, SchedulerProviderColumn, SchedulerBaseURLColumn, InvoiceClassifierVersionColumn, InvoiceDecisionColumn, InvoiceDecisionReasonColumn, InvoiceClassificationPassColumn, InvoiceInputCharactersColumn, InvoiceSourceCharactersColumn}
-		defaultColumns                  = postgres.ColumnList{IDColumn, InvoiceDoneColumn, CreatedAtColumn, UpdatedAtColumn, WorkflowIDColumn, TaskQueueColumn, RunIDColumn, NextCheckAtColumn, SchedulerProviderColumn, SchedulerBaseURLColumn, InvoiceClassifierVersionColumn, InvoiceClassificationPassColumn, InvoiceInputCharactersColumn, InvoiceSourceCharactersColumn}
+		PropertiesDoneColumn            = postgres.BoolColumn("properties_done")
+		allColumns                      = postgres.ColumnList{IDColumn, AccountIDColumn, DocumentIDColumn, GenerationColumn, AttemptColumn, OcrRevisionColumn, ReasonColumn, ConfigurationRevisionColumn, ConfigurationFingerprintColumn, ConfigurationColumn, StatusColumn, StageColumn, TextSourceColumn, InvoiceDoneColumn, FailureCodeColumn, InitiatedByUserIDColumn, ParentBatchIDColumn, CreatedAtColumn, UpdatedAtColumn, StartedAtColumn, FinishedAtColumn, WorkflowIDColumn, TaskQueueColumn, RunIDColumn, AdmittedAtColumn, DeliveryDeadlineColumn, FirstPermitAtColumn, StartRetryUntilColumn, LatestPermitEndColumn, LeaseTokenColumn, LeaseExpiresAtColumn, NextCheckAtColumn, ClosedAtColumn, SchedulerProviderColumn, SchedulerBaseURLColumn, InvoiceClassifierVersionColumn, InvoiceDecisionColumn, InvoiceDecisionReasonColumn, InvoiceClassificationPassColumn, InvoiceInputCharactersColumn, InvoiceSourceCharactersColumn, PropertiesDoneColumn}
+		mutableColumns                  = postgres.ColumnList{AccountIDColumn, DocumentIDColumn, GenerationColumn, AttemptColumn, OcrRevisionColumn, ReasonColumn, ConfigurationRevisionColumn, ConfigurationFingerprintColumn, ConfigurationColumn, StatusColumn, StageColumn, TextSourceColumn, InvoiceDoneColumn, FailureCodeColumn, InitiatedByUserIDColumn, ParentBatchIDColumn, CreatedAtColumn, UpdatedAtColumn, StartedAtColumn, FinishedAtColumn, WorkflowIDColumn, TaskQueueColumn, RunIDColumn, AdmittedAtColumn, DeliveryDeadlineColumn, FirstPermitAtColumn, StartRetryUntilColumn, LatestPermitEndColumn, LeaseTokenColumn, LeaseExpiresAtColumn, NextCheckAtColumn, ClosedAtColumn, SchedulerProviderColumn, SchedulerBaseURLColumn, InvoiceClassifierVersionColumn, InvoiceDecisionColumn, InvoiceDecisionReasonColumn, InvoiceClassificationPassColumn, InvoiceInputCharactersColumn, InvoiceSourceCharactersColumn, PropertiesDoneColumn}
+		defaultColumns                  = postgres.ColumnList{IDColumn, InvoiceDoneColumn, CreatedAtColumn, UpdatedAtColumn, WorkflowIDColumn, TaskQueueColumn, RunIDColumn, NextCheckAtColumn, SchedulerProviderColumn, SchedulerBaseURLColumn, InvoiceClassifierVersionColumn, InvoiceClassificationPassColumn, InvoiceInputCharactersColumn, InvoiceSourceCharactersColumn, PropertiesDoneColumn}
 	)
 
 	return documentAiJobsTable{
@@ -179,6 +181,7 @@ func newDocumentAiJobsTableImpl(schemaName, tableName, alias string) documentAiJ
 		InvoiceClassificationPass: InvoiceClassificationPassColumn,
 		InvoiceInputCharacters:    InvoiceInputCharactersColumn,
 		InvoiceSourceCharacters:   InvoiceSourceCharactersColumn,
+		PropertiesDone:            PropertiesDoneColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

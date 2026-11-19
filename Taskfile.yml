@@ -146,7 +146,7 @@ tasks:
     cmds: [bun --no-env-file scripts/development/compose.ts infra-up]
 
   infra:down:
-    desc: Stop PostgreSQL and Temporal infrastructure, retaining data
+    desc: Stop PostgreSQL infrastructure, retaining data
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/development/compose.ts infra-down]
 
@@ -293,10 +293,10 @@ tasks:
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/testing/browser/upload-browser-tests.ts]
 
-  test:temporal:
-    desc: Run real Temporal workflow and PostgreSQL integration tests
+  test:jobs:
+    desc: Run real Go worker and PostgreSQL integration tests
     deps: [setup:tooling]
-    cmds: [bun --no-env-file scripts/testing/backend-database-tests.ts temporal]
+    cmds: [bun --no-env-file scripts/testing/backend-database-tests.ts jobs]
 
   test:llm:
     desc: Test live Qwen extraction and embeddings (requires LLM_OLLAMA_URL; may download Qwen)
@@ -314,7 +314,7 @@ tasks:
     cmds: [bun --no-env-file scripts/testing/compose-smoke.ts]
 
   test:e2e:
-    desc: Run real Flutter + Go + PostgreSQL/Temporal browser E2E (downloads pinned Chrome)
+    desc: Run real Flutter + Go + PostgreSQL browser E2E (downloads pinned Chrome)
     deps: [setup:tooling]
     cmds: ['bun --no-env-file scripts/testing/e2e.ts {{.CLI_ARGS}}']
 
@@ -356,7 +356,7 @@ tasks:
       - bun --no-env-file scripts/development/compose.ts infra-up --docker-only
       - task: check
       - task: test:integration
-      - task: test:temporal
+      - task: test:jobs
       - task: test:api-e2e
       - task: test:browser
       - task: test:e2e

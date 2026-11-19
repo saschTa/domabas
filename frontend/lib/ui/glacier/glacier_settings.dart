@@ -1333,46 +1333,129 @@ final class GlacierWorkloadResource extends StatelessWidget {
   final int active, savedLimit, maximumLimit;
   final String? description, notice;
   @override
-  Widget build(BuildContext context) => GlacierSettingsSection(
-    title: label,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final summary = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Semantics(header: true, child: Text(label, style: text.titleMedium)),
         if (description != null) ...[
-          Text(description!),
-          const SizedBox(height: 16),
-        ],
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: limitField,
+          const SizedBox(height: 4),
+          Text(
+            description!,
+            style: text.bodySmall?.copyWith(
+              color: GlacierTokens.of(context).muted,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Allowed: 1–$maximumLimit',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ],
+    );
+    final editor = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        limitField,
+        const SizedBox(height: 4),
+        Text('Allowed: 1–$maximumLimit', style: text.bodySmall),
+      ],
+    );
+    final meter = GlacierCapacityMeter(active: active, limit: savedLimit);
+    return GlacierSurface(
+      surface: true,
+      blur: false,
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide =
+              constraints.maxWidth >=
+              600 * MediaQuery.textScalerOf(context).scale(1);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (wide)
+                Row(
+                  children: [
+                    Expanded(flex: 3, child: summary),
+                    const SizedBox(width: 24),
+                    Expanded(flex: 2, child: meter),
+                    const SizedBox(width: 24),
+                    SizedBox(width: 150, child: editor),
+                  ],
+                )
+              else ...[
+                summary,
+                const SizedBox(height: 12),
+                meter,
+                const SizedBox(height: 16),
+                editor,
+              ],
+              if (notice != null) ...[
+                const SizedBox(height: 8),
+                Text(notice!, style: text.bodySmall),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+final class GlacierCapacityMeter extends StatelessWidget {
+  const GlacierCapacityMeter({
+    super.key,
+    required this.active,
+    required this.limit,
+  });
+
+  final int active, limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final full = active >= limit;
+    final usage = '$active of $limit in use';
+    return Semantics(
+      label: usage,
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final entry in [('Saved', savedLimit), ('Active', active)])
-              Expanded(
-                child: MergeSemantics(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [Text(entry.$1), Text('${entry.$2}')],
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 12,
+              children: [
+                Text(usage, style: theme.textTheme.labelLarge),
+                if (full)
+                  Text(
+                    active > limit ? 'Draining' : 'At capacity',
+                    style: theme.textTheme.labelMedium,
                   ),
-                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TweenAnimationBuilder<double>(
+              tween: Tween(
+                end: limit > 0 ? (active / limit).clamp(0.0, 1.0) : 0.0,
               ),
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => LinearProgressIndicator(
+                value: value,
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(6),
+                color: full
+                    ? theme.colorScheme.tertiary
+                    : theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              ),
+            ),
           ],
         ),
-        if (notice != null) ...[const SizedBox(height: 12), Text(notice!)],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 final class GlacierLicenseReader extends StatelessWidget {

@@ -126,6 +126,44 @@ func TestAIReservedOrFailedAttemptDoesNotChangePublishedSearch(t *testing.T) {
 	}
 }
 
+func TestTagsCanPublishBeforeInvoiceCompletes(t *testing.T) {
+	f := newIngestionFixture(t)
+	source := llmSource(t, f)
+	aiIndependentEnableProperties(t, f)
+	doc := f.accept(t, f.actor, strings.Repeat("8", 64), "Independent branches")
+	aiIndependentReady(t, f, doc, "tag publication before invoice")
+	job := aiIndependentClaim(t, source, doc.ID).Job
+	properties := documentrepos.NewDocumentPropertyRepository(source)
+	work, err := properties.Work(t.Context(), job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	work.NextStage = "complete"
+	if err := properties.Save(t.Context(), work, work.Metadata.FillExtractedProperties(m.DocumentMetadata{Tags: []string{"early-tag"}})); err != nil {
+		t.Fatal(err)
+	}
+	var visible bool
+	if err := f.connection.QueryRow(t.Context(), "SELECT 'early-tag'=ANY(tags) FROM documents WHERE id=$1", doc.ID).Scan(&visible); err != nil || !visible {
+		t.Fatalf("published tags missing: %v", err)
+	}
+	ai := documentAIService(source)
+	if err := ai.Complete(t.Context(), job); err == nil {
+		t.Fatal("enrichment completed before invoice branch")
+	}
+	invoices := invoiceservices.NewInvoiceService(invoicerepos.NewInvoiceRepository(invoicesources.NewInvoiceDataSource(f.source.Database())), nil, nil, f.authority, nil)
+	billing, err := invoices.Work(t.Context(), job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	billing.Skipped = true
+	if err := invoices.Save(t.Context(), billing, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := ai.Complete(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAIPropertyPublicationFencesConcurrentDocumentChanges(t *testing.T) {
 	for _, scenario := range []string{"metadata cleared", "OCR corrected", "document deleted"} {
 		t.Run(scenario, func(t *testing.T) {

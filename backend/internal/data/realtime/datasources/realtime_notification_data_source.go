@@ -165,7 +165,7 @@ func decodeSignal(payload, schema string) (r.RealtimeSignal, bool) {
 		return v, v.AccountID != "" && v.UserID != ""
 	case "authority", "member_user":
 		return v, v.UserID != ""
-	case "configuration", "system_users":
+	case "configuration", "system_users", "workload":
 		return v, v.AccountID == "" && v.UserID == ""
 	default:
 		return v, false

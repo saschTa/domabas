@@ -40,6 +40,7 @@ type realtimeConnection struct {
 	cancel          context.CancelFunc
 	socket          *websocket.Conn
 	subject         m.RealtimeSubject
+	workloadHints   bool
 	epoch           uint64
 	mu              sync.Mutex
 	candidates      map[m.RealtimeSignal]bool

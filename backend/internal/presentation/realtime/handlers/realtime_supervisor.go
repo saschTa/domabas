@@ -66,6 +66,9 @@ func (s *RealtimeSupervisor) fanout() {
 				if !authenticated {
 					continue
 				}
+				if signal.Kind == "workload" && !client.subject.WorkloadHints {
+					continue
+				}
 				if (signal.Kind == "email" || signal.Kind == "authority") && signal.UserID != client.subject.UserID {
 					continue
 				}

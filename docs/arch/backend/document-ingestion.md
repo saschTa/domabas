@@ -54,107 +54,9 @@ no automatic retention policy is included.
 
 ## Durable processing
 
-Deterministic definitions live in `domain/document/workflows`, including
-`document_ingestion.workflow.go` and `document_metadata.workflow.go`.
-`data/document/temporal` owns `DocumentIngestionActivities`,
-`DocumentMetadataActivities` and `DocumentIngestionDispatcher`. Bootstrap injects
-their service ports and registers the existing versioned workflow/activity names.
+A committed upload enters the ingestion queue. The worker renders a thumbnail for a supported original before text extraction. Preview failures are recorded separately so OCR can continue. Embeddings and final publication complete the searchable document. A separate enrichment run processes invoices and properties with independent capacity and completion checks.
 
-An outbox dispatcher leases pending delivery rows and starts the deterministic
-workflow ID for a document generation. It rejects duplicate workflow IDs and
-verifies the existing workflow type, queue and ID-only input before acknowledging
-an already started execution. The acknowledged run ID is persisted. Crashes after
-Temporal accepts work but before SQL acknowledgement are safe to replay.
-Namespace history retention must remain at least 24 hours, including for external
-Temporal deployments. Startup and every readiness probe verify this floor so
-closed history cannot expire inside the delivery window. Compose uses 72 hours.
-
-New documents use `domabas.DocumentIngestion.v2`: extraction, embedding and
-finalization run through injected application ports. Finalization publishes ready,
-searchable state and its downstream intent in one SQL transaction. Property or
-invoice processing cannot reverse ingestion success. Intermediate text, invoice
-source evidence and vectors stay in PostgreSQL; history carries identifiers and
-sanitized failure codes. The persisted `split_pipeline` flag selects the workflow
-name and deterministic ID prefix before admission. Retained v1 generations keep
-their original invoice/property stage sequence and exact input bytes; the old
-metadata diagnostic v1/v2 names also remain registered.
-
-`document_ai_jobs` stores a typed row for each downstream attempt, including its
-status, stage, generation, OCR revision, immutable configuration snapshot,
-outbox lease, workflow identity and execution ownership. New finalization records
-an explicit skipped attempt when both AI switches are off and no structured
-invoice source exists. Older combined jobs have no fabricated AI outcome. Empty
-OCR corrections that publish directly also enqueue through the same transactional
-trigger. The follow-up snapshots the current configuration at publication, so an
-AI settings edit during ingestion applies when that document becomes searchable.
-
-`domabas.DocumentAI.v1` uses a separate task queue ending in `-ai`, worker,
-dispatcher and shared resource reservations across replicas. It processes structured
-invoice XML or enabled invoice AI, then enabled property extraction, and finally
-records its own completion. A hung model retains its provider and worker permits, so new work starts only when the shared budget allows it. AI
-failures preserve their failing step and never update ingestion state, original
-publication or embeddings. Disabled or empty invoice inference does not erase
-an existing invoice; a completed explicit negative classification can do so.
-
-The [resource scheduler](resource-scheduler.md) admits the complete worker/provider requirements before workflow delivery. New ingestion never cancels running AI. Waiting jobs hold no activity slot and have no delivery deadline until admitted. Jobs sharing Ollama contend for the same pool; external providers have their own pools. Retained workflow names, inputs and command order remain unchanged.
-
-Follow-up reads and writes lock the document first and verify the latest attempt,
-ready ingestion generation and current OCR revision. Property publication also
-checks metadata revision and fills only missing values. Correction, retry,
-reindexing, deletion and newer AI attempts supersede/cancel obsolete attempts.
-Dispatch verifies duplicate executions by workflow ID, type, task queue and exact
-input. Cancellation retains admission until the owned execution closes; missing
-unlimited history is not evidence of closure. The AI worker drains before shared
-model clients and PostgreSQL close.
-
-`POST /api/v1/documents/{id}/ai/retry` uses `documents:retry`, a client request UUID
-and the expected configuration revision. Repeating that request returns the same
-attempt. It leaves ingestion generation, effective text and vectors unchanged.
-The processing response has an independent optional `ai` summary; job pages use
-server-side `pipeline=ingestion|ai` filtering before cursor pagination and expose
-the pipeline version. Personal activity includes separate AI entries.
-
-The shared scheduler controls deployment-wide concurrency. Administrator workload settings replace independent ingestion and AI environment limits. Each document reserves its complete resource vector through verified execution closure. Waiting work holds no activity slots or delivery deadlines. Lower limits drain naturally and do not trigger reindexing. See [resource scheduling](resource-scheduler.md) for fairness, provider pools, foreground headroom and worker sizing.
-
-New executions have no whole-workflow or SQL processing deadline. Model HTTP
-calls retain caller cancellation without adding an elapsed-time limit. Temporal
-requires an activity deadline: invoice, property, embedding and new extraction
-activities use a ten-year fallback with three-second heartbeats and a 15-second
-heartbeat timeout. The private processor spools each bounded original before
-waiting for a CPU slot, within its bounded request envelope. Its 490-second
-server body-read timeout still applies; it does not limit the later CPU wait.
-After acquiring CPU capacity, OCR has a 480-second execution limit and 120
-seconds per Tesseract call. The remote extraction request keeps caller
-cancellation without spending the OCR budget on queue time. Version markers
-preserve four-, eight- and sixteen-minute activity commands in retained histories.
-Finalization retains its four-minute activity limit. Provider HTTP 429/503 and
-processor overload use a 65-second retry delay. Embedding, invoice and property
-steps permit up to four retries (five total attempts); terminal errors do not
-retry. Other transient errors use shorter exponential retry delays. Retained
-workflow branches keep their prior three-attempt policy. Extraction and
-finalization keep their existing three-attempt policies. A model that never responds while its worker
-remains healthy requires operator cancellation or restart.
-
-The 24-hour delivery deadline starts at admission and governs work that has not
-started. Processing records separately track processing_started_at and the
-unlimited_inference mode. The execution row stores a zero execution timeout and
-the workflow input adds the optional unlimitedInference field. Existing rows and
-histories retain their 900-second workflow/SQL limits and original activity options.
-Every stage still checks generation and state; late work cannot publish a newer
-generation. A retry creates a new generation. Finalization remains idempotent.
-
-Reconciliation cancels running unlimited workflows whose generation was deleted,
-superseded or failed, then retains admission until confirmed workflow closure.
-Missing history cannot prove closure of an unlimited execution merely by elapsed
-time, so that reservation remains held for operator investigation. Keep Temporal
-history long enough for the maximum expected backend outage; losing closed
-history before reconciliation can strand a reservation. Startup and worker
-shutdown continue to cancel and drain owned I/O.
-
-Shutdown stops the dispatcher, drains activities and closes private document
-resources before the shared Temporal client and database. Startup and readiness
-include the processor, writable storage, database, Temporal namespace and worker.
-Loading configuration or running migrations does not contact model services.
+See [native jobs](native-jobs.md) and [resource scheduling](resource-scheduler.md) for admission, restart and shutdown.
 
 ## OCR and embeddings
 
@@ -323,9 +225,7 @@ Search statements have a ten-second deadline, inside a 30-second HTTP request
 budget for query embedding and up to two search passes. Transactions retain
 repeatable-read isolation; removing a corpus-size cutoff does not remove resource
 timeouts. Search failures log HTTP status and stable code without query text,
-filters or cursors. Dispatcher warnings include task queue, error type, Temporal
-status and SQLSTATE where available; document warnings identify dispatch versus
-reconciliation. These warnings do not log raw dependency error messages.
+filters or cursors. Operational warnings identify background discovery failures.
 
 The database initializer enables pgvector as the administrative role, and migration
 029 validates its version and schema. Runtime application roles remain unprivileged.
@@ -484,9 +384,7 @@ Each correction reads current authority, locks document and processing state, ch
 the observed revision, and atomically advances revision and processing generation.
 It replaces lexical chunks, clears obsolete embeddings and errors, and binds the
 new generation to the effective OCR revision. A stale revision or metadata-only
-write returns 409. No text or vectors enter Temporal history. The existing
-`DocumentIngestionRequest{accountId,documentId,generation}` history shape is unchanged;
-activities load the revision binding from PostgreSQL and recheck it on writes.
+write returns 409. Job checkpoints contain no text or vectors. Workers load the revision binding from PostgreSQL and recheck it on writes.
 
 | Original | Derived chunks | Result | Durable work |
 | --- | --- | --- | --- |
@@ -601,29 +499,7 @@ legacy manual corrections is treated conservatively.
 
 ## Admission ownership and lock order
 
-The retained execution ledger proves ownership for the shared resource scheduler. Under document coordination and the scheduler lock, admission reserves all required resources and records execution ownership in the same transaction. The singleton admission row retains scheduler fairness
-state. The ledger has no foreign keys to accounts, users, documents, processing or
-jobs. Deletion and supersession cannot remove a possibly running execution’s
-ownership. A newer generation of the same document waits for the previous
-execution to close. Legacy executions drain independently, and all must close
-before new admission.
-The original ingestion v1 name and command sequence remain compatible. New
-inputs add an optional unlimitedInference flag; old inputs omit it and retain
-their original deadlines.
-
-Before an ExecuteWorkflow call, SQL persists a unique lease and a start permit of
-at most five seconds. The first permit fixes the retry cutoff at the earlier of
-the delivery deadline and 23 hours 59 minutes later. Retries cannot extend it.
-Each RPC ends within its persisted permit and uses the reserved workflow and task
-queue. Known runs use Describe only. After the retry cutoff no further start call
-is allowed. For old bounded executions, missing history is inconclusive until
-the latest possible permit end plus the 15-minute execution timeout. A later
-NotFound can then permit fenced closure. Unlimited executions cannot use that
-elapsed-time proof and retain capacity when their history is missing. Transport
-failure always retains capacity. Closure preserves
-already-terminal history, fences unfinished work and releases the slot atomically.
-A separate bounded SQL sweep expires undelivered work and old bounded processing
-during Temporal outages; it does not expire started unlimited processing.
+Job admission reserves a worker and ingestion pipeline slot in PostgreSQL. Individual steps acquire thumbnail, OCR, embedding or provider slots as needed. The elected worker resumes from the durable next step after a restart. Document generation and OCR revision checks fence obsolete publications. See [native workers](native-jobs.md) and [resource scheduling](resource-scheduler.md).
 
 Ordinary document acceptance and generation changes hold a shared transaction
 advisory barrier before allocating event sequences or locking their document,
@@ -641,7 +517,7 @@ Scheduler paths begin with exclusive coordination and never acquire authority
 rows, even implicitly through history references. Worker transitions and actor
 deletion lock document then processing/history; they never lock coordination,
 configuration, admission or batches. Configuration reads after document locks are
-ordinary MVCC reads. Scheduler transactions perform no inference or Temporal RPC.
+ordinary MVCC reads. Inference runs outside scheduler transactions.
 
 Explicit request mutation locks are confined to invariants: partial metadata
 merges, document/generation publication, upload reservations, and import
@@ -665,8 +541,7 @@ A PDF that requires a password remains available with failure code
 `encrypted_pdf`. The namespace claim `documents:unlock` permits
 `POST /api/v1/documents/{id}/unlock` with the observed generation and password.
 Owners receive the claim; admin and user role bundles include it. Passwords are
-bounded to 1,024 UTF-8 bytes, preserved exactly, and never persisted or sent to
-Temporal. The private processor receives them through the request body and child
+bounded to 1,024 UTF-8 bytes, preserved exactly, and excluded from storage and execution checkpoints. The private processor receives them through the request body and child
 stdin. PDFium saves with security removed and verifies reopening without a password.
 Wrong passwords return `invalid_pdf_password` without mutating stored content.
 

@@ -324,3 +324,34 @@ func TestIndependentRealtimeCommitNoiseAndUnlockedSnapshot(t *testing.T) {
 		t.Fatalf("readonly authority snapshot blocked on row locks: %v", err)
 	}
 }
+
+func TestWorkloadSignalsReflectCommittedSlotChanges(t *testing.T) {
+	f := newIndependentRealtimeFixture(t)
+	workflow := uuid.NewString()
+	f.capture(t, false, `UPDATE users SET system_role='admin' WHERE id=$1`, f.manager.UserID)
+	f.capture(t, false, `INSERT INTO scheduler_requests(workflow_id,pipeline) VALUES($1,'document_ingestion')`, workflow)
+	permit := `INSERT INTO scheduler_step_permits(workflow_id,resource_id,scope,token) VALUES($1,'stage:embedding','stage:embedding',gen_random_uuid())`
+	if got := f.capture(t, true, permit, workflow); len(got) != 0 {
+		t.Fatalf("rolled back permit: %v", got)
+	}
+	acquired := f.capture(t, false, permit, workflow)
+	if !slices.Equal(acquired, []m.RealtimeSignal{{Kind: "workload"}}) {
+		t.Fatalf("permit acquisition: %v", acquired)
+	}
+	f.wantTopics(t, f.manager, acquired)
+	admin, member := f.manager, f.owner
+	admin.WorkloadHints, member.WorkloadHints = true, true
+	f.wantTopics(t, admin, acquired, m.Workload)
+	f.wantTopics(t, member, acquired)
+	topics, err := f.service.Authorize(t.Context(), admin, nil, true)
+	if err != nil || !slices.Contains(topics, m.Workload) {
+		t.Fatalf("resync topics %v: %v", topics, err)
+	}
+	release := `DELETE FROM scheduler_step_permits WHERE workflow_id=$1`
+	if got := f.capture(t, false, release, workflow); !slices.Equal(got, acquired) {
+		t.Fatalf("permit release: %v", got)
+	}
+	if got := f.capture(t, false, release, workflow); len(got) != 0 {
+		t.Fatalf("empty permit check emitted %v", got)
+	}
+}

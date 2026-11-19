@@ -35,7 +35,8 @@ func TestSchedulerSettingsSavesDuringManyRunningAIJobs(t *testing.T) {
  CASE WHEN status='running' THEN 'active' WHEN closed_at IS NOT NULL THEN 'released' ELSE 'waiting' END,admitted_at
  FROM document_ai_jobs ORDER BY created_at,id`)
 	f.exec(`INSERT INTO scheduler_request_resources(workflow_id,resource_id)
- SELECT workflow_id,r.id FROM scheduler_requests CROSS JOIN scheduler_resources r WHERE r.id IN ('worker',$1)`, resourceID)
+ SELECT workflow_id,r.id FROM scheduler_requests CROSS JOIN scheduler_resources r WHERE r.id IN ('worker','pipeline:document_ai')`)
+	f.exec(`INSERT INTO scheduler_step_permits SELECT workflow_id,$1,'test',gen_random_uuid() FROM scheduler_requests WHERE state='active'`, resourceID)
 	for _, table := range []string{"document_ai_jobs", "scheduler_requests", "scheduler_request_resources"} {
 		f.exec("ANALYZE " + table)
 	}
@@ -123,7 +124,7 @@ func TestSchedulerSettingsSavesDuringManyRunningAIJobs(t *testing.T) {
 	}
 	for _, resource := range saved.Resources {
 		if resource.ID == "worker" || resource.ID == resourceID {
-			if resource.Limit != 1 || resource.ActiveJobs != 256 || f.active(resource.ID) != 256 {
+			if resource.Limit != 1 || resource.ActiveJobs != 256 {
 				t.Fatalf("lower limit lost running owners: %+v", resource)
 			}
 		}

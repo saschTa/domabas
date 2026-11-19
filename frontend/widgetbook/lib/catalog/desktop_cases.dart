@@ -17,7 +17,7 @@ List<CatalogCase> desktopCases() => [
       id: entry.$1,
       domain: 'Desktop application',
       component: 'Inline settings navigation',
-      name: entry.$1,
+      name: entry.$1 == 'desktop-admin-inline' ? 'Workload limits' : entry.$1,
       widgetType: 'GlacierWorkspace',
       builder: (_) => desktopWorkspace(
         initialSelected: entry.$2,

@@ -151,6 +151,7 @@ func (c *realtimeConnection) initialize(ctx context.Context, token string) ([]m.
 	if err != nil {
 		return nil, err
 	}
+	subject.WorkloadHints = c.workloadHints
 	if !c.supervisor.authenticate(c, subject) {
 		return nil, m.ErrUnavailable
 	}

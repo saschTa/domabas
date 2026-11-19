@@ -1,6 +1,9 @@
 package models
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 const (
 	SchedulerMaximumResources     = 256
@@ -9,6 +12,9 @@ const (
 )
 
 func SchedulerResourceMaximum(id string, queueSize int) int {
+	if id == "stage:paperless" {
+		return 10
+	}
 	if id == "ollama" {
 		return min(SchedulerMaximumLimit, queueSize/2)
 	}
@@ -31,7 +37,7 @@ func PlanSchedulerSettings(current SchedulerSettings, update SchedulerSettingsUp
 	}
 	plan := SchedulerSettingsPlan{ExpectedRevision: current.Revision, ExpectedQueueSize: current.OllamaQueueSize, ExpectedResources: append([]SchedulerResource(nil), current.Resources...)}
 	for _, resource := range current.Resources {
-		if resource.ID != "worker" && resource.ID != "ollama" {
+		if strings.HasPrefix(resource.ID, "external:") {
 			plan.Materialize = append(plan.Materialize, resource)
 		}
 	}

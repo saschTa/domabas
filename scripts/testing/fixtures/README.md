@@ -6,7 +6,7 @@ The sample image below is shared by Compose smoke tests and Flutter tests.
 
 [`invoice.png`](invoice.png) is a small, fictional invoice image used to check
 the complete application. It was rendered with Go Regular using the same
-fixture helper as the Go API and Temporal integration tests. It contains:
+fixture helper as the Go API and native worker integration tests. It contains:
 
 > Electricity invoice for household power
 > Amount due is 240 euros.

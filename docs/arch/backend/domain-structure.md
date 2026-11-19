@@ -12,14 +12,12 @@ internal/
     models/                    Core values, errors and validation
     interfaces/                Core repository and capability ports
     services/                  Application use cases
-    workflows/                 Deterministic *.workflow.go definitions and wire values
   bootstrap/<domain>/
     <domain>_container.go       Concrete domain construction
   data/<domain>/
     models/                    Persistence aggregates and data errors
     repos/                     Domain mapping and repository-owned source ports
     datasources/               SQL and transaction ownership
-    temporal/                  Activities, dispatchers and injected service ports
   data/identity/security/      Argon2 and Casbin adapters
   presentation/<domain>/
     models/                    HTTP input/output values and model validation
@@ -28,7 +26,7 @@ internal/
   data/postgres/               Shared pool owner and migration lifecycle
     generated/                 Generated relational schema rows/builders
     migrations/                Immutable embedded migrations
-  data/temporal/               Shared Temporal client and readiness
+  data/jobs/                   Native executor, checkpoints and inference permits
   presentation/httpapi/        Root HTTP composition and health/readiness
     contract/                  Generated public contract
     routing/                   Shared generated route grouping
@@ -77,17 +75,7 @@ predecoding and group middleware. Shared HTTP transport can use identity value
 models for its injected authentication/permission guard. This does not give
 feature handlers access to identity persistence or service construction.
 
-Workflow packages are a separate deterministic adapter role inside their domain.
-They own workflow definitions, wire values and stable registration constants.
-They may use core value models, deterministic standard-library helpers and the
-SDK's `workflow` and `temporal` packages. They cannot import services, core ports,
-data adapters, HTTP, clients, activities or sibling workflow packages. Core
-models, interfaces and services cannot import workflows.
-
-Each `data/<domain>/temporal` adapter owns its activities, dispatchers and local
-service ports. It may import its own workflow package and core values. Concrete
-services, foreign workflow packages and foreign adapters remain inaccessible;
-bootstrap injects the needed services. Presentation contains only HTTP code.
+Root bootstrap wires the native background pipelines to domain services. The shared executor owns leadership and checkpointing in PostgreSQL. Business services have no dependency on the executor.
 
 ## Cross-domain collaboration
 
@@ -113,7 +101,7 @@ explicit. A shared connection does not grant an unscoped repository operation.
 
 Concrete containers stay in `bootstrap/<domain>/<domain>_container.go`, separate from the
 pure core. They build the domain's sources, repositories, services and adapters.
-Root bootstrap owns the pool, Temporal connection, worker and shutdown. Each
+Root bootstrap owns the pool, worker and shutdown. Each
 container borrows shared resources and closes only its own activities. Putting
 concrete wiring inside core would reverse its dependency direction.
 
@@ -132,7 +120,7 @@ its generated router remain shared too.
 
 These choices keep domain ownership and Go's acyclic package imports explicit.
 The [code pattern map](../code-patterns.md) connects these conventions to their
-implementation and enforcement. See [Temporal](temporal.md) for workflow
+implementation and enforcement. See [native jobs](native-jobs.md) for worker
 compatibility and worker ownership.
 
 ## Enforcement
@@ -144,13 +132,10 @@ reach into feature implementations. Package-level restrictions cover normal,
 aliased, blank and dot imports. Positive fixtures cover service value ports and
 data joins, alongside negative fixtures for bypasses.
 
-The checks also reject Temporal presentation packages, I/O in workflow packages,
-and core dependencies on workflows. Workflow definitions require `.workflow.go`
-filenames. Naming checks reject generic handwritten type and implementation file
-names while leaving generated code and standard interface methods alone.
+The checks reject the external orchestration SDK and enforce explicit names for handwritten types.
 
 These source checks cannot prove that a join is appropriate or that a transaction
-is correct. Review and the real PostgreSQL, API, Temporal and browser tests verify
+is correct. Review and the real PostgreSQL, API, worker and browser tests verify
 those behaviors. Integration discovery includes every package under
 `internal/data/...`, so moving an adapter cannot remove its suite from the Task
 command.

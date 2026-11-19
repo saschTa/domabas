@@ -2,8 +2,7 @@
 
 Domabas is a document library you run yourself. The Flutter app is the part people
 see. A Go backend checks permissions, stores information and runs background work.
-PostgreSQL keeps the records, files live on persistent disk, and Temporal helps
-long jobs survive restarts.
+PostgreSQL keeps the records, files live on persistent disk, and workers resume from durable checkpoints.
 
 This page explains the main ideas. The [architecture index](docs/arch/index.md)
 links to the detailed guides, and the [code pattern map](docs/arch/code-patterns.md)
@@ -16,15 +15,13 @@ connects those guides to the implementation. For installation and commands, use
 | --- | --- |
 | **Flutter app** | Shows documents, invoices, chat, imports, jobs and settings. The same codebase targets web, Android, iOS, Linux, macOS and Windows. |
 | **nginx web server** | Serves the built web app and forwards its API and live-update requests to Go. Browser requests use the same public address. Native apps connect to their saved server address. |
-| **Go backend** | Handles the HTTP API, checks access, coordinates changes and runs Temporal workers and dispatchers in the same process. |
-| **PostgreSQL** | Stores users, libraries, metadata, extracted text, search vectors, settings, conversations and job progress. Separate databases hold Temporal's own records. |
-| **Temporal server** | Records workflow progress and sends tasks to the Go workers. It can resume orchestration after a process restarts. |
-| **Temporal UI** | Gives operators a technical view of workflow executions. The app's Jobs screens provide the user-facing view. |
+| **Go backend** | Handles the HTTP API, checks access, coordinates changes and runs background workers in the same process. |
+| **PostgreSQL** | Stores users, libraries, metadata, extracted text, search vectors, settings, conversations and job progress. |
 | **Private document processor** | Reads PDFs, images and email files. It extracts text, performs OCR, renders thumbnails and asks Ollama for embeddings. It is a separate Go process with resource limits. |
 | **Ollama** | Runs the local embedding model and, when used, the models for chat and document AI. Model files are cached persistently. |
 | **Optional external AI provider** | An administrator can select an OpenAI-compatible endpoint for chat or document AI. Those requests send their selected content to that provider. Local embeddings still use Ollama. |
 | **Persistent volumes** | Keep originals, staged uploads, database files, encryption keys and model caches across ordinary container shutdowns. |
-| **Initialization containers** | Prepare database roles, Temporal's schemas and namespace before the backend starts. They are setup steps, not extra application servers. |
+| **Initialization containers** | Prepare the database role and pgvector before the backend starts. They are setup steps, not extra application servers. |
 
 ```mermaid
 flowchart TD
@@ -33,9 +30,6 @@ flowchart TD
   Web --> API
   API --> DB[(PostgreSQL: application data)]
   API --> Files[(Originals and encryption keys)]
-  API <--> Temporal[Temporal server]
-  Temporal --> History[(PostgreSQL: Temporal databases)]
-  Dashboard[Temporal UI] --> Temporal
   API --> Processor[Private Go document processor]
   Processor --> Ollama[Ollama]
   API --> Ollama
@@ -59,17 +53,15 @@ from widgets. **OpenAPI generators** produce the shared HTTP boundary, while
    file, and puts it in staging storage.
 2. It saves the document and a durable request to process it in one database
    transaction. That saved request is an **outbox**: work remains recorded even
-   if the backend stops before it contacts Temporal.
-3. A dispatcher waits for available worker and Ollama capacity, then starts the
-   document's Temporal workflow using a stable identity.
+   if the backend stops before a worker sees it.
+3. The worker reserves ingestion capacity and renders a preview before extracting text.
 4. The processor keeps text already present in a PDF and uses OCR for image
    content. Email files are parsed as email. The backend saves the extracted text
    and divides it into small overlapping passages.
 5. Ollama turns the passages into embeddings. The backend stores them, moves the
    original into its final location and publishes the completed search index.
 6. A separate follow-up pipeline handles invoice extraction and any enabled
-   document AI. A failure there leaves the document searchable. Thumbnail jobs
-   separately create the previews used in document lists.
+   document AI. A failure there leaves the document searchable. A backfill supplies missing previews for older documents.
 
 Uploads from mobile share sheets, the scanner, IMAP and Paperless ultimately use the same document
 pipeline. Metadata-only records do not start file processing. Users can correct
@@ -78,39 +70,11 @@ prepared. See [document ingestion](docs/arch/backend/document-ingestion.md),
 [email ingestion](docs/arch/backend/email-ingestion.md) and
 [Paperless import](docs/arch/backend/paperless-import.md).
 
-## Scheduling, jobs and Temporal
+## Scheduling and background work
 
-Three pieces work together. The **database job record** says what was accepted and
-what progress users should see. The **resource scheduler** decides when the work
-may start. **Temporal** records and coordinates the execution after it starts.
+PostgreSQL stores accepted jobs and step checkpoints. One elected Go worker runs the pipelines. Workload limits govern concurrent runs and shared resources separately. For example, OCR can use its own slots while embeddings wait for Ollama. Invoice and tag extraction each have a capacity limit and acquire the provider only during inference. Paperless download capacity applies before files enter ingestion.
 
-Each admitted job reserves one worker permit. Ingestion also reserves Ollama;
-chat and enabled document AI reserve their selected provider. Email retrieval,
-Paperless retrieval and thumbnails need a worker permit but no model permit.
-Limits apply across backend instances. All required capacity is reserved together,
-so a job does not occupy one resource while waiting for another. Older jobs that
-can run get priority; one busy provider does not block unrelated work.
-
-Administrators change these limits in workload settings. Lowering a limit lets
-running work finish and holds back new work. A permit is released only when the
-backend can establish that the execution has closed safely. Waiting jobs remain
-in PostgreSQL and do not occupy Temporal activity slots.
-
-A **workflow** describes the order of steps. An **activity** performs the real
-work, such as reading a file, calling a model or writing a result. Temporal keeps
-an event history and replays the workflow's decisions after a restart. Activities
-can retry, so writes use job identities, expected revisions and ownership checks
-to prevent stale attempts from publishing a result.
-
-Periodic work is discovered by backend polling loops and database timestamps.
-For example, email polling checks which accounts are due, and thumbnail discovery
-runs about once a minute. Go Task is the developer command runner; it is separate
-from this runtime scheduling. The application does not depend on a user keeping
-a screen open to continue accepted work.
-
-See [background jobs](docs/arch/backend/background-jobs.md),
-[resource scheduling](docs/arch/backend/resource-scheduler.md) and
-[Temporal and worker lifetime](docs/arch/backend/temporal.md).
+See [resource scheduling](docs/arch/backend/resource-scheduler.md) and [worker lifecycle](docs/arch/backend/native-jobs.md).
 
 ## Embeddings and search
 
@@ -169,10 +133,7 @@ Changing OCR or embedding settings schedules full reindexing. See
 
 ## PostgreSQL, files and startup
 
-Compose runs one PostgreSQL server with three databases by default: `domabas` for
-application data, `temporal` for workflow history, and `temporal_visibility` for
-Temporal's execution listings. Initialization uses an administrative role; the
-application and Temporal connect using separate roles.
+Compose uses the application database for records, execution checkpoints and resource limits. Database provisioning uses a separate administrator role.
 
 The initializer installs pgvector in the application database. The backend then
 applies its embedded SQL migrations under a database lock. A checksum ledger
@@ -180,7 +141,7 @@ rejects changed or missing migration history. Application records use typed
 columns and child tables; only explicitly documented immutable snapshots use
 JSON. Original file bytes live on persistent disk, not in database rows.
 
-After database setup, Temporal's schemas and namespace are prepared. The private
+The private
 processor verifies its model cache, and the backend starts its workers and
 checks its dependencies before becoming ready. Liveness means the process is
 running; readiness also checks the services it needs. During shutdown,

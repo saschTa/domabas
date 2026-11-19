@@ -107,6 +107,7 @@ func (r realtimeStreamResponse) VisitOpenRealtimeResponse(w http.ResponseWriter)
 		transport.WriteError(w, status, "invalid_request", "WebSocket handshake is invalid")
 		return nil
 	}
+	client.workloadHints = r.request.URL.RawQuery == "workload=true"
 	controller := http.NewResponseController(w)
 	deadline := time.Now().Add(5 * time.Second)
 	if controller.SetReadDeadline(deadline) != nil || controller.SetWriteDeadline(deadline) != nil {
@@ -157,7 +158,7 @@ func headerToken(r *http.Request, header, token string) bool {
 	return false
 }
 func validateHandshake(r *http.Request, origins []string) int {
-	if r.Method != "GET" || r.ProtoMajor != 1 || r.ProtoMinor < 1 || r.URL.RawQuery != "" || r.URL.ForceQuery || r.ContentLength != 0 || len(r.TransferEncoding) > 0 || !headerToken(r, "Connection", "upgrade") || !headerToken(r, "Upgrade", "websocket") {
+	if r.Method != "GET" || r.ProtoMajor != 1 || r.ProtoMinor < 1 || (r.URL.RawQuery != "" && r.URL.RawQuery != "workload=true") || r.URL.ForceQuery || r.ContentLength != 0 || len(r.TransferEncoding) > 0 || !headerToken(r, "Connection", "upgrade") || !headerToken(r, "Upgrade", "websocket") {
 		return 400
 	}
 	if values := r.Header.Values("Sec-WebSocket-Version"); len(values) != 1 || values[0] != "13" {

@@ -18,23 +18,20 @@ Measure the workload and adjust capacity or concurrency when needed.
 | Service | Container RAM ceiling | Go runtime soft target | Compose override |
 | --- | --- | --- | --- |
 | PostgreSQL | 2 GiB | — | `POSTGRES_MEMORY_LIMIT` |
-| Temporal server | 2 GiB | 1536 MiB | `TEMPORAL_MEMORY_LIMIT`, `TEMPORAL_GOMEMLIMIT` |
 | Backend, including all application workers | 2 GiB | 1536 MiB | `BACKEND_MEMORY_LIMIT`, `BACKEND_GOMEMLIMIT` |
 | Document processor and extraction children | 4 GiB | — | `DOCUMENT_PROCESSOR_MEMORY_LIMIT` |
-| Temporal UI | 256 MiB | 192 MiB | `TEMPORAL_UI_MEMORY_LIMIT`, `TEMPORAL_UI_GOMEMLIMIT` |
 | Web server | 512 MiB | — | `WEB_MEMORY_LIMIT` |
 | Ollama | 8 GiB | — | `OLLAMA_MEMORY_LIMIT` |
 
-The long-running ceilings total **10.75 GiB excluding Ollama**, or
-**18.75 GiB including it**. These are upper limits, not the RAM needed to start a
+The long-running ceilings total **8.5 GiB excluding Ollama**, or
+**16.5 GiB including it**. These are upper limits, not the RAM needed to start a
 small installation. Ceilings do not preallocate memory and do not reserve it on
 an overcommitted host. A 5 GiB base allocation cannot absorb every simultaneous
 peak; raising limits or concurrency requires revisiting total capacity.
 Initialization/build processes, native Go/Flutter development, browsers and
 container image builds are additional consumers.
 
-Compose supplies service-specific `GOMEMLIMIT` values to the three Go servers.
-The targets leave 25% below their container ceilings. Go's limit is soft and
+Compose sets the Go backend’s `GOMEMLIMIT` to 75% of its default container ceiling. Go's limit is soft and
 covers runtime-managed memory, not all RSS, kernel charges or child processes;
 it can be exceeded when live allocations cannot be collected. It cannot cure a
 leak. Adjust both values together when changing a service's ceiling. The
@@ -58,15 +55,14 @@ limits. Lower the shared worker limit if CPU processing or total memory is under
 pressure, and increase limits only after measuring the host. The former ingestion
 and document AI concurrency environment settings, including `auto`, no longer
 control admission. See [shared resource scheduling](../arch/backend/resource-scheduler.md).
-A GPU does not eliminate CPU OCR, database or Temporal memory. An integrated GPU
+CPU-based OCR and PostgreSQL still use host memory on GPU-equipped systems. An integrated GPU
 shares system RAM; native macOS Ollama is outside Docker limits. Model size,
 context length and concurrent inference determine Ollama's separate requirement.
 
 ## Apply the settings
 
 The root Compose file uses the overrides in the table. The three
-[TrueNAS examples](../../truenas/README.md) expose the same backend, Temporal,
-PostgreSQL, UI and web limits as named values under `x-settings`. Keep the Go
+[TrueNAS examples](../../truenas/README.md) expose the same backend, PostgreSQL and web limits as named values under `x-settings`. Keep the Go
 soft targets below their corresponding container caps. Redeploy/recreate the
 affected containers after changing YAML; restarting an existing container does
 not change its resource configuration. Ordinary recreation retains data.
@@ -76,19 +72,11 @@ an instruction to downgrade a newer installation.
 
 The native backend does not inherit Compose settings. To set its soft target
 when running directly, export `GOMEMLIMIT=1536MiB` in its environment. That is
-not a host-enforced limit. Do not change Temporal's history-shard count on an
-existing database to reduce RAM.
-
-Temporal also retains workflow state in caches. The Go soft target does not
-evict live cache entries. If a large import leaves Temporal close to its budget,
-measure its retained state and review the pinned server's cache settings before
-increasing concurrency. This investigation preserves those settings; the RAM
-recommendations do not guarantee capacity for arbitrary workflow histories.
+a soft process target.
 
 ## Collect evidence on the affected host
 
-An empty Jobs list does not stop database queue polling or Temporal's background
-work. Container health checks use a slower steady cadence to reduce idle work;
+An empty Jobs list does not stop database queue polling. Container health checks use a slower steady cadence to reduce idle work;
 see [health checks](compose.md#health-checks) for timing and read-only storage
 probe limits. These settings do not guarantee a particular idle CPU percentage.
 
@@ -156,15 +144,14 @@ For a crash while answering an AI question, start recording before submitting
 the question and continue through completion or failure. Record the backend
 image tag/digest, chat model, turn status, document/chunk counts, number of
 consecutive searches and whether ingestion was active. Inspect the backend,
-Temporal and PostgreSQL separately
+worker and PostgreSQL separately
 even when Ollama remains healthy. The failed container's evidence determines
 whether its own limit or host pressure was involved; a healthy Ollama container
 does not identify which other service failed.
 
 In the current implementation, chat limits each turn to 30 document/catalog
 tool calls, reads document text in 8,000-character pages and caps model context
-at 48,000 characters. Provider responses are limited to 128 KiB. Temporal
-workflow/activity payloads carry turn identifiers, while conversation and tool
+at 48,000 characters. Provider responses are limited to 128 KiB. Job checkpoints carry turn identifiers, while conversation and tool
 contents live in PostgreSQL. These bounds reduce the risk of one question
 retaining an entire document corpus in application memory. They do not rule out
 leaks or behavior in older releases. See the [chat architecture](../arch/backend/ai-chat.md).

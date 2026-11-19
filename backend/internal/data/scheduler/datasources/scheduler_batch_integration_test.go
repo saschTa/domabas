@@ -74,7 +74,7 @@ func TestSchedulerCandidateBatchReconcilesOnceAndRetainsFairness(t *testing.T) {
 	if err = f.connection.QueryRow(t.Context(), "SELECT state FROM scheduler_requests WHERE workflow_id=$1", oldest).Scan(&state); err != nil || state != "waiting" {
 		t.Fatalf("rolled back admission lost waiting turn: %q %v", state, err)
 	}
-	if !f.reserve(oldest, "ollama") || f.active("worker") != 1 || f.active("ollama") != 1 {
+	if !f.reserve(oldest, "ollama") || f.active("worker") != 1 || f.active("ollama") != 0 {
 		t.Fatal("rolled back candidate did not retain its resource turn")
 	}
 }

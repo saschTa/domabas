@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/domabas/domabas/backend/internal/data/jobs"
 	"io"
 	"log/slog"
 	"net/http"
@@ -104,6 +105,10 @@ func (p *ChatProviderRemoteDataSource) Generate(ctx context.Context, input m.Cha
 }
 
 func (p *ChatProviderRemoteDataSource) request(ctx context.Context, method, endpoint, key string, input, output any, limit int64) error {
+	return jobs.RunInference(ctx, endpoint, func(ctx context.Context) error { return p.send(ctx, method, endpoint, key, input, output, limit) })
+}
+
+func (p *ChatProviderRemoteDataSource) send(ctx context.Context, method, endpoint, key string, input, output any, limit int64) error {
 	var body io.Reader
 	if input != nil {
 		encoded, err := json.Marshal(input)

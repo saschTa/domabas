@@ -191,12 +191,13 @@ document text and chat content used by that feature can leave your server.
 Read [Data and privacy](docs/development/privacy.md) for storage locations,
 deletion limits, encryption responsibilities and sensitive logging behavior.
 
+The quick-start file describes the pinned v0.0.10 release. To run the native worker from this checkout, use `docker compose up --build --wait` or the [TrueNAS templates and image build instructions](truenas/README.md#1-choose-a-file).
+
 ## How it fits together
 
 The Flutter app talks to one Go backend, which serves the API and runs background
-workers. PostgreSQL stores application records and job progress, with separate
-databases for Temporal's workflow history. Original files live in persistent
-storage. Temporal coordinates jobs through restarts. A private document processor
+workers. PostgreSQL stores application records, job progress and resource limits.
+Workers resume from saved checkpoints after a restart. Original files live in persistent storage. A private document processor
 extracts text, runs OCR, creates thumbnails and asks Ollama for search embeddings.
 The backend uses local or optional external models for chat and AI extraction.
 
@@ -207,8 +208,6 @@ flowchart TD
   Web --> Backend
   Backend --> Postgres[(PostgreSQL: application data)]
   Backend --> Files[(Documents and encryption keys)]
-  Backend <--> Temporal[Temporal job orchestration]
-  Temporal --> History[(PostgreSQL: Temporal databases)]
   Backend --> Processor[Document processor: text, OCR and thumbnails]
   Processor --> Ollama[Ollama: local models]
   Backend --> Ollama

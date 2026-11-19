@@ -662,7 +662,7 @@ paths:
       summary: Open a bounded stream of authorized invalidation hints.
       description: >-
         Requires an HTTP/1.1 WebSocket upgrade with subprotocol domabas.realtime.v1,
-        no query or body, and an approved browser Origin (native clients may omit Origin).
+        an empty body, and an approved browser Origin (native clients may omit Origin).
         Cookies and Authorization headers do not authenticate this operation. Send exactly one
         RealtimeAuthenticate text frame within five seconds after upgrade. A complete live session
         with realtime:connect in its active namespace is required. Every outgoing batch freshly
@@ -676,6 +676,14 @@ paths:
         Close codes are 1000 normal, 1001 lifetime/shutdown, 1008 invalid protocol, 1009 oversized,
         1013 unavailable/overloaded, 4401 invalid/revoked session and 4403 missing connect authority.
       security: []
+      parameters:
+        - in: query
+          name: workload
+          required: false
+          description: Send workload=true to opt into installation-wide workload hints. Requires system:workloads:manage for delivery. The handshake accepts only the literal workload=true or an empty query.
+          schema:
+            type: string
+            enum: ["true"]
       x-websocket:
         subprotocol: domabas.realtime.v1
         client:
@@ -717,7 +725,7 @@ paths:
       operationId: readiness
       responses:
         "200":
-          description: "PostgreSQL, the realtime listener, Temporal, background workers and dispatchers, storage directories and verified inference models are available. Storage checks read directory metadata without testing write capacity or durability. Missing email credential keys disable email operations without making ordinary document readiness fail."
+          description: "PostgreSQL, the realtime listener and the background executor, storage directories and verified inference models are available. Storage checks read directory metadata without testing write capacity or durability. Missing email credential keys disable email operations without making ordinary document readiness fail."
           content:
             application/json:
               schema:
@@ -2208,7 +2216,7 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
       summary: "Reindex namespace originals (documents:reindex)"
-      description: "Namespace scope is the authenticated session; session, membership and current claims are rechecked before resolving IDs or cursors. Commits a durable request without needing Temporal. Membership covers documents committed before its database event cutoff. Full extraction runs again and preserves manual OCR text. requestId is bound to requester, exact scope and target revision; identical retries return the accepted batch, including after completion or revision changes. Foreign requester/scope collisions return 404. Conflicting owned input, stale target revisions and another active manual batch for the same scope/revision return 409."
+      description: "Namespace scope is the authenticated session; session, membership and current claims are rechecked before resolving IDs or cursors. Commits a durable request in PostgreSQL. Membership covers documents committed before its database event cutoff. Full extraction runs again and preserves manual OCR text. requestId is bound to requester, exact scope and target revision; identical retries return the accepted batch, including after completion or revision changes. Foreign requester/scope collisions return 404. Conflicting owned input, stale target revisions and another active manual batch for the same scope/revision return 409."
   "/api/v1/document-reindex-batches/{batchId}":
     get:
       tags:
@@ -2329,7 +2337,7 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
       summary: "Inspect or request installation document reindexing (system:document-processing:manage)"
-      description: "System-authorized aggregate progress only; this capability does not grant namespace jobs, titles or document content. Commits a durable request without needing Temporal. Membership covers documents committed before its database event cutoff. Full extraction runs again and preserves manual OCR text. requestId is bound to requester, exact scope and target revision; identical retries return the accepted batch, including after completion or revision changes. Foreign requester/scope collisions return 404. Conflicting owned input, stale target revisions and another active manual batch for the same scope/revision return 409."
+      description: "System-authorized aggregate progress only; this capability does not grant namespace jobs, titles or document content. Commits a durable request in PostgreSQL. Membership covers documents committed before its database event cutoff. Full extraction runs again and preserves manual OCR text. requestId is bound to requester, exact scope and target revision; identical retries return the accepted batch, including after completion or revision changes. Foreign requester/scope collisions return 404. Conflicting owned input, stale target revisions and another active manual batch for the same scope/revision return 409."
   "/api/v1/system/document-reindex-batches/{batchId}":
     get:
       tags:
@@ -3424,6 +3432,10 @@ components:
         resourceIds:
           type: array
           items: {type: string}
+        activeSlots:
+          type: object
+          description: Slots held by this pipeline, keyed by connected resource ID. Zero means idle. Older servers may omit this field.
+          additionalProperties: {type: integer, minimum: 0}
     UpdateWorkloadSettingsRequest:
       type: object
       additionalProperties: false
@@ -3539,6 +3551,7 @@ components:
         - identity
         - members
         - system_users
+        - workload
     RealtimeAuthenticate:
       type: object
       additionalProperties: false
@@ -3568,7 +3581,7 @@ components:
           enum: [1]
         topics:
           type: array
-          maxItems: 10
+          maxItems: 11
           uniqueItems: true
           items:
             $ref: '#/components/schemas/RealtimeTopic'
@@ -3585,7 +3598,7 @@ components:
           enum: [1]
         topics:
           type: array
-          maxItems: 10
+          maxItems: 11
           uniqueItems: true
           items:
             $ref: '#/components/schemas/RealtimeTopic'
@@ -3602,7 +3615,7 @@ components:
           enum: [1]
         topics:
           type: array
-          maxItems: 10
+          maxItems: 11
           uniqueItems: true
           items:
             $ref: '#/components/schemas/RealtimeTopic'
@@ -6303,7 +6316,7 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
     Unavailable:
-      description: "PostgreSQL, Temporal, the local worker, document storage, or model inference is unavailable."
+      description: "PostgreSQL, the local worker, document storage, or model inference is unavailable."
       content:
         application/json:
           schema:

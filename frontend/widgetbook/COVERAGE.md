@@ -36,7 +36,7 @@ can be assessed in context.
 | Email | `presentation/email/views/email_providers_screen.dart`, `widgets/email_provider_editor.dart` | Accounts, IMAP fields, credential retention/replacement, import rules, consent renewal, source checks and uncertain outcomes |
 | Paperless | `presentation/paperless/views/` | Source/token configuration, import outcomes, retrieval limits and save/reconciliation states |
 | AI and processing settings | `presentation/chat/views/chat_settings_screen.dart`, `presentation/document/views/document_processing_settings_screen.dart` | Independent model/provider/context/credential settings, OCR/extraction switches, configuration conflict/unknown outcomes, scoped reindex |
-| Workload | `presentation/workload/views/workload_settings_screen.dart` | Per-resource maximum active background jobs, server-provided bounds, Saved/Active values, draft validation and save/reset |
+| Workload | `presentation/workload/views/workload_settings_screen.dart` | Desktop and phone workload screens with selectable pipeline flow, shared resource occupancy, simulated ingestion load, bounded pipeline and resource limits, save/reset and recovery |
 | Appearance/account/live updates | `presentation/appearance/`, `presentation/realtime/`, app account composition | System/light/dark, material/background preferences, persistence failure, account menu, connection context |
 | Licenses | `presentation/licenses/views/licenses_screen.dart` | Search/continuation, selectable notices, empty/error, independent catalog dependency notices |
 
@@ -47,7 +47,7 @@ Every public widget under `frontend/lib/ui/glacier/` must have its own exact
 with registrations and rejects omissions; `test/catalog_test.dart` renders all
 registered examples across the representative layout matrix. Presentation value
 objects and theme extensions are exercised through their owning widgets. The
-current inventory contains 138 public widgets: 69 desktop/shared, 61 mobile and eight
+current inventory contains 140 public widgets: 71 desktop/shared, 61 mobile and eight
 native presenters or inherited contexts.
 
 | Source file | Reusable public widgets |
@@ -60,7 +60,8 @@ native presenters or inherited contexts.
 | `glacier_reader.dart` | GlacierReader, GlacierPdfToolbar, GlacierFindBar, GlacierOriginalState, GlacierExtractedText |
 | `glacier_search.dart` | GlacierSearchDialog, GlacierSearchFilterGroup, GlacierActiveFilters, GlacierVocabularyPicker |
 | `glacier_invoices.dart` | GlacierInvoiceRow, GlacierInvoiceSection, GlacierInvoiceRecords, GlacierInvoiceDetails |
-| `glacier_settings.dart` | GlacierSettingsPage, GlacierSettingsSection, GlacierSettingsOverview, GlacierSettingsHeader, GlacierFieldGrid, GlacierSettingsRecord, GlacierIdentityContext, GlacierPermissionGroup, GlacierMemberEditor, GlacierInvitationCode, GlacierCredentialField, GlacierAuthPanel, GlacierRecoveryPanel, GlacierPasswordFields, GlacierServerForm, GlacierAppearancePreferences, GlacierModelConnection, GlacierEmailAccountForm, GlacierWorkloadResource, GlacierLicenseReader, GlacierAccountMenu |
+| `glacier_workload_flow.dart` | GlacierWorkloadFlow |
+| `glacier_settings.dart` | GlacierSettingsPage, GlacierSettingsSection, GlacierSettingsOverview, GlacierSettingsHeader, GlacierFieldGrid, GlacierSettingsRecord, GlacierIdentityContext, GlacierPermissionGroup, GlacierMemberEditor, GlacierInvitationCode, GlacierCredentialField, GlacierAuthPanel, GlacierRecoveryPanel, GlacierPasswordFields, GlacierServerForm, GlacierAppearancePreferences, GlacierModelConnection, GlacierEmailAccountForm, GlacierWorkloadResource, GlacierCapacityMeter, GlacierLicenseReader, GlacierAccountMenu |
 | `glacier_workflows.dart` | GlacierPipelineTimeline, GlacierJobRow, GlacierJobsScreen, GlacierJobDetails, GlacierJobOutcome, GlacierReindexProgress, GlacierActivityPanel |
 | `glacier_chat.dart` | GlacierConversationHistory, GlacierChatMessage, GlacierChatComposer, GlacierChatScreen |
 | `glacier_activity_dock.dart` | GlacierActivityDock |

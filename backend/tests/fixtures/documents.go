@@ -1,4 +1,4 @@
-//go:build e2e || temporal
+//go:build e2e || jobs
 
 package fixtures
 

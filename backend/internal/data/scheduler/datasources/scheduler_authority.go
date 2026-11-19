@@ -15,6 +15,9 @@ func (s *SchedulerDataSource) settingsTx(ctx context.Context, actor m.SchedulerA
 		if _, err := tx.Exec(ctx, `SET LOCAL jit=off`); err != nil {
 			return err
 		}
+		if _, err := tx.Exec(ctx, "SELECT singleton FROM paperless_admission WHERE singleton FOR UPDATE"); err != nil {
+			return err
+		}
 		if err := schedulerLock(ctx, tx); err != nil {
 			return err
 		}

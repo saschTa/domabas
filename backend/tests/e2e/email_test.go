@@ -6,10 +6,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,16 +18,11 @@ import (
 	"testing"
 	"time"
 
-	emailworkflows "github.com/domabas/domabas/backend/internal/domain/email/workflows"
 	"github.com/domabas/domabas/backend/internal/testdb"
 	"github.com/domabas/domabas/backend/tests/imapfixture"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-
-	enumspb "go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/serviceerror"
-	"go.temporal.io/sdk/client"
 )
 
 func emailJSON(t *testing.T, value any) string {
@@ -63,84 +56,9 @@ func (api *ingestionAPI) waitEmailRun(token, providerID, runID string) map[strin
 	return nil
 }
 
-func cleanupOwnedEmail(t *testing.T, databaseURL, queue string) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	db, err := pgx.Connect(ctx, databaseURL)
-	if err != nil {
-		t.Errorf("email cleanup database: %v", err)
-		return
-	}
-	defer db.Close(ctx)
-	var present bool
-	if err = db.QueryRow(ctx, `SELECT to_regclass('email_executions') IS NOT NULL`).Scan(&present); err != nil || !present {
-		return
-	}
-	rows, err := db.Query(ctx, `SELECT workflow_id,COALESCE(workflow_run_id,''),task_queue FROM email_executions`)
-	if err != nil {
-		t.Errorf("email cleanup identities: %v", err)
-		return
-	}
-	type execution struct{ id, run, queue string }
-	var executions []execution
-	for rows.Next() {
-		var value execution
-		if err = rows.Scan(&value.id, &value.run, &value.queue); err != nil {
-			break
-		}
-		executions = append(executions, value)
-	}
-	if err == nil {
-		err = rows.Err()
-	}
-	rows.Close()
-	if err != nil {
-		t.Errorf("email cleanup identities: %v", err)
-		return
-	}
-	if len(executions) == 0 {
-		return
-	}
-	remote, err := client.DialContext(ctx, client.Options{HostPort: os.Getenv("TEMPORAL_ADDRESS"), Namespace: os.Getenv("TEMPORAL_NAMESPACE")})
-	if err != nil {
-		t.Errorf("email cleanup Temporal: %v", err)
-		return
-	}
-	defer remote.Close()
-	for _, value := range executions {
-		info, err := remote.DescribeWorkflowExecution(ctx, value.id, value.run)
-		var missing *serviceerror.NotFound
-		if errors.As(err, &missing) {
-			continue
-		}
-		if err != nil {
-			t.Errorf("email cleanup describe: %v", err)
-			continue
-		}
-		execution := info.GetWorkflowExecutionInfo()
-		if value.queue != queue || execution.GetTaskQueue() != queue || execution.GetType().GetName() != emailworkflows.EmailPollWorkflowName {
-			t.Error("email cleanup ownership mismatch; left untouched")
-			continue
-		}
-		if execution.GetStatus() == enumspb.WORKFLOW_EXECUTION_STATUS_RUNNING {
-			if err = remote.TerminateWorkflow(ctx, value.id, execution.GetExecution().GetRunId(), "owned email API test cleanup"); err != nil && !errors.As(err, &missing) {
-				t.Errorf("email cleanup terminate: %v", err)
-			}
-		}
-	}
-}
-
 func TestEmailAPIEncryptedCredentialsScheduledImportConsentAndRetention(t *testing.T) {
 	databaseURL := testdb.New(t)
 	environment := newServerEnvironment(t, databaseURL)
-	queue := ""
-	for _, value := range environment {
-		if strings.HasPrefix(value, "TEMPORAL_TASK_QUEUE=") {
-			queue = strings.TrimPrefix(value, "TEMPORAL_TASK_QUEUE=") + "-email"
-		}
-	}
-	t.Cleanup(func() { cleanupOwnedEmail(t, databaseURL, queue) })
 	fixtureDirectory := filepath.Join(t.TempDir(), "imap")
 	fixture, err := imapfixture.Start(fixtureDirectory, "127.0.0.1:0")
 	if err != nil {
@@ -369,22 +287,8 @@ func TestEmailAPIEncryptedCredentialsScheduledImportConsentAndRetention(t *testi
 	if err = db.QueryRow(t.Context(), `SELECT credential_ciphertext IS NULL AND credential_key_id IS NULL FROM email_providers WHERE id=$1`, id).Scan(&cleared); err != nil || !cleared {
 		t.Fatalf("provider deletion retained credentials: %v", err)
 	}
-	remote, err := client.DialContext(t.Context(), client.Options{HostPort: os.Getenv("TEMPORAL_ADDRESS"), Namespace: os.Getenv("TEMPORAL_NAMESPACE")})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer remote.Close()
-	history := remote.GetWorkflowHistory(t.Context(), "domabas-email-"+run["id"].(string), "", false, enumspb.HISTORY_EVENT_FILTER_TYPE_ALL_EVENT)
-	for history.HasNext() {
-		event, err := history.Next()
-		if err != nil {
-			t.Fatal(err)
-		}
-		encoded := []byte(event.String())
-		for _, secret := range []string{fixture.Ready.Username, fixture.Ready.Password, "searchable body and two attachments"} {
-			if bytes.Contains(encoded, []byte(secret)) || bytes.Contains(encoded, []byte(base64.StdEncoding.EncodeToString([]byte(secret)))) {
-				t.Fatal("workflow history contains mailbox secret/content")
-			}
-		}
+	var completed bool
+	if err = db.QueryRow(t.Context(), "SELECT EXISTS(SELECT 1 FROM native_executions WHERE workflow_id=$1 AND outcome='done')", "domabas-email-"+run["id"].(string)).Scan(&completed); err != nil || !completed {
+		t.Fatalf("email worker did not checkpoint completion: %v", err)
 	}
 }

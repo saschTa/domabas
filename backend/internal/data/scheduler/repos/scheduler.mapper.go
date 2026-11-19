@@ -11,7 +11,7 @@ func schedulerSettingsMapper(record r.SchedulerSettingsRecord) m.SchedulerSettin
 		settings.Resources = append(settings.Resources, m.SchedulerResource{ID: resource.ID, Label: resource.Label, Limit: resource.Limit, MaximumLimit: resource.MaximumLimit, ActiveJobs: resource.ActiveJobs})
 	}
 	for _, pipeline := range record.Pipelines {
-		settings.Pipelines = append(settings.Pipelines, m.SchedulerPipeline{ID: pipeline.ID, Label: pipeline.Label, ResourceIDs: append([]string{}, pipeline.ResourceIDs...)})
+		settings.Pipelines = append(settings.Pipelines, m.SchedulerPipeline{ID: pipeline.ID, Label: pipeline.Label, ResourceIDs: append([]string{}, pipeline.ResourceIDs...), ActiveSlots: pipeline.ActiveSlots})
 	}
 	return settings
 }

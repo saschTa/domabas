@@ -41,10 +41,13 @@ final class WorkloadPipeline {
     required this.id,
     required this.label,
     required Iterable<String> resourceIds,
-  }) : resourceIds = List.unmodifiable(resourceIds);
+    Map<String, int> activeSlots = const {},
+  }) : resourceIds = List.unmodifiable(resourceIds),
+       activeSlots = Map.unmodifiable(activeSlots);
 
   final String id, label;
   final List<String> resourceIds;
+  final Map<String, int> activeSlots;
 }
 
 final class WorkloadSettingsFailure implements Exception {

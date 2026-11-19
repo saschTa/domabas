@@ -1,7 +1,7 @@
 # Backend architecture
 
 The backend is one Go application with clear internal boundaries. It serves the
-HTTP API and runs the Temporal workers that perform background work. PostgreSQL
+HTTP API and runs the Go workers that perform background work. PostgreSQL
 stores application records; persistent file storage holds originals. A separate
 private Go processor performs bounded document parsing, OCR and rendering.
 
@@ -16,15 +16,14 @@ For a plain-English explanation of the complete system, start with
 | `domain/<domain>/models` | Business values, validation, errors and pure policies |
 | `domain/<domain>/interfaces` | Small interfaces owned by their consumers |
 | `domain/<domain>/services` | Authorized use cases and business transitions |
-| `domain/<domain>/workflows` | Deterministic Temporal orchestration |
-| `data/<domain>` | I/O, transactions, record mapping, activities and dispatchers |
+| `data/jobs` | Worker election, durable checkpoints and retries |
+| `data/<domain>` | I/O, transactions, record mapping and job admission |
 | `presentation/<domain>` | HTTP request validation, handlers, response mapping and route groups |
 | `bootstrap` | Concrete construction, shared resources and process lifetime |
 
 Dependencies arrive through constructors. Services select policy; data sources
 apply scoped, atomic commands. Domain code stays independent of HTTP, SQL and
-generated boundary models. Workflow packages are the narrow exception for
-Temporal's deterministic SDK APIs. Go architecture tests enforce package roles,
+generated boundary models. Go architecture tests enforce package roles,
 import direction, explicit names and selected policy boundaries.
 
 The public API starts in [OpenAPI](../../../contracts/backend/openapi.yaml).
@@ -42,7 +41,7 @@ schema changes.
 - [Boundaries and lifecycle](boundaries.md): migration integrity, startup and activity draining.
 - [PostgreSQL and storage](postgresql.md): databases, roles, schemas, extensions and files.
 - [Relational persistence](persistence.md): typed data and documented snapshot exceptions.
-- [Temporal](temporal.md): workflows, activities, queues, retries and retention.
+- [Native workers](native-jobs.md): execution checkpoints, retries and leadership.
 - [Background jobs](background-jobs.md): durable acceptance, progress and cancellation.
 - [Resource scheduler](resource-scheduler.md): shared worker and provider admission.
 - [Realtime updates](realtime.md): committed notifications and authorized WebSockets.
@@ -62,9 +61,8 @@ schema changes.
 
 Unit tests cover policies and use cases. Architecture tests inspect production
 source and test their own rejection rules. Real PostgreSQL tests check queries,
-transactions and migrations; Temporal tests check workflows and worker recovery;
-API and browser E2E tests check selected complete flows. Test workers use unique
-queues and disposable schemas.
+transactions and migrations. Native worker tests check restart and takeover. The
+API and browser E2E tests check selected complete flows. Test workers use disposable database schemas.
 
 See the [code pattern map](../code-patterns.md) for links to implementation and
 enforcement, and the [testing guide](../../development/testing.md) for commands,

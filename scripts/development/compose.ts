@@ -18,16 +18,15 @@ export async function publishedPort(scope: ProcessScope, service: string, contai
   return port;
 }
 export async function infraUp(scope: ProcessScope, env: Environment = environment(), overrides: readonly string[] = []): Promise<void> {
-  try { await compose(scope, ["up", "--build", "--wait", "--wait-timeout", "900", "temporal", "document-processor"], env, undefined, overrides); }
+  try { await compose(scope, ["up", "--build", "--wait", "--wait-timeout", "900", "postgres", "document-processor"], env, undefined, overrides); }
   catch (error) {
     if (existsSync(`${ROOT}/.cache/postgres/postmaster.pid`)) console.error(`A native PostgreSQL cluster may occupy the managed port. Stop it with pg_ctl -D "${ROOT}/.cache/postgres" -m fast -w stop, or use --external-services. Existing native data has not been modified.`);
     throw error;
   }
-  await compose(scope, ["run", "--build", "--rm", "--no-deps", "temporal-init"], env, undefined, overrides);
-  await compose(scope, ["up", "--no-deps", "--wait", "--wait-timeout", "90", "temporal-ui"], env, undefined, overrides);
+  await compose(scope, ["run", "--build", "--rm", "--no-deps", "database-init"], env, undefined, overrides);
 }
 export async function infraDown(scope: ProcessScope, env: Environment = environment()): Promise<void> {
-  await compose(scope, ["stop", "document-processor", "ollama", "temporal-ui", "temporal-init", "temporal", "temporal-schema", "database-init", "postgres"], env);
+  await compose(scope, ["stop", "document-processor", "ollama", "database-init", "postgres"], env);
 }
 
 if (import.meta.main) await runCLI(async scope => {

@@ -35,13 +35,16 @@ func SchedulerConfiguredProviders(provider, baseURL string) []string {
 }
 
 func SchedulerPipelineRequirements(document, chat []string) []SchedulerPipeline {
+	document = slices.DeleteFunc(slices.Clone(document), func(id string) bool { return id == "worker" })
 	return []SchedulerPipeline{
-		{ID: "document_thumbnail", Label: "Document thumbnails", ResourceIDs: []string{"worker"}},
-		{ID: "document_ingestion", Label: "Document ingestion", ResourceIDs: []string{"worker", "ollama"}},
-		{ID: "document_ai", Label: "Document AI", ResourceIDs: document},
-		{ID: "chat", Label: "AI chat", ResourceIDs: chat},
+		{ID: "document_thumbnail", Label: "Document thumbnails", ResourceIDs: []string{"worker", "stage:thumbnail"}},
+		{ID: "document_ingestion", Label: "Document ingestion", ResourceIDs: []string{"worker", "stage:thumbnail", "stage:ocr", "stage:embedding", "ollama"}},
+		{ID: "document_ai", Label: "Document enrichment", ResourceIDs: []string{"worker", "pipeline:invoice", "pipeline:tags"}},
+		{ID: "invoice", Label: "Invoice extraction", ResourceIDs: append([]string{"stage:llm"}, document...)},
+		{ID: "tags", Label: "Tags and properties", ResourceIDs: append([]string{"stage:llm"}, document...)},
+		{ID: "chat", Label: "AI chat", ResourceIDs: append([]string{"stage:llm"}, chat...)},
 		{ID: "email", Label: "Email retrieval", ResourceIDs: []string{"worker"}},
-		{ID: "paperless", Label: "Paperless imports", ResourceIDs: []string{"worker"}},
+		{ID: "paperless", Label: "Paperless imports", ResourceIDs: []string{"worker", "stage:paperless"}},
 	}
 }
 

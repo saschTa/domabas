@@ -1,8 +1,7 @@
 # Document thumbnails
 
 Collection previews use persisted JPEG thumbnails. Opening a document or choosing
-Download original still uses its retained original. Thumbnail generation is
-independent of OCR, embeddings, invoice extraction and document AI.
+Download original still uses its retained original. Ingestion attempts a thumbnail before OCR. Backfill discovers missing previews independently.
 
 ## Discovery and durable work
 
@@ -16,20 +15,9 @@ Discovery uses a persisted keyset cursor and a fixed upper bound for each sweep.
 Successful thumbnails leaving the missing set cannot cause offset skips. Finishing
 a sweep resets its cursor so new records and newly eligible originals behind it
 are found. Scan progress and per-document work commit together. The scan holds
-no locks while contacting Temporal or the processor.
+no locks while contacting the processor.
 
-Finite Temporal workflows perform accepted generation. The shared resource
-scheduler admits each render using one worker permit and no model permit. The
-100-document page is a discovery bound, not a rendering concurrency setting.
-Each two-second delivery poll repeatedly claims and starts accepted jobs until
-the scheduler grants no further work. Each claim checks the shared workload
-limits and older feasible waiters, then delivery starts the job before claiming
-another. A poll is bounded by the maximum configurable workload limit of 256
-claims and its existing twelve-second deadline. Rendering can run concurrently;
-starting the next job does not wait for an earlier render to finish.
-Duplicate delivery and ambiguous starts reconcile the exact retained workflow
-identity. Scheduler ownership remains until execution closure is verified,
-including when the document is deleted or its original changes.
+New uploads and backfill share a rendering limit. A backfill consumes one background worker slot and one thumbnail pipeline slot. The render step also acquires the shared thumbnail resource. The scan page size controls discovery independently of these limits.
 
 Malformed, encrypted, unsupported and resource-limited inputs receive terminal
 outcomes for that source and renderer revision. Temporary failures retry with
@@ -88,7 +76,7 @@ does not grant another namespace's content.
 Unavailable and foreign artifacts use the same not-found response. Binary
 responses are private and not stored by shared caches. The client verifies the
 output identity against its descriptor before caching. Source/result bytes and
-user credentials never appear in Temporal history.
+user credentials never appear in execution checkpoints.
 
 The collection downloads thumbnails with a 256 KiB streaming response cap,
 bounded request lifetime and cancellation. It retains the existing two-request

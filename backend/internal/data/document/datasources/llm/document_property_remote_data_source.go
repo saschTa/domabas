@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/domabas/domabas/backend/internal/data/jobs"
 	"io"
 	"log/slog"
 	"net/http"
@@ -41,6 +42,11 @@ func NewDocumentPropertyRemoteDataSource(ollama string, loggers ...*slog.Logger)
 func (r *DocumentPropertyRemoteDataSource) Close() { r.client.CloseIdleConnections() }
 
 func (r *DocumentPropertyRemoteDataSource) request(ctx context.Context, endpoint, key string, input, output any, responseLimits ...int64) error {
+	call := func(ctx context.Context) error { return r.send(ctx, endpoint, key, input, output, responseLimits...) }
+	return jobs.RunInference(ctx, endpoint, call)
+}
+
+func (r *DocumentPropertyRemoteDataSource) send(ctx context.Context, endpoint, key string, input, output any, responseLimits ...int64) error {
 	body, err := json.Marshal(input)
 	if err != nil {
 		return documentInferenceRequestFailure{cause: m.DocumentProcessingError{Code: "processing_failed"}, kind: "request_encode"}

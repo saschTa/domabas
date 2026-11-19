@@ -7,4 +7,5 @@ type SchedulerSettings struct {
 	Revision        int64
 	OllamaQueueSize int32
 	Initialized     bool
+	ExecutorEpoch   int64
 }

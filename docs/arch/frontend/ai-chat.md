@@ -123,7 +123,7 @@ selection races, push refresh lifetime, configuration conflicts,
 secret clearing, independent navigation claims and draft restoration. Widget
 coverage includes 320/390-pixel screens, 200-percent text, dark appearance and
 persisted tool progress. The browser scenario configures its independent model,
-uploads evidence, completes the real Temporal/tool reply, opens a source and
+uploads evidence, completes the background reply with document tools, opens a source and
 restores the conversation after replacing the complete app scope.
 
 See the [backend chat architecture](../backend/ai-chat.md),

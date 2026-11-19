@@ -110,6 +110,35 @@ void main() {
   });
 
   test(
+    'workload subscription falls back to the plain socket on older servers',
+    () async {
+      final endpoints = <Uri>[];
+      final sockets = <_Attempt>[];
+      final optedIn = RealtimeWebSocketDataSource(
+        endpoint: 'https://example.test/prefix',
+        token: token,
+        workloadHints: true,
+        socketFactory: (endpoint) {
+          endpoints.add(endpoint);
+          final socket = _Attempt();
+          sockets.add(socket);
+          return socket;
+        },
+      );
+      addTearDown(optedIn.dispose);
+      final first = optedIn.connect();
+      sockets.single.completion.completeError(StateError('upgrade rejected'));
+      await first;
+      final second = optedIn.connect();
+      sockets.last.completion.complete();
+      await second;
+      expect(endpoints.first.query, 'workload=true');
+      expect(endpoints.last.hasQuery, isFalse);
+      expect(sockets.last.channel.sink.values, hasLength(1));
+    },
+  );
+
+  test(
     'authentication waits for raw readiness and baseline maps canonical topics',
     () async {
       final connecting = repository.connect();

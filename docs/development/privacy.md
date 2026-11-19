@@ -18,7 +18,7 @@ maps them into your chosen dataset.
 | Credentials | Account passwords are hashed; server sessions store token digests. IMAP usernames/passwords, Paperless tokens and document/chat provider keys are encrypted database records. Endpoint addresses and other settings are ordinary records. |
 | Conversations | PostgreSQL holds messages, titles, accepted model settings and tool snapshots, including document metadata/excerpts/text used by chat. Application permissions scope conversations to their user and library. |
 | Encryption keys | `credential_keys` at `/var/lib/domabas/secrets` holds `email.key`, `paperless.key` and `llm.key`. Chat uses `/data/documents/.secrets/chat.key`. Retain configured environment key overrides and historical email keyring entries too. |
-| Workflow history | PostgreSQL's separate `temporal` and `temporal_visibility` databases hold operational history. Workflow payloads use identifiers, progress and failure codes; activities load private content from application storage. |
+| Workflow history | The application database stores execution identities, checkpoints and outcomes. Workers load private content from application storage. |
 | Scratch and models | The processor temporarily stores original bytes and OCR work, normally removed on completion/shutdown. A hard crash can leave scratch until container recreation. Tesseract and Ollama model caches persist in separate volumes. |
 
 Clients also hold data. Browsers use an HttpOnly session cookie; native clients
@@ -91,9 +91,7 @@ credentials and stops further imports, while accepted documents and nonsecret
 source/run records remain.
 
 There is no general automatic expiry policy for documents or application job
-history. New Temporal namespaces use 72-hour closed-history retention; existing
-namespaces retain their configured setting. This does not expire application
-records. Deletion does not erase earlier downloads, logs, database recovery files,
+history. Deletion does not erase earlier downloads, logs, database recovery files,
 snapshots, backups or provider copies, and is not secure disk erasure.
 
 ## Encryption, logs and backups
@@ -103,7 +101,7 @@ encrypt all documents, text, chat, thumbnails, logs or volumes. The running back
 can decrypt integration credentials. Operators must provide disk/dataset and
 backup encryption where needed, restrict host/database access and protect devices.
 Use HTTPS for clients and protect internal traffic; bundled private connections
-use HTTP or unencrypted database/Temporal connections.
+use HTTP or unencrypted database connections.
 
 **Current logging limitation:** native Ollama document-AI requests write the full
 sent prompt, including document text, and model response JSON to backend INFO
@@ -111,7 +109,7 @@ logs. This applies to property/invoice inference, not the separate chat or
 external-provider diagnostic paths. Treat backend/container logs and forwarded
 copies as sensitive document data; manage their access and retention.
 
-Arrange consistent backups of PostgreSQL's application **and Temporal** data,
+Arrange consistent backups of the application database,
 staged uploads, documents and every credential key/override, with private
 deployment configuration. Protect keys separately while retaining their
 association with the matching database backup. A lost key makes saved credentials

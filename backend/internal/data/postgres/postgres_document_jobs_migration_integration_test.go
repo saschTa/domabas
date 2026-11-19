@@ -4,6 +4,7 @@ package postgres
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -68,10 +69,21 @@ func TestDocumentJobsMigrationPreservesLegacyExtractionAndUnknownStartEvidence(t
 	if err := source.pool.QueryRow(t.Context(), "SELECT clock_timestamp()").Scan(&cutover); err != nil {
 		t.Fatal(err)
 	}
-	if err := source.Migrate(t.Context()); err != nil {
+	for _, entry := range entries {
+		if entry.Name() >= "041" {
+			continue
+		}
+		name := "migrations/" + entry.Name()
+		data, err := migrations.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[name] = &fstest.MapFile{Data: data}
+	}
+	if err := source.migrate(t.Context(), files); err != nil {
 		t.Fatal(err)
 	}
-	if err := source.Migrate(t.Context()); err != nil {
+	if err := source.migrate(t.Context(), files); err != nil {
 		t.Fatal(err)
 	}
 	for _, item := range items {
@@ -119,4 +131,8 @@ func TestDocumentJobsMigrationPreservesLegacyExtractionAndUnknownStartEvidence(t
 	if err := source.pool.QueryRow(t.Context(), `SELECT started_at IS NOT NULL FROM document_processing_jobs WHERE document_id=$1`, items[0].id).Scan(&invented); err != nil || invented {
 		t.Fatalf("later legacy metadata update invented an unknown start: %t %v", invented, err)
 	}
+	if err := source.Migrate(t.Context()); err == nil || !strings.Contains(err.Error(), "Drain admitted jobs") {
+		t.Fatalf("live legacy cutover accepted: %v", err)
+	}
+
 }

@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -47,19 +46,6 @@ func namingViolations(path string, file *ast.File) []string {
 	if oneOf(filepath.Base(path), "service.go", "datasource.go", "data_source.go", "repository.go", "handler.go", "container.go", "mapper.go", "mapping.go", "workflow.go", "dispatcher.go", "activity.go", "activities.go", "source.go", "remote.go", "local.go", "config.go", "models.go", "types.go") {
 		violations = append(violations, "implementation filenames must identify their owner and purpose")
 	}
-	location := classifyPackage(path)
-	aliases := map[string]string{}
-	for _, spec := range file.Imports {
-		importPath, err := strconv.Unquote(spec.Path.Value)
-		if err != nil {
-			continue
-		}
-		alias := filepath.Base(importPath)
-		if spec.Name != nil {
-			alias = spec.Name.Name
-		}
-		aliases[alias] = importPath
-	}
 	ast.Inspect(file, func(node ast.Node) bool {
 		switch value := node.(type) {
 		case *ast.TypeSpec:
@@ -85,38 +71,14 @@ func namingViolations(path string, file *ast.File) []string {
 			if strings.Contains(value.Name.Name, "Mapper") && !strings.HasSuffix(path, ".mapper.go") {
 				violations = append(violations, "mapping helpers belong in explicit .mapper.go files")
 			}
-		case *ast.FuncType:
-			for _, field := range value.Params.List {
-				workflowContext := false
-				if selector, ok := field.Type.(*ast.SelectorExpr); ok && selector.Sel.Name == "Context" {
-					if alias, ok := selector.X.(*ast.Ident); ok {
-						workflowContext = aliases[alias.Name] == "go.temporal.io/sdk/workflow"
-					}
-				}
-				if identifier, ok := field.Type.(*ast.Ident); ok && identifier.Name == "Context" {
-					workflowContext = aliases["."] == "go.temporal.io/sdk/workflow"
-				}
-				if workflowContext && (location.layer != "domain" || location.role != "workflows" || !strings.HasSuffix(path, ".workflow.go")) {
-					violations = append(violations, "Temporal workflow definitions belong in domain/<owner>/workflows/*.workflow.go")
-				}
-			}
-		case *ast.GoStmt:
-			if location.layer == "domain" && location.role == "workflows" {
-				violations = append(violations, "workflow concurrency must use Temporal deterministic primitives")
-			}
-		case *ast.SelectorExpr:
-			if location.layer == "domain" && location.role == "workflows" {
-				if alias, ok := value.X.(*ast.Ident); ok && aliases[alias.Name] == "time" && oneOf(value.Sel.Name, "Now", "Since", "Until", "Sleep", "After", "AfterFunc", "NewTimer", "NewTicker", "Tick") {
-					violations = append(violations, "workflow time must use Temporal deterministic primitives")
-				}
-			}
+
 		}
 		return true
 	})
 	return violations
 }
 
-func TestNamingAndWorkflowLayoutPolicy(t *testing.T) {
+func TestNamingPolicy(t *testing.T) {
 	tests := []struct {
 		name, path, source string
 		valid              bool
@@ -129,17 +91,10 @@ func TestNamingAndWorkflowLayoutPolicy(t *testing.T) {
 		{"generic private constructor", "data/identity/security/casbin_identity_authorizer.go", "package security\nfunc newAuthorizer() *CasbinIdentityAuthorizer { return nil }", false},
 		{"explicit private constructor", "data/identity/security/casbin_identity_authorizer.go", "package security\nfunc newCasbinIdentityAuthorizer() *CasbinIdentityAuthorizer { return nil }", true},
 		{"private type constructor", "presentation/identity/routes/identity_limiter.go", "package routes\nfunc newIdentityRateLimiter() *identityRateLimiter { return nil }", true},
-		{"generic lifecycle constructor", "bootstrap/temporal_worker_lifecycle.go", "package bootstrap\nfunc newWorkerLifecycle() *temporalWorkerLifecycle { return nil }", false},
-		{"explicit lifecycle constructor", "bootstrap/temporal_worker_lifecycle.go", "package bootstrap\nfunc newTemporalWorkerLifecycle() *temporalWorkerLifecycle { return nil }", true},
+		{"generic lifecycle constructor", "bootstrap/native_worker_lifecycle.go", "package bootstrap\nfunc newWorkerLifecycle() *nativeWorkerLifecycle { return nil }", false},
+		{"explicit lifecycle constructor", "bootstrap/native_worker_lifecycle.go", "package bootstrap\nfunc newNativeWorkerLifecycle() *nativeWorkerLifecycle { return nil }", true},
 		{"explicit mapper", "data/document/repos/document.mapper.go", "package repos\nfunc documentRecordMapper() {}", true},
 		{"misplaced mapper", "data/document/repos/document_repository.go", "package repos\nfunc documentRecordMapper() {}", false},
-		{"workflow owner and filename", "domain/email/workflows/email_poll.workflow.go", "package workflows\nimport w \"go.temporal.io/sdk/workflow\"\nfunc EmailPollWorkflow(ctx w.Context) error { return nil }", true},
-		{"workflow ordinary filename", "domain/email/workflows/email_poll.go", "package workflows\nimport w \"go.temporal.io/sdk/workflow\"\nfunc EmailPollWorkflow(ctx w.Context) error { return nil }", false},
-		{"workflow in activity package", "data/email/temporal/email_poll.workflow.go", "package temporal\nimport w \"go.temporal.io/sdk/workflow\"\nfunc EmailPollWorkflow(ctx w.Context) error { return nil }", false},
-		{"workflow dot import", "data/email/temporal/email_poll_activities.go", "package temporal\nimport . \"go.temporal.io/sdk/workflow\"\nfunc EmailPollWorkflow(ctx Context) error { return nil }", false},
-		{"workflow function value", "data/email/temporal/email_poll_activities.go", "package temporal\nimport w \"go.temporal.io/sdk/workflow\"\nvar poll = func(ctx w.Context) error { return nil }", false},
-		{"workflow wall clock", "domain/email/workflows/email_poll.workflow.go", "package workflows\nimport clock \"time\"\nvar now = clock.Now", false},
-		{"workflow goroutine", "domain/email/workflows/email_poll.workflow.go", "package workflows\nfunc EmailPollWorkflow() { go func(){}() }", false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -152,8 +107,5 @@ func TestNamingAndWorkflowLayoutPolicy(t *testing.T) {
 				t.Fatalf("violations = %v; valid = %t", violations, test.valid)
 			}
 		})
-	}
-	for _, alias := range []string{"", "renamed ", ". ", "_ "} {
-		assertPolicy(t, "domain/email/workflows/nested/email_poll.workflow.go", "package workflows\nimport "+alias+strconv.Quote("go.temporal.io/sdk/client"), "only deterministic Temporal")
 	}
 }

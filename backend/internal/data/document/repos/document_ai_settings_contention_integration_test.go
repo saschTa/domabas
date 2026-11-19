@@ -146,7 +146,7 @@ func TestAISettingsSaveWithLargeSaturatedQueue(t *testing.T) {
 	f.exec(t, `INSERT INTO document_processing(document_id,account_id,generation,state,stage,configuration_revision,configuration,updated_at,delivery_deadline,split_pipeline)
  SELECT d.id,d.account_id,1,'ready','complete',p.configuration_revision,p.configuration,clock_timestamp(),clock_timestamp()+interval '1 hour',true FROM documents d CROSS JOIN document_processing p WHERE p.document_id=$1 AND d.id<>$1`, doc.ID)
 	f.exec(t, `INSERT INTO scheduler_requests(workflow_id,pipeline) SELECT 'document-ai-v1/'||account_id::text||'/'||document_id::text||'/'||generation::text||'/'||attempt::text,'document_ai' FROM document_ai_jobs WHERE admitted_at IS NULL`)
-	f.exec(t, `INSERT INTO scheduler_request_resources(workflow_id,resource_id) SELECT workflow_id,r.id FROM scheduler_requests CROSS JOIN scheduler_resources r WHERE state='waiting' AND r.id IN ('worker','ollama')`)
+	f.exec(t, `INSERT INTO scheduler_request_resources(workflow_id,resource_id) SELECT workflow_id,r.id FROM scheduler_requests CROSS JOIN scheduler_resources r WHERE state='waiting' AND r.id IN ('worker','pipeline:document_ai')`)
 	for _, table := range []string{"document_ai_jobs", "document_processing", "scheduler_requests", "scheduler_request_resources"} {
 		f.exec(t, "ANALYZE "+table)
 	}

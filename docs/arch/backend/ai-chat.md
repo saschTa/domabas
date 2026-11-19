@@ -69,27 +69,9 @@ intent atomically. Reusing a request UUID with different content conflicts. Ther
 is at most one active turn per conversation and ten pending turns per user.
 Conversation and message APIs have bounded continuation pages.
 
-`domabas.ChatTurn.v1` uses the dedicated `-chat` task queue. The shared resource scheduler reserves worker and accepted-provider capacity before a turn starts, across all backend instances. Delivery leases reconcile
-the stable `domabas-chat-{turn UUID}` identity, workflow type, task queue, input
-identity and retained run before accepting an ambiguous start. Starts are bounded
-to twenty hours, shorter than required Temporal history retention. Terminal
-execution ownership remains reserved until closure and activity drain are safe.
-
-New workflow executions call `domabas.RunChatStep.v1` once per provider round,
-with an expected ordinal from zero through thirty. Each step permits four
-automatic retries after the first attempt, with 190-second waits that exceed the
-execution lease. A persisted tool result completes its ordinal; a lost activity
-completion cannot run the next round under the previous retry budget. Atomic
-step acquisition recognizes an already-published answer and returns completion
-without generating it again. A version marker keeps retained workflows on the
-registered whole-turn activity and its previous three-attempt policy. Terminal
-provider errors do not retry, and waiting for scheduler admission consumes no activity retry.
-
-Activities load private content from PostgreSQL and return no message contents
-to Temporal. A random execution token with a renewable 180-second lease fences
+The native worker processes admitted turns using the stable turn identity. Each provider round has an ordinal and a checkpoint. The chat service recognizes completed answers and persisted tool results on retry. The execution ledger contains identifiers and progress. Private messages stay in the chat tables. A random execution token with a renewable 180-second lease fences
 stage, tool and final writes. Renewal runs every five seconds. Provider calls are
-cancellable and bounded to 30 minutes; retry delays exceed the activity lease.
-Workflows have a 24-hour execution bound. Deleting a conversation hides it and
+cancellable and bounded to 30 minutes; each round has a durable checkpoint. Deleting a conversation hides it and
 fences publication while retaining the records needed to reconcile background
 work. After every owned execution has closed and drained, deletion scrubs message
 text, tool snapshots, sources, titles, hashes and per-turn endpoint/credential
@@ -97,7 +79,7 @@ references. Minimal identity and execution tombstones remain for reconciliation;
 unused credentials are removed. Cancellation confirms the database fence immediately; the owned request
 then drains. “Send again” creates another visible prompt with a fresh request ID.
 
-The [shared scheduler](resource-scheduler.md) atomically admits worker and provider requirements. Internal Ollama aliases share the ingestion embedding pool; external origins use independent pools. Running requests do not poll or cancel when ingestion arrives. Chat document tools use lexical search and create no embedding requests. Missing optional chat models do not make the application unready, but failed workers and dispatchers do.
+The [shared scheduler](resource-scheduler.md) admits chat turns and grants model and provider slots around each provider call. Internal Ollama aliases share the ingestion embedding pool; external origins use independent pools. Running requests do not poll or cancel when ingestion arrives. Chat document tools use lexical search and create no embedding requests. Missing optional chat models do not make the application unready, but failed workers and dispatchers do.
 
 ## Model callbacks and context
 
@@ -192,7 +174,7 @@ Provider and workflow tests cover Qwen actions, native tools, malformed transpor
 safe errors, cancellation and reconciliation. PostgreSQL tests cover encryption,
 private ownership, fresh authority, idempotency, paging, admission and fencing.
 Compiled API and browser E2E use deterministic local providers with real
-PostgreSQL/Temporal. `task test:llm` additionally checks the installed Qwen model
+PostgreSQL. `task test:llm` additionally checks the installed Qwen model
 when explicitly configured. Test schemas, task queues, storage and workflow
 cleanup belong only to each test. See the
 [testing guide](../../development/testing.md) for prerequisites and suite commands.

@@ -93,9 +93,8 @@ await appendFile(process.env.COMMAND_LOG!, JSON.stringify(process.argv.slice(2))
         const result = await scope.capture(args, { env: { ...process.env, OLLAMA_RUNTIME: runtime, PATH: `${dir}:${process.env.PATH}`, COMMAND_LOG: log } });
         expect(result.code).toBe(0);
         const calls = (await Bun.file(log).text()).trim().split("\n").map(line => JSON.parse(line) as string[]);
-        expect(calls).toHaveLength(3);
-        expect(calls[1]!.slice(-5)).toEqual(["run", "--build", "--rm", "--no-deps", "temporal-init"]);
-        expect(calls[2]!.slice(-6)).toEqual(["up", "--no-deps", "--wait", "--wait-timeout", "90", "temporal-ui"]);
+        expect(calls).toHaveLength(2);
+        expect(calls[1]!.slice(-5)).toEqual(["run", "--build", "--rm", "--no-deps", "database-init"]);
         for (const call of calls) {
           expect(call.filter(arg => arg.endsWith(".yaml"))).toEqual([join(ROOT, "compose.yaml"), ...developmentComposeOverrides(runtime === "mlx" ? "cpu" : runtime as "cpu" | "cuda" | "rocm")]);
           expect(call).not.toContain("--volumes");

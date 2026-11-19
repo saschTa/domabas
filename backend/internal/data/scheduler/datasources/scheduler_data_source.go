@@ -103,7 +103,7 @@ func (s *SchedulerDataSource) requirements(ctx context.Context, tx pgx.Tx, provi
 			return nil, err
 		}
 		if !exists {
-			if count >= m.SchedulerMaximumResources {
+			if count+1 >= m.SchedulerMaximumResources {
 				return nil, m.SchedulerValidationError{Message: "workload provider resource limit reached"}
 			}
 			if _, err := tx.Exec(ctx, `INSERT INTO scheduler_resources(id,label,origin,concurrency_limit) VALUES($1,$2,$2,$3)`, id, resource.Label, resource.Limit); err != nil {
@@ -186,9 +186,17 @@ func (s *SchedulerDataSource) reservePrepared(ctx context.Context, tx pgx.Tx, wo
 	if err != nil {
 		return false, err
 	}
-	if err = putSchedulerRequest(ctx, tx, workflowID, pipeline, resources, false); err != nil {
+	if err = putSchedulerRequest(ctx, tx, workflowID, pipeline, []string{"pipeline:" + pipeline, "worker"}, false); err != nil {
 		return false, err
 	}
+	for _, resource := range resources {
+		if resource != "worker" {
+			if _, err := tx.Exec(ctx, "INSERT INTO scheduler_job_providers VALUES($1,$2) ON CONFLICT DO NOTHING", workflowID, resource); err != nil {
+				return false, err
+			}
+		}
+	}
+
 	var state string
 	if err = tx.QueryRow(ctx, `SELECT state FROM scheduler_requests WHERE workflow_id=$1`, workflowID).Scan(&state); err != nil {
 		return false, err

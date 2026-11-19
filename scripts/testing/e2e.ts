@@ -7,13 +7,12 @@ import { parseArgs } from "node:util";
 import { setTimeout as delay } from "node:timers/promises";
 import { install } from "./browser/browser-tools.ts";
 import { nativeBin } from "../development/database.ts";
-import { captureCompose, compose, infraUp } from "../development/compose.ts";
+import { compose, infraUp } from "../development/compose.ts";
 import { emailFixtureEnvironment, startEmailFixture } from "./fixtures/email-fixture.ts";
 import { startLLMFixture } from "./fixtures/llm-fixture.ts";
 import { startPaperlessFixture } from "./fixtures/paperless-fixture.ts";
 import { ROOT, ProcessScope, binary, command, environment, required, requireFreePort, runCLI, waitHTTP, withCleanup } from "../shared/runtime.ts";
 import { inspectionArguments, prepareInspection, waitForInspection } from "./e2e-inspection.ts";
-import { cleanupWorkflows, ownedExecutions } from "./workflow-cleanup.ts";
 
 async function streamBrowserLogs(port: number, signal: AbortSignal, secrets: string[]): Promise<void> {
   while (!signal.aborted) {
@@ -119,12 +118,6 @@ if (import.meta.main) await runCLI(async scope => {
       await compose(sqlScope, ["exec", "-T", "postgres", "psql", "--dbname", containerURL!, "-X", "-v", "ON_ERROR_STOP=1", "-q", "-c", statement], sqlEnv);
     }
   };
-  const query = async (queryScope: ProcessScope, statement: string): Promise<string> => {
-    const args = ["--dbname", psql ? databaseURL : containerURL!, "-X", "-v", "ON_ERROR_STOP=1", "-t", "-A", "-c", statement];
-    const result = psql ? await queryScope.capture([psql, ...args], { env: sqlEnv }) : await captureCompose(queryScope, ["exec", "-T", "postgres", "psql", ...args], sqlEnv);
-    if (result.code) throw new Error("Cannot read the disposable workflow cleanup manifest.");
-    return result.stdout.trim();
-  };
   const installedBrowser = values.inspect ? undefined : await install(scope.signal);
   const chrome = env.CHROME_EXECUTABLE || installedBrowser?.chrome;
   const driver = installedBrowser?.driver;
@@ -133,7 +126,6 @@ if (import.meta.main) await runCLI(async scope => {
   env.DATABASE_URL = schemaURL(databaseURL, schema);
   env.HTTP_ADDR = `${host}:${apiPort}`;
   env.CORS_ORIGINS = `http://localhost:${webPort},http://127.0.0.1:${webPort},http://${host}:${webPort}`;
-  env.TEMPORAL_TASK_QUEUE = `domabas-${schema}`;
   const apiURL = `http://${host}:${apiPort}`;
   const executable = join(ROOT, ".tools", binary("domabas-e2e"));
   await scope.run([go, "build", "-o", executable, "./cmd/server"], { cwd: join(ROOT, "backend"), env });
@@ -218,18 +210,6 @@ if (import.meta.main) await runCLI(async scope => {
       await paperless.stop();
       const cleanup = new ProcessScope();
       try {
-        const tables = JSON.parse(await query(cleanup, `SELECT json_build_object('paperless',to_regclass('"${schema}".paperless_runs') IS NOT NULL,'email',to_regclass('"${schema}".email_executions') IS NOT NULL,'documents',to_regclass('"${schema}".document_processing_executions') IS NOT NULL,'ai',to_regclass('"${schema}".document_ai_jobs') IS NOT NULL,'chat',to_regclass('"${schema}".chat_turns') IS NOT NULL,'thumbnails',to_regclass('"${schema}".document_thumbnail_jobs') IS NOT NULL)`)) as { paperless: boolean; email: boolean; documents: boolean; ai: boolean; chat: boolean; thumbnails: boolean };
-        const selections = [];
-        if (tables.paperless) selections.push(`SELECT 'domabas-paperless-'||id::text AS "workflowId",'' AS "runId",task_queue AS "taskQueue",'domabas.PaperlessImport.v1' AS "workflowType" FROM "${schema}".paperless_runs WHERE NOT execution_closed`);
-        if (tables.email) selections.push(`SELECT workflow_id AS "workflowId",COALESCE(workflow_run_id,'') AS "runId",task_queue AS "taskQueue",'domabas.EmailPoll.v1' AS "workflowType" FROM "${schema}".email_executions WHERE closed_at IS NULL`);
-        if (tables.documents) selections.push(`SELECT workflow_id AS "workflowId",run_id AS "runId",task_queue AS "taskQueue",CASE WHEN split_pipeline THEN 'domabas.DocumentIngestion.v2' ELSE 'domabas.DocumentIngestion.v1' END AS "workflowType" FROM "${schema}".document_processing_executions WHERE closed_at IS NULL`);
-        if (tables.ai) selections.push(`SELECT workflow_id AS "workflowId",run_id AS "runId",task_queue AS "taskQueue",'domabas.DocumentAI.v1' AS "workflowType" FROM "${schema}".document_ai_jobs WHERE admitted_at IS NOT NULL AND closed_at IS NULL`);
-        if (tables.thumbnails) selections.push(`SELECT workflow_id AS "workflowId",run_id AS "runId",task_queue AS "taskQueue",'domabas.DocumentThumbnail.v1' AS "workflowType" FROM "${schema}".document_thumbnail_jobs WHERE admitted_at IS NOT NULL AND closed_at IS NULL`);
-        if (tables.chat) selections.push(`SELECT workflow_id AS "workflowId",run_id AS "runId",task_queue AS "taskQueue",'domabas.ChatTurn.v1' AS "workflowType" FROM "${schema}".chat_turns WHERE admitted_at IS NOT NULL AND NOT execution_closed`);
-        if (selections.length) {
-          const manifest = JSON.parse(await query(cleanup, `SELECT COALESCE(json_agg(owned),'[]'::json) FROM (${selections.join(" UNION ALL ")}) owned`));
-          await cleanupWorkflows(cleanup, env, ownedExecutions(manifest, env.TEMPORAL_TASK_QUEUE!));
-        }
         await sql(cleanup, `DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
       }
       finally {

@@ -24,7 +24,7 @@ export async function up(scope: ProcessScope): Promise<void> {
     await compose(scope, ["run", "--build", "--rm", "--no-deps", "database-init"]);
   }
   catch (error) {
-    if (existsSync(join(DATA, "postmaster.pid"))) console.error(`A native PostgreSQL cluster may own port 54329. Stop it with pg_ctl -D "${DATA}" -m fast -w stop, or use --external-services with PostgreSQL and Temporal endpoints. Its data has not been modified.`);
+    if (existsSync(join(DATA, "postmaster.pid"))) console.error(`A native PostgreSQL cluster may own port 54329. Stop it with pg_ctl -D "${DATA}" -m fast -w stop, or use --external-services with PostgreSQL endpoints. Its data has not been modified.`);
     throw error;
   }
 }

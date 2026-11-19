@@ -13,7 +13,7 @@ class RealtimeApi {
 
   final ApiClient apiClient;
 
-  Future<Response> openRealtimeWithHttpInfo({ Future<void>? abortTrigger, }) async {
+  Future<Response> openRealtimeWithHttpInfo({ String? workload, Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final path = r'/api/v1/realtime';
 
@@ -23,6 +23,10 @@ class RealtimeApi {
     final queryParams = <QueryParam>[];
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
+
+    if (workload != null) {
+      queryParams.addAll(_queryParams('', 'workload', workload));
+    }
 
     const contentTypes = <String>[];
 
@@ -38,8 +42,8 @@ class RealtimeApi {
     );
   }
 
-  Future<void> openRealtime({ Future<void>? abortTrigger, }) async {
-    final response = await openRealtimeWithHttpInfo(abortTrigger: abortTrigger,);
+  Future<void> openRealtime({ String? workload, Future<void>? abortTrigger, }) async {
+    final response = await openRealtimeWithHttpInfo(workload: workload, abortTrigger: abortTrigger,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

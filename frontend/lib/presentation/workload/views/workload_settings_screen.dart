@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../domain/workload/models/workload_settings.dart';
 import '../../../ui/domabas_ui.dart';
 import '../cubits/workload_settings_cubit.dart';
 
@@ -24,55 +25,79 @@ final class WorkloadSettingsScreen extends StatelessWidget {
       insetBody: false,
 
       title: 'Workload limits',
-      description: 'Control how many background jobs share workers and AI providers across all libraries.',
+      description: 'Monitor active work across libraries and set how much can run at once.',
       onRefresh: state.loading || state.saving ? null : cubit.load,
       child: ListView(
         key: const Key('workloadSettingsScroll'),
         padding: GlacierSettingsPage.scrollPadding(context),
         children: [
-          const AppNotice(
-            tone: AppTone.info,
-            title: 'Jobs share resources',
-            message: 'Jobs wait until every resource they need has room. Running jobs finish normally; new imports and lower limits do not interrupt them.',
-          ),
-          const SizedBox(height: 16),
           AppProgressSlot(active: state.loading || state.saving),
           if (state.error != null) ...[
             AppNotice(message: state.error!),
             const SizedBox(height: 16),
           ],
           if (state.settings case final settings?) ...[
-            for (final resource in settings.resources) ...[
-              GlacierWorkloadResource(
-                label: resource.label,
-                active: resource.activeJobs,
-                savedLimit: resource.limit,
-                maximumLimit: resource.maximumLimit,
-                description: switch (resource.id) {
-                  'worker' =>
-                    'One slot per active background job across all pipelines.',
-                  'ollama' => 'Shared by background embedding jobs and AI pipelines configured to use Ollama.',
-                  _ => 'Shared by background jobs using this provider address, including different models and API paths.',
-                },
-                limitField: _WorkloadLimitField(
-                  key: ValueKey('workloadLimit-${resource.id}'),
-                  resourceId: resource.id,
-                  value: state.drafts[resource.id] ?? '',
-                  keyboardType: TextInputType.number,
-                  enabled: !state.loading && !state.saving,
-                  decoration: InputDecoration(
-                    labelText: 'Maximum active background jobs',
-                    errorText: resource.validateLimit(
-                      state.drafts[resource.id] ?? '',
-                    ),
-                  ),
-                  onChanged: (value) => cubit.edit(resource.id, value),
-                ),
-                notice: resource.id == 'ollama'
-                    ? 'New jobs wait until active usage falls below the saved limit. Configured Ollama queue: ${settings.ollamaQueueSize}. At most ${resource.maximumLimit} active background jobs, capped at 50% of the queue. The queue sets a safety ceiling. Ollama controls how many requests run inference at once.'
-                    : 'New jobs wait until active usage falls below the saved limit.',
+            if (settings.pipelines.isNotEmpty) ...[
+              AppSurface(
+                glacier: true,
+                child: GlacierWorkloadFlow(pipelines: _flowPipelines(settings)),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+            ],
+            for (final pipelines in [true, false]) ...[
+              if (settings.resources.any(
+                (r) => r.id.startsWith('pipeline:') == pipelines,
+              ))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppSectionHeader(
+                    title: pipelines ? 'Pipelines' : 'Shared resources',
+                    description: pipelines
+                        ? 'Maximum concurrent runs for each type of work.'
+                        : 'Stages acquire these slots while they use the resource.',
+                  ),
+                ),
+              for (final resource in settings.resources.where(
+                (r) => r.id.startsWith('pipeline:') == pipelines,
+              )) ...[
+                GlacierWorkloadResource(
+                  label: resource.label,
+                  active: resource.activeJobs,
+                  savedLimit: resource.limit,
+                  maximumLimit: resource.maximumLimit,
+                  description: switch (resource.id) {
+                    'worker' => 'One slot per active background job across all pipelines.',
+                    'pipeline:document_ingestion' => 'Generate a thumbnail, extract text, then embed the document.',
+                    'pipeline:paperless' => 'Concurrent import runs. Retrieval concurrency controls downloads from Paperless.',
+                    'pipeline:invoice' => 'Extract structured invoice fields from XML or recognized text.',
+                    'pipeline:tags' => 'Extract document tags and properties from recognized text.',
+                    'stage:paperless' => 'Simultaneous downloads from Paperless before document ingestion.',
+                    _ when pipelines => 'Concurrent runs across all libraries.',
+                    _ when resource.id.startsWith('stage:') =>
+                      'Shared across all pipelines that use this stage.',
+                    'ollama' => 'Shared by background embedding jobs and AI pipelines configured to use Ollama.',
+                    _ => 'Shared by background jobs using this provider address, including different models and API paths.',
+                  },
+                  limitField: _WorkloadLimitField(
+                    key: ValueKey('workloadLimit-${resource.id}'),
+                    resourceId: resource.id,
+                    value: state.drafts[resource.id] ?? '',
+                    keyboardType: TextInputType.number,
+                    enabled: !state.loading && !state.saving,
+                    decoration: InputDecoration(
+                      labelText: 'Maximum parallel',
+                      errorText: resource.validateLimit(
+                        state.drafts[resource.id] ?? '',
+                      ),
+                    ),
+                    onChanged: (value) => cubit.edit(resource.id, value),
+                  ),
+                  notice: resource.id == 'ollama'
+                      ? 'Ollama queue size ${settings.ollamaQueueSize}. The maximum is half the configured queue.'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+              ],
             ],
             AppSurface(
               glacier: true,
@@ -80,7 +105,7 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Active counts include jobs starting or finishing. Changes apply to new admissions and do not reindex documents.',
+                    'Lowering a limit lets active work finish. New work waits until a slot opens.',
                   ),
                   const SizedBox(height: 16),
                   GlacierWorkspaceGeometry.measureEndActions(
@@ -115,56 +140,37 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            AppSurface(
-              glacier: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const AppSectionHeader(
-                    title: 'What shares these limits',
-                    description: 'These are the current pipeline requirements. Each new job reserves every listed resource. When one is full, new jobs that need it wait; other pipelines can continue.',
-                  ),
-                  for (final pipeline in settings.pipelines) ...[
-                    const SizedBox(height: 20),
-                    Text(
-                      pipeline.label,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final id in pipeline.resourceIds)
-                          AppStatusBadge(
-                            label: settings.resources
-                                .firstWhere((resource) => resource.id == id)
-                                .label,
-                          ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Accepted jobs keep their original resource requirements. Provider resources from earlier settings can remain in the list above.',
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Paperless and email retrievals use workers. Accepted documents enter document ingestion separately, where they also need Ollama for embeddings.',
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Paperless parallel retrievals also protect the source server. That setting does not increase shared worker capacity.',
-                  ),
-                ],
-              ),
-            ),
           ],
         ],
       ),
     ),
   );
+}
+
+List<GlacierFlowPipeline> _flowPipelines(WorkloadSettings settings) {
+  final resources = {
+    for (final resource in settings.resources) resource.id: resource,
+  };
+  return [
+    for (final pipeline in settings.pipelines)
+      (
+        id: pipeline.id,
+        label: pipeline.label,
+        active: resources['pipeline:${pipeline.id}']?.activeJobs,
+        limit: resources['pipeline:${pipeline.id}']?.limit,
+        resources: [
+          for (final id in pipeline.resourceIds)
+            if (resources[id] case final resource?)
+              (
+                id: id,
+                label: resource.label,
+                active: resource.activeJobs,
+                limit: resource.limit,
+                fromPipeline: pipeline.activeSlots[id],
+              ),
+        ],
+      ),
+  ];
 }
 
 final class _WorkloadLimitField extends StatefulWidget {

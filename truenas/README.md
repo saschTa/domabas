@@ -1,8 +1,7 @@
 # Domabas on TrueNAS
 
 These complete Docker Compose examples target **TrueNAS 25.10 (Goldeye) and
-later**. They include the web app, backend, PostgreSQL, Temporal, Ollama and
-document processing. Follow the steps below, then paste one complete file into
+later**. They include the web app, backend, PostgreSQL, Ollama and the private document processor. The backend runs the Go background workers. Follow the steps below, then paste one complete file into
 **Apps > Discover Apps > Install via YAML**.
 
 The templates use volume subpaths supported by the required TrueNAS release.
@@ -21,22 +20,24 @@ described below. A GPU and HTTPS proxy are optional.
 
 ## 1. Choose a file
 
-| File | Ollama runtime | Dataset path to set | Default web / Temporal UI ports |
+| File | Ollama runtime | Dataset path to set | Default web port |
 | --- | --- | --- | --- |
-| [compose.cpu.yaml](compose.cpu.yaml) | CPU; no GPU access | `/mnt/POOL/domabas` | `8088` / `8233` |
-| [compose.cuda.yaml](compose.cuda.yaml) | NVIDIA/CUDA | `/mnt/POOL/domabas` | `8088` / `8233` |
-| [compose.rocm.yaml](compose.rocm.yaml) | AMD/ROCm | `/mnt/POOL/domabas` | `8088` / `8233` |
+| [compose.cpu.yaml](compose.cpu.yaml) | CPU; no GPU access | `/mnt/POOL/domabas` | `8088` |
+| [compose.cuda.yaml](compose.cuda.yaml) | NVIDIA/CUDA | `/mnt/POOL/domabas` | `8088` |
+| [compose.rocm.yaml](compose.rocm.yaml) | AMD/ROCm | `/mnt/POOL/domabas` | `8088` |
 
-Each file is standalone. No override files, `.env` files or local builds are
-needed. All three files use the same storage preparation and run every service
-as **UID/GID `950:950`**.
+Each variant is standalone and uses UID/GID `950:950` with the same six storage directories.
 
-The initializer, backend, document processor and web app are pinned to the
-matching [v0.0.10 release](https://github.com/saschTa/domabas/releases/tag/v0.0.10)
-images in `ghcr.io/saschta`, with immutable SHA-256 digests. The examples require
-`linux/amd64`. For upgrades, update all four image references together using the
-digests from one release. Keep the `x-init` anchor so all initialization services
-share its image.
+**Published installations.** Download `compose.cpu.yaml`, `compose.cuda.yaml` or `compose.rocm.yaml` from the assets of a release that includes the native Go worker. Each release file pins all four Domabas images by digest for Linux AMD64. For the earlier stack pinned to v0.0.10, use the [archived templates and guide](https://github.com/saschTa/domabas/tree/6ae24a388b901ee8e0df1c74a83807de573319e8/truenas).
+
+**Testing this checkout before release.** The three files in this directory use local image tags. On the Docker engine used by TrueNAS, build the four images from this checkout, or build them on another host and transfer them with `docker image save` and `docker image load`. From the repository root, run:
+
+```sh
+docker build --platform linux/amd64 -t domabas-init:native-local -f infra/init/Dockerfile .
+docker build --platform linux/amd64 -t domabas-backend:native-local -f backend/Dockerfile .
+docker build --platform linux/amd64 -t domabas-document-processor:native-local -f infra/document-processor/Dockerfile .
+docker build --platform linux/amd64 -t domabas-web:native-local -f frontend/Dockerfile .
+```
 
 Public GHCR packages allow anonymous pulls. If the packages are private,
 configure an account with package access under **Apps > Configuration > Sign-in
@@ -44,7 +45,7 @@ to a Docker registry** before deploying. Repository visibility and package
 visibility are separate settings. For a deployment built from a checkout, use
 the [Compose guide](../docs/development/compose.md). Maintainers can find manual
 container publishing and version selection in the
-[release guide](../docs/development/releases.md). No native app downloads are published.
+[release guide](../docs/development/releases.md).
 
 ## 2. Prepare the dataset
 
@@ -93,14 +94,11 @@ The `domabas-storage` Docker volume points to the selected host dataset. Each
 service mounts only its required subdirectories. Keep the container paths and
 subdirectory names unchanged. Ollama's `HOME` and `OLLAMA_MODELS` settings keep
 its cache writable as user `950`; the processor sees the same models read-only.
-Temporal's `USER` setting and the web service's temporary writable directories
-also match this user.
+The web service’s temporary writable directories also match this user.
 
 ## 3. Fill in your settings
 
-Keep the published templates unchanged. From the checkout root, make a private
-copy of your chosen variant before entering credentials. This POSIX-shell
-example selects CPU; use `cuda` or `rocm` in both names for a GPU variant:
+Keep a private copy of the chosen template for your credentials. For a release installation, copy the downloaded release asset. For a source build, the following command copies the CPU template from the checkout root. Substitute `cuda` or `rocm` for the GPU variants.
 
 ```sh
 (
@@ -127,16 +125,12 @@ In the private copy, edit `x-settings` at the top. Leave the YAML anchor names
 | `dataset_path` | Existing dataset path from step 2 |
 | `postgres_admin_password` | PostgreSQL provisioning password |
 | `postgres_password` | Separate password for the Domabas database role |
-| `temporal_password` | Separate password for the Temporal database role |
 | `public_origin` | Browser HTTP or HTTPS origin, such as `http://192.168.0.230:8088` or `https://documents.example.com`; include a non-default port if used, with no path or trailing slash |
 | `web_bind_address`, `web_port` | NAS address and host port reached by your browser or proxy; `0.0.0.0` binds all IPv4 interfaces |
-| `temporal_ui_bind_address`, `temporal_ui_port` | NAS address and host port for Temporal UI |
-| `temporal_ui_url` | Browser-reachable Temporal URL; update the NAS address and port or use a separate HTTPS hostname |
-| `ingestion_concurrency` | Legacy setting retained for release compatibility; default `1`. Current source builds use Admin settings → Workload limits instead. |
 | `ollama_max_queue` | Ollama queue budget; default `128`. Keep it consistent across Ollama, backend and processor. Current source builds require at least `2` and limit shared Ollama jobs to half this value. |
 | `gpu_render_gid`, `gpu_video_gid` | ROCm example only: numeric GPU device group IDs from step 4 |
 
-All three passwords start empty and must be filled. Generate a different password
+Both passwords start empty and must be filled. Generate a different password
 for each role with a password manager; 64-character hexadecimal passwords avoid
 YAML and interpolation escaping. Never reuse the checked-in development defaults
 from `backend/.env` or the main Compose file. Compose expands dollar signs
@@ -160,16 +154,7 @@ encrypt traffic. To use HTTPS, point your proxy at the same HTTP address; the
 proxy must preserve the original Host and Origin and support WebSocket upgrades.
 Set `public_origin` to the HTTPS origin when using the proxy.
 
-Temporal UI opens the `domabas` namespace. **Admin > Document processing >
-Temporal dashboard** uses `temporal_ui_url`. Replace the fictional hostname
-`nas.example.test` in the default URL with your browser-reachable NAS hostname
-or address. Changing the published port also requires updating this URL. Use
-an address reachable from your browser, not a container name or localhost.
-
-Temporal UI has unauthenticated cluster administration access. Domabas sign-in
-does not protect its port; keep it on a trusted network or behind an
-authenticated proxy. PostgreSQL, Temporal gRPC, Ollama and the processor have
-no published host ports.
+Open **Admin settings → Workload limits** to inspect active jobs and set limits for ingestion, invoice extraction, tags, model calls, embeddings and Paperless retrieval. Only the web service publishes a host port.
 
 ## 4. Check your GPU on the host
 
@@ -269,7 +254,7 @@ GPU mapping or device groups.
 1. Open **Apps > Discover Apps > Install via YAML** from the menu.
 2. Enter an app name such as `domabas`, paste the entire completed private copy
    and save.
-3. Wait for storage, database and Temporal initialization, then model preparation.
+3. Wait for storage and database initialization, then model preparation.
    Successful one-shot initialization services exit normally; they do not keep
    running. First startup may download models and take several minutes.
 4. Check service logs if the app does not become ready. Open your configured web address
@@ -279,6 +264,10 @@ GPU mapping or device groups.
 When changing `group_add`, device mappings or environment settings, edit and
 save the installed app's YAML so TrueNAS redeploys it. Restarting the old
 container alone does not apply a changed container configuration.
+
+### Upgrade from a Temporal-based installation
+
+Pause uploads and scheduled imports, let admitted jobs finish with the existing backend, then stop the old app and take a consistent dataset snapshot. Apply the matching native-worker template to the same app, retaining the dataset, credentials, origin and GPU settings. The migration checks for open executions and leaves queued work available to the new worker. If it reports an open execution, restart the previous stack to finish draining. Keep the old PostgreSQL data and credential keys. See [worker upgrade details](../docs/arch/backend/native-jobs.md).
 
 ### Upgrade an existing PostgreSQL 18 installation
 
@@ -427,11 +416,7 @@ even when optional AI is disabled. Add capacity for TrueNAS, ZFS and other apps.
 Large documents, bulk imports and higher concurrency need more headroom; this
 starting recommendation does not cover every simultaneous service peak.
 
-The examples cap PostgreSQL, Temporal and the backend at 2 GiB each, the
-processor at 4 GiB, Temporal UI at 256 MiB, web at 512 MiB and Ollama at 8 GiB.
-Temporal and the backend use a 1536 MiB Go soft target; UI uses 192 MiB. Edit
-the named limits and targets under `x-settings`, then redeploy the app. These
-are ceilings, not idle usage or memory reservations.
+The templates cap PostgreSQL and the backend at 2 GiB each, the processor at 4 GiB, web at 512 MiB and Ollama at 8 GiB. The backend Go runtime has a 1536 MiB soft target. These limits total 8.5 GiB before Ollama and 16.5 GiB with it. Actual usage depends on the workload.
 
 The processor's 2 GiB `/tmp` tmpfs shares its container budget when used;
 these examples set `TMPDIR=/var/tmp` for disk-backed OCR and PDF compilation
@@ -441,10 +426,7 @@ system RAM. See the [resource guide](../docs/development/resources.md) for
 the complete budget, scratch requirements and commands to identify OOM kills
 and record memory during repeated imports or AI chat turns.
 
-Start with one admitted Ollama job. On current source builds, set this in
-**Admin settings → Workload limits**; the legacy `ingestion_concurrency` field
-does not control the shared scheduler. Adjust resources before increasing
-capacity or choosing larger models. See [resource scheduling](../docs/arch/backend/resource-scheduler.md).
+Start with one Ollama slot under **Admin settings → Workload limits**. Ingestion and Paperless downloads can run concurrently while model calls are limited. See [resource scheduling](../docs/arch/backend/resource-scheduler.md).
 The processor health check allows ten minutes for initial preparation; retained
 caches avoid repeated downloads.
 
@@ -493,16 +475,14 @@ data; do not delete the dataset or volumes as routine troubleshooting.
 To update application images, use coordinated release references for `x-init`,
 `backend`, `document-processor` and `web`. Replace the whole `image` value,
 including its digest. Retain your dataset path, passwords, user and group IDs,
-ports, origin and GPU settings. Keep Temporal server/schema-tool versions
-matched. PostgreSQL major upgrades require a separate migration; reverting an
+ports, origin and GPU settings. PostgreSQL major upgrades require a separate migration; reverting an
 image does not necessarily undo a schema migration.
 
 Changing `postgres_admin_password` in YAML does not rotate that password in an
 existing database. Keep it unchanged unless performing a deliberate rotation.
 
 Maintainers should update all three examples together when changing shared
-setup or image pins. These files are not rewritten by
-release CI. Validate each with `docker compose -f FILE config --quiet`.
+setup. Release packaging copies the three templates and replaces the local image tags with the digests from the same build. Validate each with `docker compose -f FILE config --quiet`.
 Syntax validation does not establish successful NAS startup or GPU inference.
 Runtime verification remains a separate step. The [testing guide](../docs/development/testing.md)
 explains which checks establish syntax, compilation and actual runtime behavior.

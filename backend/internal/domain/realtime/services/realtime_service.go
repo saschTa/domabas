@@ -67,6 +67,7 @@ func (s *RealtimeService) Authorize(ctx context.Context, subject m.RealtimeSubje
 		result[m.Chat] = allows(subject.AccountID, "chat:use")
 		result[m.Members] = allows(subject.AccountID, "users:manage")
 		result[m.Configuration] = system("system:document-processing:manage")
+		result[m.Workload] = subject.WorkloadHints && system(string(i.SystemWorkloadsManage))
 		result[m.SystemUsers] = system("system:users:manage")
 	}
 	if resync {
@@ -100,6 +101,8 @@ func (s *RealtimeService) Authorize(ctx context.Context, subject m.RealtimeSubje
 			if own && activity && (signal.Kind == "document_job" || processing) {
 				result[m.Activity] = true
 			}
+		case "workload":
+			result[m.Workload] = subject.WorkloadHints && system(string(i.SystemWorkloadsManage))
 		case "configuration":
 			if system("system:document-processing:manage") {
 				result[m.Configuration] = true

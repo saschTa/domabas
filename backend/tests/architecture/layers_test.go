@@ -59,7 +59,7 @@ func classifyPackage(path string) packageBoundary {
 	case "bootstrap", "domain":
 		result.owner = parts[1]
 	case "data":
-		if parts[1] == "postgres" || parts[1] == "temporal" {
+		if parts[1] == "jobs" || parts[1] == "postgres" {
 			result.role = parts[1]
 			return result
 		}
@@ -83,15 +83,15 @@ func classifyPackage(path string) packageBoundary {
 func locationViolation(location packageBoundary) string {
 	switch location.layer {
 	case "domain":
-		if location.owner == "" || !oneOf(location.role, "models", "interfaces", "services", "workflows") {
-			return "domain code belongs in its owner's models, interfaces, services or workflows packages"
+		if location.owner == "" || !oneOf(location.role, "models", "interfaces", "services") {
+			return "domain code belongs in its owner's models, interfaces or services packages"
 		}
 	case "data":
 		if location.owner == "" {
-			if !oneOf(location.role, "postgres", "temporal") {
+			if !oneOf(location.role, "jobs", "postgres") {
 				return "shared data packages need explicit infrastructure ownership"
 			}
-		} else if !oneOf(location.role, "models", "repos", "datasources", "security", "temporal") {
+		} else if !oneOf(location.role, "models", "repos", "datasources", "security") {
 			return "domain data code needs an explicit adapter role"
 		}
 	case "presentation":
@@ -152,23 +152,9 @@ func importViolation(source packageBoundary, importPath string) string {
 		}
 	}
 	if strings.HasPrefix(importPath, "go.temporal.io/") {
-		if source.layer == "domain" && source.role == "workflows" {
-			if !oneOf(importPath, "go.temporal.io/sdk/workflow", "go.temporal.io/sdk/temporal") {
-				return "domain workflows use only deterministic Temporal workflow and error APIs"
-			}
-			return ""
-		}
-		if source.layer != "bootstrap" && !(source.layer == "data" && source.role == "temporal") {
-			return "Temporal SDK belongs in Temporal adapters or composition"
-		}
+		return "workers must run natively in Go"
 	}
 	if !strings.HasPrefix(importPath, internalPrefix) {
-		if source.layer == "domain" && source.role == "workflows" {
-			if !oneOf(importPath, "errors", "fmt", "time", "strings", "strconv", "math", "math/bits", "sort", "slices", "cmp", "unicode", "unicode/utf8") {
-				return "domain workflows cannot import I/O or external infrastructure"
-			}
-			return ""
-		}
 		if source.layer == "domain" && (strings.Contains(strings.Split(importPath, "/")[0], ".") || strings.HasPrefix(importPath, "net/http") || strings.HasPrefix(importPath, "database/") || importPath == "os") {
 			return "core imports infrastructure"
 		}
@@ -221,20 +207,11 @@ func bootstrapImportViolation(source, dependency packageBoundary) string {
 }
 
 func coreImportViolation(source, dependency packageBoundary) string {
-	if source.role == "workflows" {
-		if dependency.layer == "domain" && dependency.role == "models" {
-			return ""
-		}
-		return "domain workflows consume only core values, not services or other adapters"
-	}
 	if dependency.layer != "domain" {
 		return "core cannot import adapters or composition"
 	}
 	if dependency.role == "models" {
 		return ""
-	}
-	if dependency.role == "workflows" {
-		return "pure core cannot import workflow adapters"
 	}
 	if dependency.owner != source.owner {
 		return "foreign domain interfaces and services must be consumed through local service ports"
@@ -250,11 +227,8 @@ func dataImportViolation(source, dependency packageBoundary) string {
 		if source.owner == "" {
 			return "shared data infrastructure cannot depend on business domains"
 		}
-		if source.role == "temporal" && dependency.owner == source.owner && dependency.role == "workflows" {
-			return ""
-		}
 		if dependency.role == "models" && source.role != "models" {
-			if source.owner == dependency.owner || oneOf(source.role, "repos", "datasources", "temporal") {
+			if source.owner == dependency.owner || oneOf(source.role, "repos", "datasources") {
 				return ""
 			}
 		}
@@ -263,22 +237,22 @@ func dataImportViolation(source, dependency packageBoundary) string {
 		}
 		return "data adapters cannot import core services or foreign core ports"
 	}
-	if source.role == "temporal" && source.owner != "" {
-		if dependency.layer == "data" && dependency.owner == source.owner && dependency.role == "temporal" {
-			return ""
-		}
-		return "domain Temporal activities and dispatchers use injected ports, not concrete adapters"
-	}
 	if dependency.layer != "data" {
 		return "data adapters cannot import another implementation layer"
 	}
 	if source.owner == "" {
+		if source.role == "jobs" && dependency.role == "postgres" && dependency.owner == "" {
+			return ""
+		}
 		if dependency.owner != "" || source.role != dependency.role {
 			return "shared data infrastructure cannot import domain adapters or sibling infrastructure"
 		}
 		return ""
 	}
 	if dependency.owner == "" {
+		if dependency.role == "jobs" && source.role == "datasources" {
+			return ""
+		}
 		if dependency.role != "postgres" || source.role == "security" {
 			return "domain data adapters may borrow only relevant shared storage infrastructure"
 		}
@@ -292,9 +266,6 @@ func dataImportViolation(source, dependency packageBoundary) string {
 	}
 	if source.role == "models" && dependency.role != "models" {
 		return "data models cannot import adapter implementations"
-	}
-	if dependency.role == "temporal" && source.role != "temporal" {
-		return "data persistence and security adapters cannot import Temporal implementations"
 	}
 	return ""
 }

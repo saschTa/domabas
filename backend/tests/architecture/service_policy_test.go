@@ -41,7 +41,7 @@ func TestServicePolicyDoesNotReturnToPersistence(t *testing.T) {
 func servicePolicyViolations(path string, file *ast.File) []string {
 	location := classifyPackage(path)
 	var violations []string
-	if location.layer == "data" && oneOf(location.role, "datasources", "repos") && location.owner != "postgres" && location.owner != "temporal" {
+	if location.layer == "data" && oneOf(location.role, "datasources", "repos") && location.owner != "postgres" {
 		ast.Inspect(file, func(node ast.Node) bool {
 			switch value := node.(type) {
 			case *ast.SelectorExpr:

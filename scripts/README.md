@@ -12,7 +12,7 @@ contain the Bun TypeScript implementations and their tests.
 | [release](release/) | Version reservation, native preview packaging, image publication and GitHub releases | `task release:prepare`, `task release:native`, `task release` |
 | [security](security/) | OSV dependency scans and Trivy image scans | `task security:dependencies`, `task security:image` |
 | [shared](shared/) | Process ownership, cancellation, environment loading and repository paths | Imported by other scripts |
-| [testing](testing/) | Database, browser E2E and Compose test harnesses, workflow cleanup and cross-tool tests | `task test:integration`, `task test:temporal`, `task test:api-e2e`, `task test:e2e`, `task test:compose` |
+| [testing](testing/) | Database, browser E2E and Compose test harnesses, job recovery and cross-tool tests | `task test:integration`, `task test:jobs`, `task test:api-e2e`, `task test:e2e`, `task test:compose` |
 | [testing/browser](testing/browser/) | Pinned browser installation and focused Flutter browser suites | `task test:browser`, `task test:scanner:web`, `task test:realtime:web`, `task test:documents:web`, `task test:uploads:web` |
 | [testing/fixtures](testing/fixtures/) | Local email, LLM and Paperless fixture servers, plus sample documents | Used by test harnesses and Flutter tests |
 

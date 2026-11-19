@@ -30,6 +30,21 @@ void main() {
         tester.widget<GlacierWorkspace>(find.byType(GlacierWorkspace)).selected,
         'settings-workload',
       );
+      final picker = find.byKey(const ValueKey('flow-pipeline-picker'));
+      expect(picker.hitTestable(), findsOneWidget);
+      await tester.tap(picker);
+      await settleFollowup(tester);
+      await tester.tap(find.text('Paperless imports').hitTestable().last);
+      await settleFollowup(tester);
+      final flow = find.byType(GlacierWorkloadFlow);
+      expect(
+        find.descendant(of: flow, matching: find.text('Paperless downloads')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: flow, matching: find.text('2 from pipeline')),
+        findsOneWidget,
+      );
       await tester.tap(admin);
       await settleFollowup(tester);
       expect(workload, findsNothing);

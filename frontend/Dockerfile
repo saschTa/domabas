@@ -10,7 +10,7 @@ WORKDIR /src
 COPY frontend/ ./
 RUN flutter pub get --enforce-lockfile && flutter build web --release --no-web-resources-cdn
 
-FROM nginx:1.30.6-alpine@sha256:901e593c95dc85f5a729f5765516321366ef4ac401821431d408897e95287d0a
+FROM nginx:1.30.7-alpine@sha256:bef154735288bc38d99fac41ae63730684bcc661503673a04a0f9bc526ba8598
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/build/web /usr/share/nginx/html
 COPY LICENSE /usr/share/doc/domabas/LICENSE

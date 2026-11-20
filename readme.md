@@ -163,22 +163,24 @@ For a NAS installation from source, see the [TrueNAS templates and image build i
 
 ## How it fits together
 
-The Flutter app talks to one Go backend, which serves the API and runs background
-workers. PostgreSQL stores application records, job progress and resource limits.
-Workers resume from saved checkpoints after a restart. Original files live in persistent storage. A private document processor
-extracts text, runs OCR, creates thumbnails and asks llama.cpp for search embeddings.
-The backend uses an optional external provider for chat and AI extraction.
+The **Go API backend** checks library permissions, stores the original file and
+queues an ingestion job in PostgreSQL. Workers run inside that same Go process.
+They send the file over private HTTP to the **Go document processor**, which
+returns extracted text and thumbnails. The backend splits the text into passages
+and sends them to the processor for embedding. It stores the returned vectors
+in pgvector. Semantic search uses the same path to embed the search query.
 
 ```mermaid
 flowchart TD
-  Browser[Flutter web app] --> Web[Web server]
-  Native[Flutter mobile and desktop apps] --> Backend[Go API and background workers]
-  Web --> Backend
-  Backend --> Postgres[(PostgreSQL: application data)]
-  Backend --> Files[(Documents and encryption keys)]
-  Backend --> Processor[Document processor: text, OCR and thumbnails]
-  Processor -->|Indexing and semantic search| Embeddings[llama.cpp with Nomic Embed Text v1.5]
-  Backend -. chat and AI extraction when enabled .-> External[External OpenAI-compatible provider]
+  Clients["Flutter web, mobile and desktop apps"] --> Web["nginx<br/>Serves Flutter web and proxies API requests"]
+  Web -->|"HTTP /api/v1"| Backend["Go API backend<br/>backend:8080<br/>HTTP handlers and job workers"]
+  Backend -->|"SQL"| DB[("PostgreSQL + pgvector<br/>Metadata, job checkpoints and search vectors")]
+  Backend -->|"File I/O"| Files[("File storage<br/>Staged uploads and originals")]
+  Backend -->|"POST /internal/v1/extract<br/>POST /internal/v1/thumbnail<br/>POST /internal/v1/embed"| Processor["Go document processor<br/>document-processor:8091<br/>PDFium and Tesseract OCR"]
+  Processor -->|"POST /v1/embeddings"| Embed["llama.cpp<br/>embeddings:8080<br/>Nomic Embed Text v1.5<br/>768 dimensions · CPU or Vulkan"]
+  Backend -.->|"Optional chat and AI extraction"| External["External OpenAI-compatible API"]
+  classDef goService stroke-width:3px
+  class Backend,Processor goService
 ```
 
 The [architecture overview](architecture.md) explains each component and how

@@ -33,10 +33,15 @@ The web container serves Flutter and proxies `/api/`, `/healthz` and `/readyz` t
 
 ```mermaid
 flowchart LR
-  Browser --> Web[Flutter / Nginx]
-  Web --> Go[Go HTTP + native worker]
-  Go --> AppDB[(Application database)]
-  AppDB --- PG[One PostgreSQL server]
+  Browser --> Web[nginx serving Flutter]
+  Web --> Go[Go API and workers]
+  Go --> PG[(PostgreSQL with pgvector)]
+  Go --> Processor[Private document processor]
+  Processor -->|Document and query embeddings| Embeddings[llama.cpp]
+  Go -. chat and AI extraction when enabled .-> Provider[External OpenAI-compatible provider]
+  Init[model-init] -->|Verifies or downloads| Cache[(Nomic GGUF volume)]
+  Embeddings -->|Reads model| Cache
+  Processor -->|Verifies model| Cache
 ```
 
 The database initializer provisions the application database, role and pgvector. The backend applies migrations and starts its Go worker when dependencies are ready.

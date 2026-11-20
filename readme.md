@@ -48,9 +48,9 @@ Stop the stack with `docker compose down`. Docker retains documents, database re
 - **Multiple libraries and users:** Each user gets a personal library and can
   share it with other users. Switch between your own and shared libraries, with
   roles and permissions controlling access.
-- **Run privately:** Host storage, processing, search and AI locally. No cloud
-  account is required. See [data and privacy](docs/development/privacy.md) for
-  optional external services and mobile scanner data flows.
+- **Run privately:** Keep documents, OCR and semantic search on your server.
+  For private chat and AI extraction, connect an OpenAI-compatible provider you
+  host yourself. See [data and privacy](docs/development/privacy.md).
 - **Web, mobile and desktop:** Use the browser app or build apps for Android,
   iOS, Linux, macOS and Windows. Mobile apps also support sharing documents from
   other apps. See the [app guide](frontend/README.md).
@@ -100,14 +100,14 @@ other development tools on the host.
 | Requirement | Starting point |
 | --- | --- |
 | **Container runtime** | Docker Engine 25+ with [Compose 2.20.2+](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the published images and the web build stage when building from source. |
-| **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for the local embedding service. Leave capacity for your operating system and other services. |
-| **Storage** | Persistent space for original files, the database, encryption keys and model caches, plus temporary processing space and backups. Size this for your library and chosen models. |
+| **CPU and memory** | For a small library, start with **4 CPU cores and 5 GiB of RAM for the base application**, plus room for local embeddings. The embedding container has a **2 GiB** default memory limit. Leave headroom for the operating system. |
+| **Storage** | Allow **274 MB** for the cached Nomic embedding model, plus space for OCR models, container images, originals, database and search indexes, encryption keys, temporary processing files and backups. |
 | **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |
-| **GPU** | Optional. A Vulkan-capable Linux host can enable GPU embeddings. |
+| **GPU** | CPU embeddings work by default. For GPU acceleration, use the [Linux Vulkan override](docs/development/compose.md#select-the-embedding-runtime) with a compatible driver and an accessible render node. |
 
-Memory needs grow with document size, concurrent jobs and model context. Search
-uses the local embedding model even when generation features are disabled. See the [resource guide](docs/development/resources.md) for
-service ceilings and sizing.
+Memory needs grow with document size and concurrent jobs. If you also host a
+chat or extraction provider, budget for that service separately. See the
+[resource guide](docs/development/resources.md) for the individual container limits.
 
 Use the [quick start](#quick-start) to run the source checkout. The
 [self-hosting guide](docs/development/compose.md) covers configuration, building
@@ -177,8 +177,8 @@ flowchart TD
   Backend --> Postgres[(PostgreSQL: application data)]
   Backend --> Files[(Documents and encryption keys)]
   Backend --> Processor[Document processor: text, OCR and thumbnails]
-  Processor --> Embeddings[llama.cpp: Nomic embeddings]
-  Backend -. optional .-> External[External AI provider]
+  Processor -->|Indexing and semantic search| Embeddings[llama.cpp with Nomic Embed Text v1.5]
+  Backend -. chat and AI extraction when enabled .-> External[External OpenAI-compatible provider]
 ```
 
 The [architecture overview](architecture.md) explains each component and how

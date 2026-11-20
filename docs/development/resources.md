@@ -51,7 +51,7 @@ CPU-based OCR and PostgreSQL use host memory. An integrated GPU shares system RA
 
 ## Apply the settings
 
-The root Compose file uses the overrides in the table. The three
+The root Compose file uses the overrides in the table. The CPU and Vulkan
 [TrueNAS examples](../../truenas/README.md) expose the same backend, PostgreSQL and web limits as named values under `x-settings`. Keep the Go
 soft targets below their corresponding container caps. Redeploy/recreate the
 affected containers after changing YAML; restarting an existing container does

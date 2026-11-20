@@ -21,7 +21,7 @@ connects those guides to the implementation. For installation and commands, use
 | **llama.cpp** | Serves the pinned Nomic embedding model privately. Both the processor and server mount the verified model read-only. |
 | **Optional external AI provider** | Serves chat or document AI when configured by an administrator. The backend sends selected content to its OpenAI-compatible API. |
 | **Persistent volumes** | Keep originals, staged uploads, database files, encryption keys and model caches across ordinary container shutdowns. |
-| **Initialization containers** | Prepare the database role and pgvector before the backend starts. They are setup steps, not extra application servers. |
+| **Initialization containers** | The database initializer prepares the application database, role and pgvector. The model initializer verifies the cached Nomic GGUF and downloads it when needed before llama.cpp starts. |
 
 ```mermaid
 flowchart TD
@@ -31,7 +31,7 @@ flowchart TD
   API --> DB[(PostgreSQL: application data)]
   API --> Files[(Originals and encryption keys)]
   API --> Processor[Private Go document processor]
-Processor --> Embeddings[llama.cpp embeddings]
+  Processor -->|Document and query embeddings| Embeddings[Private llama.cpp server]
   API -. optional chat and document AI .-> Provider[External AI provider]
   API -. import .-> Sources[IMAP and Paperless-ngx]
 ```

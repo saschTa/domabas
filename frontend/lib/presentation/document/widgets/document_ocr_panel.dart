@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,6 +26,7 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
   int _match = 0;
   bool _wasEditing = false;
   int? _revision;
+
   @override
   void initState() {
     super.initState();
@@ -245,19 +247,7 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
                 ),
               ),
               if (ocr != null && (ocr.available || state.editingOcr))
-                SliverLayoutBuilder(
-                  builder: (context, constraints) {
-                    final remaining =
-                        constraints.viewportMainAxisExtent -
-                        constraints.precedingScrollExtent;
-                    return SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: remaining < 240 ? 240 : remaining,
-                        child: _editorContent(state),
-                      ),
-                    );
-                  },
-                ),
+                _textSliver(state),
             ],
           ),
         ),
@@ -265,36 +255,68 @@ final class _DocumentOcrPanelState extends State<DocumentOcrPanel> {
     },
   );
 
-  Widget _editorContent(DocumentState state) => DecoratedBox(
+  Widget _textSliver(DocumentState state) {
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        !state.editingOcr &&
+        _query.text.isEmpty) {
+      return SliverToBoxAdapter(
+        child: RepaintBoundary(
+          child: _textSurface(
+            SelectionArea(
+              child: Text(
+                _text.text,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final remaining =
+            constraints.viewportMainAxisExtent -
+            constraints.precedingScrollExtent;
+        return SliverToBoxAdapter(
+          child: SizedBox(
+            height: remaining < 240 ? 240 : remaining,
+            child: _textSurface(_editorContent(state)),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _textSurface(Widget content) => DecoratedBox(
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     ),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: TextField(
-        key: _editor,
-        controller: _text,
-        focusNode: _focus,
-        readOnly: !state.editingOcr || state.saving,
-        maxLines: null,
-        minLines: null,
-        expands: true,
-        textAlignVertical: TextAlignVertical.top,
-        keyboardType: TextInputType.multiline,
-        decoration: const InputDecoration(
-          labelText: 'Extracted text',
-          alignLabelWithHint: true,
-          border: InputBorder.none,
-        ),
-        style: Theme.of(context).textTheme.bodyMedium!,
-        cursorColor: Theme.of(context).colorScheme.primary,
-        onChanged: (value) {
-          widget.cubit.setOcrDraft(value);
-          setState(_find);
-        },
-      ),
+    child: Padding(padding: const EdgeInsets.all(12), child: content),
+  );
+
+  Widget _editorContent(DocumentState state) => TextField(
+    key: _editor,
+    controller: _text,
+    focusNode: _focus,
+    readOnly: !state.editingOcr || state.saving,
+    maxLines: null,
+    minLines: null,
+    expands: true,
+    textAlignVertical: TextAlignVertical.top,
+    keyboardType: TextInputType.multiline,
+    decoration: const InputDecoration(
+      labelText: 'Extracted text',
+      alignLabelWithHint: true,
+      border: InputBorder.none,
     ),
+    style: Theme.of(context).textTheme.bodyMedium!,
+    cursorColor: Theme.of(context).colorScheme.primary,
+    onChanged: (value) {
+      widget.cubit.setOcrDraft(value);
+      setState(_find);
+    },
   );
 }

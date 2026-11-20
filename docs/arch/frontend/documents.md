@@ -156,6 +156,9 @@ does not create a second localization requirement.
 
 A compact shared find bar handles PDF and OCR searches without replacing their
 separate controllers or result semantics. PDF search uses PDFium's native text layer and highlights matching page text.
+On Android, the extracted-text panel scrolls as one page while reading.
+The text supports long-press selection. Searching or editing opens the text
+field so it can select a match or hold a correction.
 Extracted-text search operates separately on OCR text. Scanned PDFs can have no
 native matches; the UI does not claim that OCR matches have page geometry that
 the backend never stored. A correction changes searchable extracted content while

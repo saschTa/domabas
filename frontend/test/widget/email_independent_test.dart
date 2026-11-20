@@ -36,6 +36,10 @@ void main() {
       testWidgets(
         'email viewer and preview enforce text=$textRead independently of download=$download',
         (tester) async {
+          tester.view.physicalSize = const Size(390, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
           final repository = IndependentEmailDocumentRepository();
           final email = Document(
             id: 'email',
@@ -54,10 +58,14 @@ void main() {
             ),
           );
           repository.records.add(email);
-          repository.ocr[email.id] = const DocumentOcr(
+          final body = List.filled(
+            90,
+            'Text protected independently from download',
+          ).join('\n');
+          repository.ocr[email.id] = DocumentOcr(
             status: 'available',
             revision: 1,
-            text: 'Text protected independently from download',
+            text: body,
             origin: 'machine',
             reason: null,
             semanticIndexing: 'ready',
@@ -84,10 +92,21 @@ void main() {
           expect(find.byKey(const Key('email-document-view')), findsOneWidget);
           expect(repository.originalRequests, 0);
           expect(repository.textRequests > 0, textRead);
-          expect(
-            find.text('Text protected independently from download'),
-            textRead ? findsOneWidget : findsNothing,
-          );
+          expect(find.text(body), textRead ? findsOneWidget : findsNothing);
+          if (textRead) {
+            final list = find.byKey(const Key('email-document-view'));
+            final position = Scrollable.of(tester.element(find.text(body)))
+                .position;
+            final start =
+                tester.getRect(list).bottomCenter - const Offset(0, 40);
+            expect(tester.getRect(find.text(body)).contains(start), isTrue);
+            await tester.dragFrom(start, const Offset(0, -180));
+            await tester.pumpAndSettle();
+            expect(position.pixels, greaterThan(100));
+            await tester.longPressAt(start);
+            await tester.pumpAndSettle();
+            expect(find.text('Copy'), findsOneWidget);
+          }
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox.shrink());
           await cubit.close();

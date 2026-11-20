@@ -585,6 +585,11 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
     }
     if (state.document!.file!.isEmail) {
       final mail = state.document!;
+      Widget selectableEmailText(String value, {Key? key, TextStyle? style}) =>
+          SelectionArea(
+            child: Text(value, key: key, style: style),
+          );
+
       return AppRefreshable(
         onRefresh:
             _document.capabilities.readOcr && !state.ocrLoading && !state.saving
@@ -596,16 +601,18 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
           children: [
             const Icon(Icons.mail_outline, size: 48),
             const SizedBox(height: 16),
-            SelectableText(
+            selectableEmailText(
               mail.subject.isEmpty ? mail.title : mail.subject,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            if (mail.sender.isNotEmpty) SelectableText('From: ${mail.sender}'),
+            if (mail.sender.isNotEmpty)
+              selectableEmailText('From: ${mail.sender}'),
             if (mail.recipients.isNotEmpty)
-              SelectableText('To: ${mail.recipients.join(', ')}'),
-            if (mail.cc.isNotEmpty) SelectableText('CC: ${mail.cc.join(', ')}'),
+              selectableEmailText('To: ${mail.recipients.join(', ')}'),
+            if (mail.cc.isNotEmpty)
+              selectableEmailText('CC: ${mail.cc.join(', ')}'),
             if (mail.bcc.isNotEmpty)
-              SelectableText('BCC: ${mail.bcc.join(', ')}'),
+              selectableEmailText('BCC: ${mail.bcc.join(', ')}'),
             if (mail.documentDate.isNotEmpty) Text(mail.documentDate),
             const AppStripedDivider(height: 32, thickness: 8),
             if (!_document.capabilities.readOcr)
@@ -616,7 +623,7 @@ final class _DocumentDetailDialogState extends State<DocumentDetailDialog>
               if (state.ocrLoading) const AppStripedProgressIndicator(),
               if (state.ocrError case final error?) AppNotice(message: error),
               if (state.ocr?.text case final text?)
-                SelectableText(text, key: const Key('email-body'))
+                selectableEmailText(text, key: const Key('email-body'))
               else
                 Text(
                   state.ocr?.status == 'pending'

@@ -52,8 +52,8 @@ type DocumentProcessingConfiguration struct {
 	Ready                                                                                       bool
 }
 type DocumentProcessingScheduling struct {
-	IngestionConcurrency, AIConcurrency, OllamaQueueSize, ProviderStepRetries int
-	IngestionConcurrencyMode, AIConcurrencyMode, PriorityPolicy               string
+	IngestionConcurrency, AIConcurrency, EmbeddingQueueSize, ProviderStepRetries int
+	IngestionConcurrencyMode, AIConcurrencyMode, PriorityPolicy                  string
 }
 type DocumentWeight struct{ Name, SHA256 string }
 type DocumentProcessing struct {

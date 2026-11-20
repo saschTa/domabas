@@ -33,7 +33,7 @@ func (chatDeniedAuthority) ResolveBackgroundAuthority(context.Context, string, s
 }
 
 func TestChatServiceChecksEveryForegroundEntryPoint(t *testing.T) {
-	s := NewChatService(nil, nil, nil, chatDeniedAuthority{})
+	s := NewChatService(nil, chatDeniedAuthority{})
 	a := m.ChatActor{}
 	checks := []func() error{
 		func() error { _, err := s.Configuration(t.Context(), a, false); return err },
@@ -46,8 +46,6 @@ func TestChatServiceChecksEveryForegroundEntryPoint(t *testing.T) {
 		func() error { _, err := s.Messages(t.Context(), a, "id", m.ChatPageRequest{}); return err },
 		func() error { _, err := s.Send(t.Context(), a, "id", m.ChatSendInput{}); return err },
 		func() error { _, err := s.Cancel(t.Context(), a, "id", "turn"); return err },
-		func() error { _, err := s.Models(t.Context(), a, 10, 0); return err },
-		func() error { _, err := s.ModelContext(t.Context(), a, "model"); return err },
 	}
 	for index, check := range checks {
 		if err := check(); !errors.Is(err, m.ErrUnauthorized) {

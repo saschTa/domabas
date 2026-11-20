@@ -78,7 +78,7 @@ native presenters or inherited contexts.
 | `glacier_mobile_documents.dart` | GlacierMobileDocumentFilters, GlacierMobileDocumentCard, GlacierMobileDocumentSelectionBar, GlacierMobileDocumentCollection, GlacierMobileSearchFilters |
 
 Existing AppNotice, AppStatusBadge, AppPagedList, AppProgressSlot, AppRefreshable,
-AppJobSpinner/AppJobProgress and AppModelContextField remain shared rather than
+and AppJobSpinner/AppJobProgress remain shared rather than
 being copied into new equivalents. They appear in foundation/domain examples.
 
 ## Mobile reference coverage

@@ -5,7 +5,7 @@ import '../../../domain/workload/models/workload_settings.dart';
 WorkloadSettings workloadSettingsMapper(api.WorkloadSettings value) {
   final resourceIds = value.resources.map((resource) => resource.id).toSet();
   if (value.revision < 1 ||
-      value.ollamaQueueSize < 2 ||
+      value.embeddingQueueSize < 2 ||
       value.resources.isEmpty ||
       resourceIds.length != value.resources.length ||
       value.pipelines.map((pipeline) => pipeline.id).toSet().length !=
@@ -19,8 +19,8 @@ WorkloadSettings workloadSettingsMapper(api.WorkloadSettings value) {
             resource.maximumLimit > 256 ||
             resource.limit > resource.maximumLimit ||
             resource.activeJobs < 0 ||
-            (resource.id == 'ollama' &&
-                resource.maximumLimit > value.ollamaQueueSize ~/ 2),
+            (resource.id == 'embedding-runtime' &&
+                resource.maximumLimit > value.embeddingQueueSize ~/ 2),
       ) ||
       value.pipelines.any(
         (pipeline) =>
@@ -36,7 +36,7 @@ WorkloadSettings workloadSettingsMapper(api.WorkloadSettings value) {
   }
   return WorkloadSettings(
     revision: value.revision,
-    ollamaQueueSize: value.ollamaQueueSize,
+    embeddingQueueSize: value.embeddingQueueSize,
     resources: value.resources.map(
       (resource) => WorkloadResource(
         id: resource.id,

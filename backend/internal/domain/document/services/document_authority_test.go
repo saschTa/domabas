@@ -77,10 +77,6 @@ func TestDocumentServiceEntryPointsRequireCurrentAuthority(t *testing.T) {
 			_, e := s.SetProcessingConfiguration(t.Context(), m.DocumentActor{}, m.DocumentProcessingConfiguration{})
 			return e
 		},
-		"model context": func(s *DocumentIngestionService) error {
-			_, e := s.ModelContext(t.Context(), m.DocumentActor{}, "x")
-			return e
-		},
 		"namespace configuration": func(s *DocumentIngestionService) error {
 			_, e := s.NamespaceConfiguration(t.Context(), m.DocumentActor{})
 			return e

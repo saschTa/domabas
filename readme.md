@@ -13,35 +13,17 @@ processing and AI can all run on your own hardware.
 
 ## Quick start
 
-With Docker Engine 25+ and Docker Compose 2.20.2+ already running:
+Download or clone this repository. From its root, start the application with Docker Engine 25+ and Docker Compose 2.20.2+.
 
-1. Download [compose.quickstart.yaml](https://raw.githubusercontent.com/saschTa/domabas/main/compose.quickstart.yaml)
-   and save it as **`compose.yaml`** in a new folder.
-2. Open a terminal in that folder and run:
+```sh
+docker compose up --build --wait
+```
 
-   ```sh
-   docker compose up -d
-   ```
+Open **http://localhost:8088** and create an account. The first account on a fresh installation becomes its system administrator. On first startup, Docker builds the application and the model initializer downloads a verified 274 MB embedding model. Later starts reuse its volume. Use `docker compose logs -f` to watch progress.
 
-3. Open **http://localhost:8088** and create an account. The first account on a
-   new installation becomes the system administrator.
+To install published images, use the standalone Compose configuration in the notes for the release you choose. Its images and configuration belong to that release. The [quick-start file](compose.quickstart.yaml) in the source checkout includes its sibling [compose.yaml](compose.yaml).
 
-The `-d` flag keeps Domabas running in the background. First startup can take
-several minutes while Docker downloads the images and Domabas downloads its
-models. Check progress with `docker compose logs -f`; Ctrl+C leaves the app
-running. No repository checkout, development tools or GPU are needed.
-
-The file uses published **v0.0.10** images, pinned by digest, for **Linux AMD64**
-containers. Native ARM64 images are not available; ARM64 machines, including
-Apple Silicon Macs, require compatible AMD64 emulation, which is not guaranteed
-to run this release. See [hosting requirements](#what-you-need-to-host-it) for
-memory and storage needs. The defaults are for testing on your own machine and
-bind ports to localhost. For a shared installation, follow the
-[self-hosting guide](docs/development/compose.md).
-
-To stop Domabas, run `docker compose down` in the same folder. Your documents,
-database and models stay in Docker volumes; `docker compose up -d` starts it
-again with that data.
+Stop the stack with `docker compose down`. Docker retains documents, database records, keys and models for the next start. Set passwords and network addresses before sharing the installation. See the [hosting guide](docs/development/compose.md).
 
 ## Features
 
@@ -75,21 +57,9 @@ again with that data.
 
 ## How AI is used
 
-Ollama runs the embedding model that turns document text and search queries into
-representations of their meaning. These embeddings make semantic search possible
-and run locally in the default setup, even when optional AI features are disabled.
+Domabas runs Nomic Embed Text v1.5 locally with llama.cpp to index document passages and answer semantic searches. The default CPU deployment works without a GPU. A Linux Vulkan override can accelerate the same model. Search, OCR and structured invoice XML processing work before any external model is configured.
 
-Ollama can also run models for chat, document properties and invoice extraction.
-Smaller models need less memory and are a starting point. For better answers and
-extraction, we recommend larger, more capable models when your hardware allows.
-You can also connect an OpenAI-compatible service, including one you host yourself.
-
-Chat and AI extraction are still under heavy development. Results depend on the
-model and documents, so review them before relying on them. Property and invoice
-AI start disabled; administrators can enable them under Admin → Document
-processing. Chat has separate settings under Admin → AI chat. See the
-[AI configuration guide](docs/development/property-extraction.md) for model
-selection, providers and GPU setup.
+Chat and AI extraction start disabled. An administrator can connect an OpenAI-compatible provider, including a self-hosted service. Chat has its own URL, model and optional key under **Admin → AI chat**. Property and invoice AI share a connection under **Admin → Document processing** and can be enabled independently. Enabling these features sends relevant document content to the selected service. Review generated answers and extracted values. See the [AI configuration guide](docs/development/property-extraction.md).
 
 ## Screenshots
 
@@ -130,21 +100,19 @@ other development tools on the host.
 | Requirement | Starting point |
 | --- | --- |
 | **Container runtime** | Docker Engine 25+ with [Compose 2.20.2+](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the published images and the web build stage when building from source. |
-| **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for Ollama's embedding model and any chat or extraction models. Leave capacity for your operating system and other services. |
+| **CPU and memory** | Start with **4 CPU cores and 5 GiB available RAM** for a small home library, plus memory for the local embedding service. Leave capacity for your operating system and other services. |
 | **Storage** | Persistent space for original files, the database, encryption keys and model caches, plus temporary processing space and backups. Size this for your library and chosen models. |
 | **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |
-| **GPU** | Optional. CPU operation is supported; NVIDIA and AMD setups need compatible hardware and drivers. |
+| **GPU** | Optional. A Vulkan-capable Linux host can enable GPU embeddings. |
 
 Memory needs grow with document size, concurrent jobs and model context. Search
-embeddings also use Ollama; allow for their model alongside any optional chat or
-extraction models. See the [resource guide](docs/development/resources.md) for
+uses the local embedding model even when generation features are disabled. See the [resource guide](docs/development/resources.md) for
 service ceilings and sizing.
 
-Use the [quick start](#quick-start) to try the published images. The
+Use the [quick start](#quick-start) to run the source checkout. The
 [self-hosting guide](docs/development/compose.md) covers configuration, building
 from source, HTTPS, storage and upgrades. The [TrueNAS guide](truenas/README.md)
-provides CPU, NVIDIA and AMD examples pinned to the matching
-[v0.0.10 container images](https://github.com/saschTa/domabas/releases/tag/v0.0.10).
+provides CPU and Vulkan templates.
 Set your passwords, dataset path and network addresses before deploying. Private
 GHCR packages require registry authentication. The
 [release guide](docs/development/releases.md) describes versioned GHCR containers,
@@ -191,15 +159,15 @@ document text and chat content used by that feature can leave your server.
 Read [Data and privacy](docs/development/privacy.md) for storage locations,
 deletion limits, encryption responsibilities and sensitive logging behavior.
 
-The quick-start file describes the pinned v0.0.10 release. To run the native worker from this checkout, use `docker compose up --build --wait` or the [TrueNAS templates and image build instructions](truenas/README.md#1-choose-a-file).
+For a NAS installation from source, see the [TrueNAS templates and image build instructions](truenas/README.md#1-choose-a-file).
 
 ## How it fits together
 
 The Flutter app talks to one Go backend, which serves the API and runs background
 workers. PostgreSQL stores application records, job progress and resource limits.
 Workers resume from saved checkpoints after a restart. Original files live in persistent storage. A private document processor
-extracts text, runs OCR, creates thumbnails and asks Ollama for search embeddings.
-The backend uses local or optional external models for chat and AI extraction.
+extracts text, runs OCR, creates thumbnails and asks llama.cpp for search embeddings.
+The backend uses an optional external provider for chat and AI extraction.
 
 ```mermaid
 flowchart TD
@@ -209,8 +177,7 @@ flowchart TD
   Backend --> Postgres[(PostgreSQL: application data)]
   Backend --> Files[(Documents and encryption keys)]
   Backend --> Processor[Document processor: text, OCR and thumbnails]
-  Processor --> Ollama[Ollama: local models]
-  Backend --> Ollama
+  Processor --> Embeddings[llama.cpp: Nomic embeddings]
   Backend -. optional .-> External[External AI provider]
 ```
 

@@ -10,7 +10,8 @@ import (
 	"unicode/utf8"
 )
 
-const InstalledPipelineManifestRevision int64 = 2
+const InstalledPipelineManifestRevision int64 = 3
+const LegacyEmbeddingDigest = "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
 const CurrentExtractionRevision = "document-content-v2"
 const LegacyExtractionRevision = "tesseract-pdf-image-v1"
 const LegacyChunkingRevision = "ocr-rune-chunks-v1"
@@ -68,7 +69,7 @@ func (c DocumentProcessingConfiguration) CanonicalFingerprint() (string, error) 
 	llm := c.LLM.Defaults()
 	invoiceEnabled := llm.InvoiceExtractionEnabled()
 	llm.InvoiceEnabled = nil
-	if err := llm.Validate(); err != nil {
+	if err := c.LLM.Validate(); err != nil {
 		return "", err
 	}
 	contextLength := llm.ContextLength
@@ -124,11 +125,14 @@ func (s DocumentEmbeddingSpace) Supported() bool { return s == DefaultConfigurat
 func (c DocumentProcessingConfiguration) ExtractionIdentity(mediaType string) (DocumentExtractionIdentity, error) {
 	c = c.WithLegacyIdentity()
 	legacy := c.ManifestRevision == 1 && c.ExtractionRevision == LegacyExtractionRevision
-	current := c.ManifestRevision == InstalledPipelineManifestRevision && c.ExtractionRevision == CurrentExtractionRevision
+	current := (c.ManifestRevision == 2 || c.ManifestRevision == InstalledPipelineManifestRevision) && c.ExtractionRevision == CurrentExtractionRevision
 	if !legacy && !current {
 		return DocumentExtractionIdentity{}, DocumentProcessingError{Code: "configuration_unavailable"}
 	}
 	installed := DefaultConfiguration()
+	if c.ManifestRevision <= 2 {
+		installed.EmbeddingDigest = LegacyEmbeddingDigest
+	}
 	installed.ManifestRevision, installed.ExtractionRevision = c.ManifestRevision, c.ExtractionRevision
 	expected, err := installed.ManifestFingerprint()
 	actual, identityErr := c.ManifestFingerprint()

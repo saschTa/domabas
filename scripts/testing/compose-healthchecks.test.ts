@@ -8,11 +8,11 @@ interface ComposeHealthService {
 }
 
 const startup = {
-  postgres: ["2s", "5s"], ollama: ["3s", "30s"],
+  postgres: ["2s", "5s"], embeddings: ["3s", "30s"],
   "document-processor": ["5s", "10m"], backend: ["3s", "10m"], web: ["3s", "30s"],
 };
 
-for (const file of ["compose.yaml", "compose.quickstart.yaml", "truenas/compose.cpu.yaml", "truenas/compose.cuda.yaml", "truenas/compose.rocm.yaml"]) {
+for (const file of ["compose.yaml", "truenas/compose.cpu.yaml", "truenas/compose.vulkan.yaml"]) {
   test(`${file} keeps steady probes infrequent and startup probes responsive`, async () => {
     const { services } = Bun.YAML.parse(await Bun.file(join(ROOT, file)).text()) as { services: Record<string, ComposeHealthService> };
     for (const [name, [interval, period]] of Object.entries(startup)) {
@@ -23,3 +23,8 @@ for (const file of ["compose.yaml", "compose.quickstart.yaml", "truenas/compose.
     expect(services.web!.depends_on?.backend?.condition).toBe("service_healthy");
   });
 }
+
+test("the source quick start uses the embedding deployment from the same checkout", async () => {
+  const quickstart = Bun.YAML.parse(await Bun.file(join(ROOT, "compose.quickstart.yaml")).text());
+  expect(quickstart).toEqual({ name: "domabas", include: ["compose.yaml"] });
+});

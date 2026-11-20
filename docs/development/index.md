@@ -60,13 +60,7 @@ Run `task dev` from the repository root. The launcher starts and waits for Compo
 
 Managed development now uses Compose consistently. `task infra:up` starts infrastructure alone; `task db:up` and `task db:down` operate only on PostgreSQL and its database initialization. The full web stack uses `task compose:up` or `docker compose up --build --wait`. See the [Compose guide](compose.md) for the service graph, ports and configuration.
 
-Select Ollama by changing `OLLAMA_RUNTIME=cpu` in `backend/.env` to `cuda`,
-`rocm` or `mlx`, then restart `task dev`. MLX runs a managed native Ollama on
-Apple Silicon while the processor stays in Docker. Its process stops with the
-development session and its model cache is retained. `task infra:up` stays in
-the foreground in MLX mode. See the
-[runtime guide](compose.md#select-the-development-ollama-runtime) for prerequisites,
-model selection and lifecycle details.
+Set `EMBEDDING_RUNTIME=vulkan` for accelerated development on a compatible Linux host. CPU is the default. See [embedding runtime setup](compose.md#select-the-embedding-runtime).
 
 Earlier native `.cache/postgres` clusters are retained but no longer selected automatically. Their records are not silently migrated into the Compose volume. Stop any native server using the configured port before starting Compose: for a PostgreSQL 18 installation, `pg_ctl -D .cache/postgres -m fast -w stop` from the repository root. To keep using that cluster, start it deliberately and use the external-services option. Never delete the cluster to resolve a port conflict.
 
@@ -154,4 +148,4 @@ See the [frontend guide](../arch/frontend/index.md) for mobile networking config
 Live browser connections use the same configured API endpoint and exact CORS origins as the HTTP client. See [live connection deployment](compose.md#live-connections) and [realtime checks](testing.md#realtime-checks).
 
 Optional [LLM property extraction](property-extraction.md) includes administrator
-settings, encrypted API keys and CUDA/ROCm Compose overrides.
+settings, encrypted API keys and optional LM Studio compatibility.

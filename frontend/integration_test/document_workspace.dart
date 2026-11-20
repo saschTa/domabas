@@ -171,16 +171,16 @@ Future<void> exerciseDocumentWorkspace(
   await tester.enterText(find.byKey(const Key('pdfSearch')), 'Orchard');
   await _until(
     tester,
-    () => find.text('1 of 2 matches').evaluate().isNotEmpty,
+    () => find.text('1/2').evaluate().isNotEmpty,
     'native PDF search',
   );
   await tester.tap(find.byTooltip('Next PDF match'));
   await _until(
     tester,
-    () => find.text('2 of 2 matches').evaluate().isNotEmpty,
+    () => find.text('2/2').evaluate().isNotEmpty,
     'next native PDF match',
   );
-  expect(find.text('2 of 2 matches'), findsOneWidget);
+  expect(find.text('2/2'), findsOneWidget);
   final pdfController = tester
       .widget<PdfViewer>(find.byType(PdfViewer))
       .controller;
@@ -210,7 +210,7 @@ Future<void> exerciseDocumentWorkspace(
       same(searchController),
     );
     expect(searchController!.text, 'Orchard');
-    expect(find.text('2 of 2 matches'), findsOneWidget);
+    expect(find.text('2/2'), findsOneWidget);
   }
   await tester.tap(find.byTooltip('Close PDF search'));
   await tester.pumpAndSettle();
@@ -512,7 +512,13 @@ Future<void> _exercisePasswordPdf(
     () => find.text('Password protected fixture').evaluate().isNotEmpty,
     'password PDF in collection',
   );
-  expect(find.byTooltip('PDF password required'), findsOneWidget);
+  expect(
+    find.descendant(
+      of: find.byKey(Key('document-$id')),
+      matching: find.byTooltip('Password required'),
+    ),
+    findsOneWidget,
+  );
   await tester.tap(find.text('Password protected fixture'));
   await _until(
     tester,

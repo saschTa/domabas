@@ -64,39 +64,40 @@ Future<void> exerciseLLMProcessing(
   expect(installed.llm!.propertyThinkingEnabled, isFalse);
   expect(installed.llm!.invoiceThinkingEnabled, isFalse);
   expect(installed.llm!.lmStudioCompatibility, isFalse);
-  expect(installed.llm!.contextLength, 32768);
   final workloads = (await system.getWorkloadSettings())!;
-  final ollama = workloads.resources.singleWhere(
-    (resource) => resource.id == 'ollama',
+  final runtime = workloads.resources.singleWhere(
+    (resource) => resource.id == 'embedding-runtime',
   );
-  expect(ollama.limit, inInclusiveRange(1, workloads.ollamaQueueSize ~/ 2));
+  expect(runtime.limit, inInclusiveRange(1, workloads.embeddingQueueSize ~/ 2));
   expect(
-    ollama.maximumLimit,
-    lessThanOrEqualTo(workloads.ollamaQueueSize ~/ 2),
+    runtime.maximumLimit,
+    lessThanOrEqualTo(workloads.embeddingQueueSize ~/ 2),
   );
   expect(
     workloads.pipelines
         .singleWhere((pipeline) => pipeline.id == 'document_ingestion')
         .resourceIds,
-    unorderedEquals(['worker', 'ollama']),
+    unorderedEquals([
+      'worker',
+      'stage:thumbnail',
+      'stage:ocr',
+      'stage:embedding',
+      'embedding-runtime',
+    ]),
   );
   expect(
     workloads.pipelines
         .singleWhere((pipeline) => pipeline.id == 'paperless')
         .resourceIds,
-    ['worker'],
+    unorderedEquals(['worker', 'stage:paperless']),
   );
   await _reveal(tester, find.text('Shared resource limits'));
   expect(find.text('Shared resource limits'), findsOneWidget);
   expect(find.byKey(const Key('processingConcurrencySummary')), findsNothing);
-  await _reveal(tester, find.byKey(const Key('llmContextLength')));
-  await tester.enterText(find.byKey(const Key('llmContextLength')), '16384');
   await _reveal(tester, find.byKey(const Key('llmEnabled')));
   await tester.tap(find.byKey(const Key('llmEnabled')));
   await _reveal(tester, find.byKey(const Key('propertyThinkingEnabled')));
   await tester.tap(find.byKey(const Key('propertyThinkingEnabled')));
-  await _reveal(tester, find.byKey(const Key('llmProviderOpenAI')));
-  await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
   await tester.pumpAndSettle();
   await _reveal(tester, find.byKey(const Key('llmBaseUrl')));
   await tester.enterText(find.byKey(const Key('llmBaseUrl')), fixtureUrl);
@@ -223,21 +224,16 @@ Future<void> exerciseLLMProcessing(
   expect(saved.llm!.invoiceThinkingEnabled, isFalse);
   expect(saved.llm!.lmStudioCompatibility, isTrue);
   expect(saved.llm!.credentialConfigured, isTrue);
-  expect(saved.llm!.contextLength, 16384);
-  expect(
-    (await api.ChatApi(generated).getChatAdminConfiguration())!.contextLength,
-    32768,
-  );
   final configuredWorkloads = (await system.getWorkloadSettings())!;
   final aiResources = configuredWorkloads.pipelines
-      .singleWhere((pipeline) => pipeline.id == 'document_ai')
+      .singleWhere((pipeline) => pipeline.id == 'tags')
       .resourceIds;
-  expect(aiResources, contains('worker'));
-  expect(aiResources, isNot(contains('ollama')));
+  expect(aiResources, contains('stage:llm'));
+  expect(aiResources, isNot(contains('embedding-runtime')));
   expect(aiResources, hasLength(2));
   final externalResource = configuredWorkloads.resources.singleWhere(
     (resource) =>
-        resource.id == aiResources.singleWhere((id) => id != 'worker'),
+        resource.id == aiResources.singleWhere((id) => id != 'stage:llm'),
   );
   expect(externalResource.label, contains(Uri.parse(fixtureUrl).host));
   await _finishReindex(tester, documents, saved.automaticBatchId);
@@ -524,16 +520,16 @@ Future<void> exerciseLLMProcessing(
       await tester.pumpAndSettle();
     }
   }
-  await _reveal(tester, find.byKey(const Key('llmProviderOllama')));
-  await tester.tap(find.byKey(const Key('llmProviderOllama')));
+  await _reveal(tester, find.byKey(const Key('llmBaseUrl')));
+  await tester.enterText(find.byKey(const Key('llmBaseUrl')), '');
   await _reveal(tester, find.byKey(const Key('llmModel')));
-  await tester.enterText(find.byKey(const Key('llmModel')), 'qwen3.5:4b');
+  await tester.enterText(find.byKey(const Key('llmModel')), '');
   await _reveal(tester, find.byKey(const Key('saveLLMSettings')));
   expect(
     settings.canSave,
     isTrue,
     reason:
-        'The disabled internal-provider draft must be saveable: ${settings.state.error}',
+        'The disabled, unconfigured draft must be saveable: ${settings.state.error}',
   );
   await tester.tap(find.byKey(const Key('saveLLMSettings')));
   await _wait(

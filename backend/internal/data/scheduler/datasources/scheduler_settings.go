@@ -29,7 +29,7 @@ func (s *SchedulerDataSource) UpdateSettings(ctx context.Context, actor m.Schedu
 		if err != nil {
 			return err
 		}
-		if settings.Revision != plan.ExpectedRevision || settings.OllamaQueueSize != plan.ExpectedQueueSize || len(settings.Resources) != len(plan.ExpectedResources) {
+		if settings.Revision != plan.ExpectedRevision || settings.EmbeddingQueueSize != plan.ExpectedQueueSize || len(settings.Resources) != len(plan.ExpectedResources) {
 			return m.ErrConflict
 		}
 		for i, resource := range settings.Resources {
@@ -130,11 +130,11 @@ func (s *SchedulerDataSource) settingsMetadata(ctx context.Context, tx pgx.Tx) (
 		return settings, err
 	}
 	settings.Pipelines = pipelines
-	if err = tx.QueryRow(ctx, `SELECT revision,ollama_queue_size FROM scheduler_settings WHERE singleton`).Scan(&settings.Revision, &settings.OllamaQueueSize); err != nil {
+	if err = tx.QueryRow(ctx, `SELECT revision,embedding_queue_size FROM scheduler_settings WHERE singleton`).Scan(&settings.Revision, &settings.EmbeddingQueueSize); err != nil {
 		return settings, err
 	}
 	rows, err := tx.Query(ctx, `SELECT r.id,r.label,r.concurrency_limit FROM (SELECT id,label,concurrency_limit FROM scheduler_resources UNION ALL SELECT 'stage:paperless','Paperless downloads',retrieval_concurrency FROM paperless_admission WHERE singleton) r
- ORDER BY CASE r.id WHEN 'worker' THEN 0 WHEN 'ollama' THEN 1 ELSE 2 END,r.label,r.id`)
+ ORDER BY CASE r.id WHEN 'worker' THEN 0 WHEN 'embedding-runtime' THEN 1 ELSE 2 END,r.label,r.id`)
 	if err != nil {
 		return settings, err
 	}
@@ -144,7 +144,7 @@ func (s *SchedulerDataSource) settingsMetadata(ctx context.Context, tx pgx.Tx) (
 		if err = rows.Scan(&resource.ID, &resource.Label, &resource.Limit); err != nil {
 			return settings, err
 		}
-		resource.MaximumLimit = m.SchedulerResourceMaximum(resource.ID, settings.OllamaQueueSize)
+		resource.MaximumLimit = m.SchedulerResourceMaximum(resource.ID, settings.EmbeddingQueueSize)
 		settings.Resources = append(settings.Resources, resource)
 	}
 	if err := rows.Err(); err != nil {
@@ -159,7 +159,7 @@ func (s *SchedulerDataSource) settingsMetadata(ctx context.Context, tx pgx.Tx) (
 		switch id {
 		case "worker":
 			return 0
-		case "ollama":
+		case "embedding-runtime":
 			return 1
 		default:
 			return 2

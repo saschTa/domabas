@@ -159,7 +159,10 @@ async function emailSmoke(base: string, token: string, signal: AbortSignal): Pro
   const provider = await json(`${base}/api/v1/email-providers`, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body: JSON.stringify({ id: providerID, label: "Compose key persistence", endpoint: "imap.example.test", port: 993, mailbox: "INBOX", username: "compose-mailbox", password: "compose-fixture-password", enabled: false, intervalMinutes: 15, maxAgeDays: 30, pageSize: 50 }) });
   if (provider.credentialState !== "ready" || provider.username !== "compose-mailbox") throw new Error("Automatic email key could not store mailbox credentials.");
   const configuration = await json(`${base}/api/v1/system/document-processing`, { headers });
-  if (configuration.manifestRevision !== 2 || configuration.extractionRevision !== "document-content-v2") throw new Error("Compose did not install the email-capable extraction manifest.");
+  if (configuration.manifestRevision !== 3 || configuration.extractionRevision !== "document-content-v2" ||
+      configuration.embeddingDigest !== "f7af6f66802f4df86eda10fe9bbcfc75c39562bed48ef6ace719a251cf1c2fdb") {
+    throw new Error("Compose did not install the expected extraction revision and Nomic GGUF embedding space.");
+  }
   const body = "Compose mailbox retention evidence.";
   const original = new TextEncoder().encode(`From: sender@example.test\r\nTo: receiver@example.test\r\nSubject: Compose email\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}\r\n`);
   const digest = new Bun.CryptoHasher("sha256").update(original).digest("hex");
@@ -286,7 +289,7 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
   const temporary = await mkdtemp(join(tmpdir(), "domabas-compose-smoke-"));
   const cachedNetwork = join(temporary, "cached-models.yaml");
   const dockerHost = await dockerTestHost(scope);
-  const env: Environment = environment({ ...process.env, COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", WEB_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", LLM_OLLAMA_PORT: "0", LLM_CREDENTIAL_KEY: "", EMAIL_CREDENTIAL_KEYS: "", EMAIL_CREDENTIAL_ACTIVE_KEY_ID: "", EMAIL_IMAP_ALLOWED_HOSTS: "", EMAIL_IMAP_CA_FILE: "", PAPERLESS_CREDENTIAL_KEY: "" });
+  const env: Environment = environment({ ...process.env, COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", WEB_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", EMBEDDING_DOWNLOAD_ALLOWED: "false", EMBEDDING_MODEL_EXTERNAL_VOLUME: "true", EMBEDDING_MODEL_VOLUME: process.env.TEST_EMBEDDING_MODEL_VOLUME ?? "domabas_embedding_models", LLM_CREDENTIAL_KEY: "", EMAIL_CREDENTIAL_KEYS: "", EMAIL_CREDENTIAL_ACTIVE_KEY_ID: "", EMAIL_IMAP_ALLOWED_HOSTS: "", EMAIL_IMAP_CA_FILE: "", PAPERLESS_CREDENTIAL_KEY: "" });
   const credentialFingerprint = async (): Promise<string> => {
     const fingerprints: string[] = [];
     for (const name of ["paperless", "email", "llm"]) {
@@ -303,7 +306,7 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
   let passed = false;
   await mkdir(join(ROOT, ".logs"), { recursive: true });
   await withCleanup(async () => {
-    await Bun.write(cachedNetwork, "services:\n  ollama:\n    networks: [cached_models]\n  document-processor:\n    networks: [cached_models]\n  backend:\n    networks: [default, cached_models]\nnetworks:\n  cached_models:\n    internal: true\n");
+    await Bun.write(cachedNetwork, "services:\n  model-init:\n    networks: [cached_models]\n  embeddings:\n    networks: [cached_models]\n  document-processor:\n    networks: [cached_models]\n  backend:\n    networks: [default, cached_models]\nnetworks:\n  cached_models:\n    internal: true\n");
     await compose(scope, ["up", "--build", "--wait", "--wait-timeout", "900"], env);
     const port = await publishedPort(scope, "web", 8080, env), base = `http://${dockerHost}:${port}`;
     for (const path of ["/", "/flutter_bootstrap.js", "/main.dart.js", "/readyz"]) {
@@ -406,7 +409,7 @@ export async function runSmoke(scope: ProcessScope): Promise<void> {
       const logs = await captureCompose(cleanup, ["logs", "--no-color"], env);
       await Bun.write(join(ROOT, ".logs/compose-smoke.log"), logs.stdout + logs.stderr);
       if (!passed) {
-        const diagnostics = await captureCompose(cleanup, ["logs", "--no-color", "--tail", "60", "document-processor", "ollama", "backend", "web"], env);
+        const diagnostics = await captureCompose(cleanup, ["logs", "--no-color", "--tail", "60", "document-processor", "embeddings", "model-init", "backend", "web"], env);
         console.error(diagnostics.stdout + diagnostics.stderr);
       }
     } finally {

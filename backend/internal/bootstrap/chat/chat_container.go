@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"log/slog"
 	"path/filepath"
 
 	"github.com/domabas/domabas/backend/internal/data/chat/datasources"
@@ -19,21 +18,15 @@ type ChatContainer struct {
 	provider  *provider.ChatProviderRemoteDataSource
 }
 
-func NewChatContainer(ctx context.Context, db *postgres.PostgresDatabase, authority interfaces.ChatAuthority, scheduler datasources.ChatResourceScheduler, storageRoot, origin, queue string, logger *slog.Logger) (*ChatContainer, error) {
-	if origin == "" {
-		origin = "http://127.0.0.1:11435"
-	}
+func NewChatContainer(ctx context.Context, db *postgres.PostgresDatabase, authority interfaces.ChatAuthority, scheduler datasources.ChatResourceScheduler, storageRoot, queue string) (*ChatContainer, error) {
 	source, err := datasources.NewChatDataSource(ctx, db, filepath.Join(storageRoot, ".secrets", "chat.key"), queue, scheduler)
 	if err != nil {
 		return nil, err
 	}
-	remote, err := provider.NewChatProviderRemoteDataSource(origin, logger)
-	if err != nil {
-		return nil, err
-	}
+	remote := provider.NewChatProviderRemoteDataSource()
 	repository := repos.NewChatRepository(source)
 	execution := services.NewChatExecutionService(repository, remote, authority)
-	return &ChatContainer{service: services.NewChatService(repository, remote, remote, authority), execution: execution, provider: remote}, nil
+	return &ChatContainer{service: services.NewChatService(repository, authority), execution: execution, provider: remote}, nil
 }
 func (c *ChatContainer) Service() *services.ChatService            { return c.service }
 func (c *ChatContainer) Execution() *services.ChatExecutionService { return c.execution }

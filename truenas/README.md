@@ -1,7 +1,7 @@
 # Domabas on TrueNAS
 
 These complete Docker Compose examples target **TrueNAS 25.10 (Goldeye) and
-later**. They include the web app, backend, PostgreSQL, Ollama and the private document processor. The backend runs the Go background workers. Follow the steps below, then paste one complete file into
+later**. They include the web app, backend, PostgreSQL, llama.cpp embeddings and the private document processor. The backend runs the Go background workers. Follow the steps below, then paste one complete file into
 **Apps > Discover Apps > Install via YAML**.
 
 The templates use volume subpaths supported by the required TrueNAS release.
@@ -10,7 +10,7 @@ Compose 2.20.2+. Steady checks run every 30 seconds; see
 [health-check behavior and backend image requirements](../docs/development/compose.md#health-checks).
 
 This guide is for NAS operators. For a small home library, start with **4 CPU
-cores and 5 GiB available RAM**, plus memory for Ollama models, TrueNAS and other
+cores and 5 GiB available RAM**, plus memory for the embedding service, TrueNAS and other
 apps. You also need a dedicated dataset and usable Domabas image references as
 described below. A GPU and HTTPS proxy are optional.
 
@@ -20,17 +20,16 @@ described below. A GPU and HTTPS proxy are optional.
 
 ## 1. Choose a file
 
-| File | Ollama runtime | Dataset path to set | Default web port |
+| File | Embedding runtime | Dataset path to set | Default web port |
 | --- | --- | --- | --- |
-| [compose.cpu.yaml](compose.cpu.yaml) | CPU; no GPU access | `/mnt/POOL/domabas` | `8088` |
-| [compose.cuda.yaml](compose.cuda.yaml) | NVIDIA/CUDA | `/mnt/POOL/domabas` | `8088` |
-| [compose.rocm.yaml](compose.rocm.yaml) | AMD/ROCm | `/mnt/POOL/domabas` | `8088` |
+| [compose.cpu.yaml](compose.cpu.yaml) | CPU | `/mnt/POOL/domabas` | `8088` |
+| [compose.vulkan.yaml](compose.vulkan.yaml) | Linux Vulkan | `/mnt/POOL/domabas` | `8088` |
 
 Each variant is standalone and uses UID/GID `950:950` with the same six storage directories.
 
-**Published installations.** Download `compose.cpu.yaml`, `compose.cuda.yaml` or `compose.rocm.yaml` from the assets of a release that includes the native Go worker. Each release file pins all four Domabas images by digest for Linux AMD64. For the earlier stack pinned to v0.0.10, use the [archived templates and guide](https://github.com/saschTa/domabas/tree/6ae24a388b901ee8e0df1c74a83807de573319e8/truenas).
+**Published installations.** Choose the CPU or Vulkan asset from a release that includes llama.cpp. Each asset pins that release's four Domabas images by digest for Linux AMD64. Older releases require their own matching configuration.
 
-**Testing this checkout before release.** The three files in this directory use local image tags. On the Docker engine used by TrueNAS, build the four images from this checkout, or build them on another host and transfer them with `docker image save` and `docker image load`. From the repository root, run:
+**Testing this checkout before release.** The two templates in this directory use local image tags. On the Docker engine used by TrueNAS, build the four images from this checkout, or build them on another host and transfer them with `docker image save` and `docker image load`. From the repository root, run:
 
 ```sh
 docker build --platform linux/amd64 -t domabas-init:native-local -f infra/init/Dockerfile .
@@ -82,7 +81,7 @@ modes before storage consumers start:
 | `documents` | Backend `/data/documents` | `950:950` | `0700` |
 | `secrets` | Backend `/var/lib/domabas/secrets` | `950:950` | `0700` |
 | `tesseract` | Processor `/models/tesseract` | `950:950` | `0700` |
-| `ollama` | Ollama `/home/ollama/.ollama`; processor `/models/ollama` read-only | `950:950` | `0755` |
+| `embedding` | Model initializer writes here. The embedding server and processor mount `/models/embedding` read-only. | `950:950` | `0755` |
 
 You do not need to create these six directories for a new installation. The
 initializer does not create ZFS datasets, change owners or recursively modify
@@ -92,13 +91,12 @@ attention if they prevent access.
 
 The `domabas-storage` Docker volume points to the selected host dataset. Each
 service mounts only its required subdirectories. Keep the container paths and
-subdirectory names unchanged. Ollama's `HOME` and `OLLAMA_MODELS` settings keep
-its cache writable as user `950`; the processor sees the same models read-only.
+subdirectory names unchanged. The model initializer runs as UID 950 and validates the pinned GGUF.
 The web service’s temporary writable directories also match this user.
 
 ## 3. Fill in your settings
 
-Keep a private copy of the chosen template for your credentials. For a release installation, copy the downloaded release asset. For a source build, the following command copies the CPU template from the checkout root. Substitute `cuda` or `rocm` for the GPU variants.
+Keep a private copy of the chosen template for your credentials. For a release installation, copy the downloaded release asset. For a source build, the following command copies the CPU template from the checkout root. Use `vulkan` for the GPU template.
 
 ```sh
 (
@@ -127,8 +125,8 @@ In the private copy, edit `x-settings` at the top. Leave the YAML anchor names
 | `postgres_password` | Separate password for the Domabas database role |
 | `public_origin` | Browser HTTP or HTTPS origin, such as `http://192.168.0.230:8088` or `https://documents.example.com`; include a non-default port if used, with no path or trailing slash |
 | `web_bind_address`, `web_port` | NAS address and host port reached by your browser or proxy; `0.0.0.0` binds all IPv4 interfaces |
-| `ollama_max_queue` | Ollama queue budget; default `128`. Keep it consistent across Ollama, backend and processor. Current source builds require at least `2` and limit shared Ollama jobs to half this value. |
-| `gpu_render_gid`, `gpu_video_gid` | ROCm example only: numeric GPU device group IDs from step 4 |
+| `embedding_queue_size` | Embedding admission budget, default 128. Background slots are capped at half this value. |
+| `render_device`, `render_group` | Vulkan only. Render node mapping and numeric owning group from step 4. |
 
 Both passwords start empty and must be filled. Generate a different password
 for each role with a password manager; 64-character hexadecimal passwords avoid
@@ -143,7 +141,7 @@ Check your private copy without printing resolved credentials:
 docker compose -f truenas/compose.cpu.local.yaml config --quiet
 ```
 
-Use the matching filename for CUDA or ROCm. This validates syntax only; passwords
+Use the Vulkan filename for GPU embeddings. This validates syntax only; passwords
 and dataset settings must still be filled in, and the NAS must be able to pull
 the images before deployment.
 
@@ -158,96 +156,14 @@ Open **Admin settings → Workload limits** to inspect active jobs and set limit
 
 ## 4. Check your GPU on the host
 
-Run the commands in this step in the **TrueNAS host shell or over SSH**, before
-installing. CPU users can skip to step 5.
+For the CPU template, continue to deployment. The Vulkan template requires a working Linux Vulkan driver and an accessible GPU render node. In the host shell, inspect the available nodes and obtain the numeric group for the chosen GPU.
 
-### AMD / ROCm
-
-First, identify the GPU behind each render device:
-
-```bash
-ls -l /dev/kfd /dev/dri/
-
-for node in /sys/class/drm/renderD*; do
-  printf '\n%s\n' "/dev/dri/$(basename "$node")"
-  lspci -Dnnk -s "$(basename "$(readlink -f "$node/device")")"
-done
+```sh
+ls -l /dev/dri/renderD*
+stat -c '%n %g' /dev/dri/renderD128
 ```
 
-Look for your AMD GPU and `Kernel driver in use: amdgpu`. `/dev/kfd` must also
-exist. If a required device is missing, investigate host GPU/driver support
-before changing container permissions.
-
-Next, get the numeric device group IDs:
-
-```bash
-stat -c '%n mode=%a uid=%u gid=%g group=%G' \
-  /dev/kfd /dev/dri/card* /dev/dri/renderD*
-```
-
-Example device permissions:
-
-| Device | Mode | Owner | Group |
-| --- | --- | --- | --- |
-| `/dev/kfd` | `660` | root (`0`) | render (`107`) |
-| `/dev/dri/renderD128` | `660` | root (`0`) | render (`107`) |
-| `/dev/dri/card0` | `660` | root (`0`) | video (`44`) |
-
-These IDs are examples, not universal defaults. Set `gpu_render_gid` and
-`gpu_video_gid` in `compose.rocm.yaml` to your host's values. The example already
-passes them to Ollama through `group_add`. If `/dev/kfd` has a different owning
-group from the render node, add that numeric GID to `group_add` as well.
-
-With those example group IDs, the ROCm configuration resolves to these Ollama settings:
-
-```yaml
-    user: "950:950"
-    group_add:
-      - "107"
-      - "44"
-    devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
-```
-
-Mapping devices makes them visible; supplemental groups grant the non-root
-process permission to use them. Use host numeric GIDs because group names
-inside the image can differ. See [Docker group settings](https://docs.docker.com/reference/compose-file/services/#group_add).
-
-Mapping `/dev/dri` exposes all its GPUs. If you need only one, identify its
-render node above, then replace that directory mapping with, for example,
-`/dev/dri/renderD128:/dev/dri/renderD128`. Keep `/dev/kfd:/dev/kfd`.
-Recheck the node after hardware changes. See [AMD device mapping](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/how-to/docker.html).
-
-Leave `HSA_OVERRIDE_GFX_VERSION` unset initially. It changes the architecture
-reported to ROCm, not which GPU is selected.
-Automatic detection is the starting point, not a guarantee of compatibility
-with every host driver. See [AMD specifications](https://rocm.docs.amd.com/en/latest/reference/gpu-specs.html)
-and [Ollama hardware support](https://docs.ollama.com/gpu).
-
-### NVIDIA / CUDA
-
-Enable NVIDIA drivers in TrueNAS and check host detection:
-
-```bash
-nvidia-smi -L
-```
-
-Use a GPU supported by the installed TrueNAS driver and Ollama. Check the
-[TrueNAS 25.10 GPU notes](https://www.truenas.com/docs/scale/25.10/gettingstarted/versionnotes/#nvidia-gpu-support)
-for that release's driver requirements.
-
-The CUDA example gives Ollama `gpus: all`. To select one NVIDIA GPU, replace
-that setting with its UUID from `nvidia-smi -L`:
-
-```yaml
-    gpus:
-      - driver: nvidia
-        device_ids: ["GPU-YOUR-GPU-UUID"]
-```
-
-Only Ollama receives GPU access in either GPU example. The CPU example has no
-GPU mapping or device groups.
+Set `render_device` to a host-to-container mapping of this node and set `render_group` to its numeric group. Only the embedding container receives GPU access. The public website and document processor use the same configuration as the CPU template.
 
 ## 5. Deploy the app
 
@@ -345,78 +261,18 @@ and [Docker startup health checks](https://docs.docker.com/reference/dockerfile/
 
 ## 6. Verify container access and actual GPU use
 
-Find the running Ollama container from the **TrueNAS host shell**:
+Check that `model-init` completed and the document processor, embedding server, backend and web containers are healthy. Upload a small document, wait for searchable publication, then run a semantic search. On Vulkan installations, inspect the embedding service's startup logs for the selected GPU and the number of layers offloaded. Run the following in the host shell to locate its container.
 
-```bash
-sudo docker ps --filter label=com.docker.compose.service=ollama \
-  --format 'table {{.Names}}\t{{.Image}}'
+```sh
+sudo docker ps --filter label=com.docker.compose.service=embeddings
+sudo docker logs --tail 200 EMBEDDING_CONTAINER_NAME
 ```
 
-Choose the container belonging to your Domabas app and set its exact name:
-
-```bash
-OLLAMA_CONTAINER='replace-with-container-name'
-```
-
-Inspect its configured user, groups and GPU mappings:
-
-```bash
-sudo docker inspect "$OLLAMA_CONTAINER" \
-  --format 'User={{.Config.User}} Groups={{json .HostConfig.GroupAdd}} Devices={{json .HostConfig.Devices}} GPURequests={{json .HostConfig.DeviceRequests}}'
-```
-
-For AMD, check access as the actual configured user. Do not override it to root
-for this check:
-
-```bash
-sudo docker exec "$OLLAMA_CONTAINER" sh -c '
-id
-ls -ln /dev/kfd /dev/dri/
-for device in /dev/kfd /dev/dri/renderD*; do
-  if [ -r "$device" ] && [ -w "$device" ]; then
-    echo "ACCESS OK: $device"
-  else
-    echo "ACCESS FAILED: $device"
-  fi
-done
-'
-```
-
-Expect UID/GID `950:950`, your added groups and `ACCESS OK` for `/dev/kfd` and
-the intended render nodes. Permission checks establish file access; model
-execution is the next check. For NVIDIA, check container visibility with:
-
-```bash
-sudo docker exec "$OLLAMA_CONTAINER" nvidia-smi -L
-```
-
-Trigger model processing in Domabas, then run:
-
-```bash
-sudo docker exec "$OLLAMA_CONTAINER" ollama ps
-
-sudo docker logs --tail 300 "$OLLAMA_CONTAINER" 2>&1 \
-  grep -Ei 'rocm|hip|gpu|gfx|offload|permission|denied|error'
-```
-
-Read the `PROCESSOR` column: `100% GPU` means the loaded model is entirely on
-the GPU; a CPU/GPU split means partial offload; `100% CPU` means CPU-only.
-Empty output means no model is currently loaded. CPU-only is expected for the
-CPU example. See the [Ollama FAQ](https://docs.ollama.com/faq#how-can-i-tell-if-my-model-was-loaded-onto-the-gpu).
-
-The `ollama list` health check proves the service responds, not that inference
-uses the GPU. If devices are accessible but inference stays on CPU, inspect
-the logs for the selected GPU, architecture, driver errors and available memory.
+For permission errors, check the selected render node and its numeric group against your template. The CPU template uses the same GGUF model.
 
 ## Resources
 
-Start with four CPU cores and **5 GiB of available RAM** for a small home library,
-plus memory for Ollama models when using AI. Include the search embedding model
-even when optional AI is disabled. Add capacity for TrueNAS, ZFS and other apps.
-Large documents, bulk imports and higher concurrency need more headroom; this
-starting recommendation does not cover every simultaneous service peak.
-
-The templates cap PostgreSQL and the backend at 2 GiB each, the processor at 4 GiB, web at 512 MiB and Ollama at 8 GiB. The backend Go runtime has a 1536 MiB soft target. These limits total 8.5 GiB before Ollama and 16.5 GiB with it. Actual usage depends on the workload.
+Allow memory for local OCR, PostgreSQL, the backend and embeddings alongside TrueNAS, ZFS and other apps. The templates limit PostgreSQL, the backend and embeddings to 2 GiB each, the processor to 4 GiB and web to 512 MiB. The total ceiling is 10.5 GiB. The Go soft target is 1536 MiB.
 
 The processor's 2 GiB `/tmp` tmpfs shares its container budget when used;
 these examples set `TMPDIR=/var/tmp` for disk-backed OCR and PDF compilation
@@ -426,7 +282,7 @@ system RAM. See the [resource guide](../docs/development/resources.md) for
 the complete budget, scratch requirements and commands to identify OOM kills
 and record memory during repeated imports or AI chat turns.
 
-Start with one Ollama slot under **Admin settings → Workload limits**. Ingestion and Paperless downloads can run concurrently while model calls are limited. See [resource scheduling](../docs/arch/backend/resource-scheduler.md).
+Start with one local embedding slot under **Admin settings → Workload limits**. External document AI and chat acquire independent provider slots. See [resource scheduling](../docs/arch/backend/resource-scheduler.md).
 The processor health check allows ten minutes for initial preparation; retained
 caches avoid repeated downloads.
 
@@ -439,17 +295,13 @@ one `dataset_path` and UID/GID `950:950` throughout.
 1. Stop the existing app and take a consistent snapshot or backup of all six
    stores and the completed YAML before changing ownership or paths.
 2. Locate the existing `postgres`, `ingestion`, `documents`, `secrets`,
-   `tesseract` and `ollama` stores. They must appear under the selected dataset
-   with those names. If the old paths were elsewhere, prepare a storage
-   migration while the app is stopped; changing YAML does not move files.
+   and `tesseract` stores. Keep these under the selected dataset with their existing names. If the paths differ, migrate the files while the app is stopped.
 3. In TrueNAS, correct ownership to `950:950` for those stores and their
    existing contents, including PostgreSQL's nested data and saved secret keys.
    Preserve file permissions within them; do not apply one directory mode to
    every file. Resolve incompatible inherited ACLs on this app's storage.
 4. Preserve the existing passwords, image versions, ports and public origin.
-   Keep the Ollama cache contents: its container path changes from
-   `/root/.ollama` to `/home/ollama/.ollama`, but its host `ollama/models`
-   directory remains the same.
+   Model initialization prepares the new `embedding` directory. The old model cache can remain in place. Configure an external provider to use generative AI.
 5. Redeploy and repeat step 6. If initialization reports an ownership mismatch,
    correct the indicated path in TrueNAS. The initializer only checks and
    adjusts the six directory roots; it does not migrate their descendants.
@@ -487,6 +339,4 @@ Syntax validation does not establish successful NAS startup or GPU inference.
 Runtime verification remains a separate step. The [testing guide](../docs/development/testing.md)
 explains which checks establish syntax, compilation and actual runtime behavior.
 
-See also the [Compose operations guide](../docs/development/compose.md),
-[TrueNAS custom app instructions](https://apps.truenas.com/managing-apps/installing-custom-apps/)
-and [Ollama Docker setup](https://docs.ollama.com/docker).
+See the [Compose operations guide](../docs/development/compose.md) and [TrueNAS custom app instructions](https://apps.truenas.com/managing-apps/installing-custom-apps/).

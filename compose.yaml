@@ -41,22 +41,25 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
-  ollama:
-    image: ollama/ollama:0.34.1@sha256:0c0a83210471fb50226bcdc2d6611d20ab13ae87e024cc304c94a6a5765c5e65
+  model-init:
+    <<: *init
+    command: [embedding-model]
     environment:
-      OLLAMA_HOST: 0.0.0.0:11434
-      OLLAMA_NUM_PARALLEL: "1"
-      OLLAMA_MAX_LOADED_MODELS: "2"
-      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:-128}
-      OLLAMA_KEEP_ALIVE: -1
-    ports:
-      - "${PRIVATE_BIND_ADDRESS:-127.0.0.1}:${LLM_OLLAMA_PORT:-11435}:11434"
+      EMBEDDING_DOWNLOAD_ALLOWED: ${EMBEDDING_DOWNLOAD_ALLOWED:-true}
     volumes:
-      - ollama_models:/root/.ollama
-    cpus: ${OLLAMA_CPUS:-4}
-    mem_limit: ${OLLAMA_MEMORY_LIMIT:-8g}
+      - embedding_models:/models/embedding
+
+  embeddings:
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:5b43086e3ba7ea5794d72904654f6cd41224a9b1c6ac0398f4940ee380d30f23
+    command: ["--model", "/models/embedding/nomic-embed-text-v1.5.f16.gguf", "--alias", "nomic-embed-text:v1.5", "--embedding", "--pooling", "mean", "--host", "0.0.0.0", "--port", "8080", "--ctx-size", "2048", "--batch-size", "2048", "--ubatch-size", "2048", "--parallel", "1"]
+    depends_on:
+      model-init: {condition: service_completed_successfully}
+    volumes:
+      - embedding_models:/models/embedding:ro
+    cpus: ${EMBEDDING_CPUS:-4}
+    mem_limit: ${EMBEDDING_MEMORY_LIMIT:-2g}
     healthcheck:
-      test: [CMD, ollama, list]
+      test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8080/health]
       interval: 30s
       start_interval: 3s
       timeout: 5s
@@ -71,21 +74,21 @@ services:
     environment:
       HTTP_ADDR: 0.0.0.0:8091
       MODEL_CACHE_ROOT: /models/tesseract
-      OLLAMA_CACHE_ROOT: /models/ollama/models
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:-128}
+      EMBEDDING_MODEL_PATH: /models/embedding/nomic-embed-text-v1.5.f16.gguf
+      EMBEDDING_URL: http://embeddings:8080
+      EMBEDDING_QUEUE_SIZE: ${EMBEDDING_QUEUE_SIZE:-128}
     ports:
       - "${PRIVATE_BIND_ADDRESS:-127.0.0.1}:${DOCUMENT_PROCESSOR_PORT:-8091}:8091"
     volumes:
       - tesseract_models:/models/tesseract
-      - ollama_models:/models/ollama:ro
+      - embedding_models:/models/embedding:ro
     tmpfs:
       - /tmp:size=2147483648,mode=1777
     cpus: ${DOCUMENT_PROCESSOR_CPUS:-4}
     mem_limit: ${DOCUMENT_PROCESSOR_MEMORY_LIMIT:-4g}
     pids_limit: 256
     depends_on:
-      ollama: {condition: service_healthy}
+      embeddings: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8091/readyz]
       interval: 30s
@@ -108,10 +111,9 @@ services:
       HTTP_ADDR: 0.0.0.0:8080
       GOMEMLIMIT: ${BACKEND_GOMEMLIMIT:-1536MiB}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:7357,http://127.0.0.1:7357}
-      LLM_OLLAMA_URL: http://ollama:11434
       DOCUMENT_INGESTION_CONCURRENCY: ${DOCUMENT_INGESTION_CONCURRENCY:-1}
       DOCUMENT_AI_CONCURRENCY: ${DOCUMENT_AI_CONCURRENCY:-1}
-      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:-128}
+      EMBEDDING_QUEUE_SIZE: ${EMBEDDING_QUEUE_SIZE:-128}
       LLM_CREDENTIAL_KEY: ${LLM_CREDENTIAL_KEY:-}
       LLM_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/llm.key
       DOCUMENT_PROCESSOR_URL: http://document-processor:8091
@@ -163,4 +165,6 @@ volumes:
   document_storage:
   credential_keys:
   tesseract_models:
-  ollama_models:
+  embedding_models:
+    name: ${EMBEDDING_MODEL_VOLUME:-${COMPOSE_PROJECT_NAME:-domabas}_embedding_models}
+    external: ${EMBEDDING_MODEL_EXTERNAL_VOLUME:-false}

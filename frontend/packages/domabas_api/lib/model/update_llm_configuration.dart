@@ -13,7 +13,6 @@ class UpdateLLMConfiguration {
     this.propertyThinkingEnabled,
     this.invoiceThinkingEnabled,
     this.lmStudioCompatibility,
-    this.contextLength,
     required this.enabled,
     this.invoiceEnabled,
     required this.provider,
@@ -28,8 +27,6 @@ class UpdateLLMConfiguration {
   bool? invoiceThinkingEnabled;
 
   bool? lmStudioCompatibility;
-
-  int? contextLength;
 
   bool enabled;
 
@@ -50,7 +47,6 @@ class UpdateLLMConfiguration {
     other.propertyThinkingEnabled == propertyThinkingEnabled &&
     other.invoiceThinkingEnabled == invoiceThinkingEnabled &&
     other.lmStudioCompatibility == lmStudioCompatibility &&
-    other.contextLength == contextLength &&
     other.enabled == enabled &&
     other.invoiceEnabled == invoiceEnabled &&
     other.provider == provider &&
@@ -65,7 +61,6 @@ class UpdateLLMConfiguration {
     (propertyThinkingEnabled == null ? 0 : propertyThinkingEnabled!.hashCode) +
     (invoiceThinkingEnabled == null ? 0 : invoiceThinkingEnabled!.hashCode) +
     (lmStudioCompatibility == null ? 0 : lmStudioCompatibility!.hashCode) +
-    (contextLength == null ? 0 : contextLength!.hashCode) +
     (enabled.hashCode) +
     (invoiceEnabled == null ? 0 : invoiceEnabled!.hashCode) +
     (provider.hashCode) +
@@ -75,7 +70,7 @@ class UpdateLLMConfiguration {
     (clearApiKey.hashCode);
 
   @override
-  String toString() => 'UpdateLLMConfiguration[propertyThinkingEnabled=$propertyThinkingEnabled, invoiceThinkingEnabled=$invoiceThinkingEnabled, lmStudioCompatibility=$lmStudioCompatibility, contextLength=$contextLength, enabled=$enabled, invoiceEnabled=$invoiceEnabled, provider=$provider, model=$model, baseUrl=$baseUrl, apiKey=$apiKey, clearApiKey=$clearApiKey]';
+  String toString() => 'UpdateLLMConfiguration[propertyThinkingEnabled=$propertyThinkingEnabled, invoiceThinkingEnabled=$invoiceThinkingEnabled, lmStudioCompatibility=$lmStudioCompatibility, enabled=$enabled, invoiceEnabled=$invoiceEnabled, provider=$provider, model=$model, baseUrl=$baseUrl, apiKey=$apiKey, clearApiKey=$clearApiKey]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -93,11 +88,6 @@ class UpdateLLMConfiguration {
       json[r'lmStudioCompatibility'] = this.lmStudioCompatibility;
     } else {
       json[r'lmStudioCompatibility'] = null;
-    }
-    if (this.contextLength != null) {
-      json[r'contextLength'] = this.contextLength;
-    } else {
-      json[r'contextLength'] = null;
     }
       json[r'enabled'] = this.enabled;
     if (this.invoiceEnabled != null) {
@@ -138,7 +128,6 @@ class UpdateLLMConfiguration {
         propertyThinkingEnabled: mapValueOfType<bool>(json, r'propertyThinkingEnabled'),
         invoiceThinkingEnabled: mapValueOfType<bool>(json, r'invoiceThinkingEnabled'),
         lmStudioCompatibility: mapValueOfType<bool>(json, r'lmStudioCompatibility'),
-        contextLength: mapValueOfType<int>(json, r'contextLength'),
         enabled: mapValueOfType<bool>(json, r'enabled')!,
         invoiceEnabled: mapValueOfType<bool>(json, r'invoiceEnabled'),
         provider: UpdateLLMConfigurationProviderEnum.fromJson(json[r'provider'])!,
@@ -199,7 +188,6 @@ class UpdateLLMConfiguration {
 }
 
 enum UpdateLLMConfigurationProviderEnum {
-  ollama._(r'ollama'),
   openai._(r'openai'),
   ;
 
@@ -241,7 +229,6 @@ class UpdateLLMConfigurationProviderEnumTypeTransformer {
     }
     if (data != null) {
       switch (data) {
-        case r'ollama': return UpdateLLMConfigurationProviderEnum.ollama;
         case r'openai': return UpdateLLMConfigurationProviderEnum.openai;
         default:
           if (!allowNull) {

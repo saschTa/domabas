@@ -88,7 +88,7 @@ func independentEmailFixture(t *testing.T) (*pgxpool.Pool, *emailsources.EmailDa
 	if err != nil {
 		t.Fatal(err)
 	}
-	scheduler := schedulersources.NewSchedulerDataSource(database.Database(), 512, "http://ollama.test:11434")
+	scheduler := schedulersources.NewSchedulerDataSource(database.Database(), 512)
 	if err := scheduler.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}

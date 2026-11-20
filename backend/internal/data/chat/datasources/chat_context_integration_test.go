@@ -18,7 +18,7 @@ func TestChatContextSettingsOmissionAndAcceptedSnapshot(t *testing.T) {
 		t.Fatal("unexpected default", configuration, err)
 	}
 	requested := 65536
-	update := m.ChatConfigurationUpdate{ExpectedRevision: configuration.Revision, Enabled: true, Provider: "ollama", Model: configuration.Model, ContextLength: &requested}
+	update := m.ChatConfigurationUpdate{ExpectedRevision: configuration.Revision, Enabled: true, Provider: "openai", BaseURL: "https://first.test/v1", Model: configuration.Model, ContextLength: &requested}
 	configuration, err = f.source.UpdateConfiguration(ctx, f.actor, update)
 	if err != nil || configuration.ContextLength != requested || configuration.Revision != update.ExpectedRevision+1 {
 		t.Fatal(configuration, err)

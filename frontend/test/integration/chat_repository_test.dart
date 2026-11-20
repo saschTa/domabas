@@ -18,7 +18,6 @@ void main() {
     'model': 'chat-model',
     'baseUrl': 'https://example.com/v1',
     'hasApiKey': true,
-    'contextLength': 32768,
     'revision': 3,
   };
   final conversation = {
@@ -97,7 +96,6 @@ void main() {
     expect(requests.first.path, '/api/v1/chat/configuration');
     expect(requests[1].path, '/api/v1/system/chat/configuration');
     expect(requests[2].body!['expectedRevision'], 3);
-    expect(requests[2].body!['contextLength'], 32768);
     expect(requests[2].body!['apiKey'], isNull);
     expect(requests[3].body!['apiKey'], 'replacement');
     expect(requests[4].body!['clearApiKey'], isTrue);
@@ -128,20 +126,13 @@ void main() {
     }
   });
 
-  test('maps paginated history, messages, trusted source records and bounded model pages', () async {
+  test('maps paginated history, messages, trusted source records', () async {
     final paths = <Uri>[];
     respond = (request) async {
       paths.add(request.uri);
       request.response.write(
         jsonEncode(
-          request.uri.path.endsWith('/models')
-              ? {
-                  'items': [
-                    {'name': 'qwen3.5:4b'},
-                  ],
-                  'nextOffset': 40,
-                }
-              : request.uri.path.endsWith('/messages')
+          request.uri.path.endsWith('/messages')
               ? {
                   'items': [message],
                   'nextCursor': 'earlier',
@@ -161,11 +152,7 @@ void main() {
     expect(page.items.single.sources.single.documentId, 'document');
     expect(page.items.single.statusLabel, 'Answer ready');
     expect(page.nextCursor, 'earlier');
-    final models = await repository.models(offset: 20);
-    expect(models.items.single, 'qwen3.5:4b');
-    expect(models.nextOffset, 40);
     expect(paths[0].queryParameters, {'limit': '20', 'cursor': 'older'});
-    expect(paths[2].queryParameters, {'limit': '20', 'offset': '20'});
   });
 
   test('acceptance sends stable caller request IDs and cancel returns persisted status', () async {
@@ -239,55 +226,5 @@ void main() {
   test('malformed model response becomes safe domain failure', () async {
     respond = (request) async => request.response.write('{"enabled":true}');
     await expectLater(repository.configuration(), throwsA(isA<ChatFailure>()));
-  });
-  test(
-    'model context maps bounded metadata and preserves slash model query',
-    () async {
-      const model = 'publisher/model:latest';
-      respond = (request) async {
-        expect(request.uri.path, '/api/v1/system/chat/model-context');
-        expect(request.uri.queryParameters, {'model': model});
-        request.response.write(
-          jsonEncode({'model': model, 'maxContextLength': 8192}),
-        );
-      };
-      expect((await repository.modelContext(model)).maxContextLength, 8192);
-      for (final invalid in [
-        {'model': 'different', 'maxContextLength': 8192},
-        {'model': model, 'maxContextLength': 0},
-      ]) {
-        respond = (request) async =>
-            request.response.write(jsonEncode(invalid));
-        await expectLater(
-          repository.modelContext(model),
-          throwsA(isA<ChatFailure>()),
-        );
-      }
-    },
-  );
-  test('configuration preserves requested context and omits invalid external draft', () async {
-    final bodies = <Map<String, dynamic>>[];
-    respond = (request) async {
-      bodies.add(
-        jsonDecode(await utf8.decoder.bind(request).join())
-            as Map<String, dynamic>,
-      );
-      request.response.write(jsonEncode({...config, 'contextLength': 65536}));
-    };
-    final saved = await repository.updateConfiguration(
-      const ChatConfigurationDraft(contextLength: '65536'),
-      expectedRevision: 3,
-    );
-    expect(saved.contextLength, 65536);
-    expect(bodies.single['contextLength'], 65536);
-    await repository.updateConfiguration(
-      const ChatConfigurationDraft(
-        provider: 'openai',
-        baseUrl: 'https://example.com/v1',
-        contextLength: '',
-      ),
-      expectedRevision: 3,
-    );
-    expect(bodies.last['contextLength'], isNull);
   });
 }

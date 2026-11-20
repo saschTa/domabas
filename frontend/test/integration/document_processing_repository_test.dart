@@ -44,8 +44,8 @@ void main() {
   final scheduling = <String, Object?>{
     'ingestionConcurrency': 5,
     'aiConcurrency': 2,
-    'ollamaQueueSize': 11,
-    'ingestionConcurrencyMode': 'ollama_half_queue',
+    'embeddingQueueSize': 11,
+    'ingestionConcurrencyMode': 'embedding_half_queue',
     'aiConcurrencyMode': 'fixed',
     'providerStepRetries': 4,
     'priorityPolicy': 'ingestion_first',
@@ -171,35 +171,6 @@ void main() {
   });
 
   test(
-    'pipeline model context uses its own route and rejects mismatched metadata',
-    () async {
-      const model = 'publisher/model:latest';
-      respond = (request) async {
-        expect(
-          request.uri.path,
-          '/api/v1/system/document-processing/model-context',
-        );
-        expect(request.uri.queryParameters, {'model': model});
-        request.response.write(
-          jsonEncode({'model': model, 'maxContextLength': 8192}),
-        );
-      };
-      expect((await repository.modelContext(model)).maxContextLength, 8192);
-      for (final invalid in [
-        {'model': 'different', 'maxContextLength': 8192},
-        {'model': model, 'maxContextLength': 0},
-      ]) {
-        respond = (request) async =>
-            request.response.write(jsonEncode(invalid));
-        await expectLater(
-          repository.modelContext(model),
-          throwsA(isA<DocumentProcessingFailure>()),
-        );
-      }
-    },
-  );
-
-  test(
     'scheduling maps server limits and sources in namespace and admin reads',
     () async {
       respond = (request) async {
@@ -223,8 +194,8 @@ void main() {
       ]) {
         expect(policy?.ingestionConcurrency, 5);
         expect(policy?.aiConcurrency, 2);
-        expect(policy?.ollamaQueueSize, 11);
-        expect(policy?.ingestionConcurrencyMode, 'ollama_half_queue');
+        expect(policy?.embeddingQueueSize, 11);
+        expect(policy?.ingestionConcurrencyMode, 'embedding_half_queue');
         expect(policy?.aiConcurrencyMode, 'fixed');
         expect(policy?.providerStepRetries, 4);
         expect(policy?.priorityPolicy, 'ingestion_first');
@@ -383,14 +354,12 @@ void main() {
             'model': 'custom',
             'baseUrl': 'https://models.example/v1',
             'credentialConfigured': true,
-            'contextLength': 16384,
           },
         }),
       );
     };
     const draft = DocumentLLMSettingsDraft(
       enabled: true,
-      contextLength: '16384',
       provider: 'openai',
       model: 'custom',
       baseUrl: 'https://models.example/v1',
@@ -403,8 +372,6 @@ void main() {
     );
     expect(writes.single.containsKey('apiKey'), isFalse);
     expect(writes.single['provider'], 'openai');
-    expect(writes.single['contextLength'], 16384);
-    expect(saved.llm.contextLength, 16384);
     expect(saved.llm.credentialConfigured, isTrue);
     expect(saved.pipeline.configuration.propertyExtractionEnabled, isTrue);
     expect(saved.pipeline.configuration.propertyExtractionModel, 'custom');
@@ -440,25 +407,6 @@ void main() {
     );
     expect(writes.last['clearApiKey'], isTrue);
     expect(writes.last.containsKey('apiKey'), isFalse);
-    await repository.updateSystemConfiguration(
-      language: 'eng+deu',
-      segmentation: 'auto',
-      llm: draft.copyWith(
-        provider: 'ollama',
-        lmStudioCompatibility: true,
-        apiKey: 'not-for-local',
-        baseUrl: 'https://old.example/v1',
-      ),
-    );
-    expect(writes.last['baseUrl'], isEmpty);
-    expect(writes.last['lmStudioCompatibility'], isTrue);
-    expect(writes.last.containsKey('apiKey'), isFalse);
-    await repository.updateSystemConfiguration(
-      language: 'eng+deu',
-      segmentation: 'auto',
-      llm: draft.copyWith(contextLength: ''),
-    );
-    expect(writes.last.containsKey('contextLength'), isFalse);
   });
 
   test('older extraction settings default optional thinking and compatibility to off', () async {
@@ -472,7 +420,6 @@ void main() {
           'model': 'custom',
           'baseUrl': 'http://127.0.0.1:1234/v1',
           'credentialConfigured': false,
-          'contextLength': 32768,
         },
       }),
     );
@@ -523,7 +470,6 @@ void main() {
           'model': 'custom',
           'baseUrl': 'https://private-key@example.com/v1',
           'credentialConfigured': true,
-          'contextLength': 32768,
         },
       }),
     );

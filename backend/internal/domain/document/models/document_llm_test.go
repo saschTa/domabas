@@ -8,7 +8,7 @@ import (
 
 func TestLMStudioCompatibilityKeepsOldSnapshotsAndManifestIdentity(t *testing.T) {
 	c := DefaultConfiguration()
-	c.LLM.Provider, c.LLM.BaseURL = "openai", "http://model.test/v1"
+	c.LLM.Provider, c.LLM.Model, c.LLM.BaseURL = "openai", "fixture", "http://model.test/v1"
 	before, err := c.CanonicalFingerprint()
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func TestLMStudioCompatibilityKeepsOldSnapshotsAndManifestIdentity(t *testing.T)
 
 func TestLLMDefaultsValidationAndFingerprintCompatibility(t *testing.T) {
 	base := DefaultConfiguration()
-	if base.LLM.Enabled || base.LLM.InvoiceExtractionEnabled() || base.LLM.Defaults().Model != "qwen3.5:4b" {
+	if base.LLM.Enabled || base.LLM.InvoiceExtractionEnabled() || base.LLM.Defaults().Model != "" {
 		t.Fatal("optional extraction must default off")
 	}
 	base.LLM = DocumentLLMConfiguration{}
@@ -106,16 +106,16 @@ func TestLLMContextValidationAndSnapshotDefaults(t *testing.T) {
 		t.Fatal("new and historical context defaults lost their distinct meaning")
 	}
 	for _, tokens := range []int{-1, 0, 1023, 1048577} {
-		if _, err := (DocumentLLMConfigurationUpdate{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: &tokens}).Normalize(); err == nil {
+		if _, err := (DocumentLLMConfigurationUpdate{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1", ContextLength: &tokens}).Normalize(); err == nil {
 			t.Fatalf("invalid context update accepted: %d", tokens)
 		}
 	}
 	for _, tokens := range []int{1024, 32768, 1048576} {
-		if _, err := (DocumentLLMConfigurationUpdate{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: &tokens}).Normalize(); err != nil {
+		if _, err := (DocumentLLMConfigurationUpdate{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1", ContextLength: &tokens}).Normalize(); err != nil {
 			t.Fatalf("valid context update rejected: %d %v", tokens, err)
 		}
 	}
-	if _, err := (DocumentLLMConfigurationUpdate{Provider: "ollama", Model: "qwen3.5:4b"}).Normalize(); err != nil {
+	if _, err := (DocumentLLMConfigurationUpdate{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}).Normalize(); err != nil {
 		t.Fatal("old client omission rejected", err)
 	}
 }
@@ -124,6 +124,7 @@ func TestIndependentInvoiceSettingsPreserveLegacyIdentity(t *testing.T) {
 	fingerprints := map[string]bool{}
 	for _, properties := range []bool{false, true} {
 		legacy := DefaultConfiguration()
+		legacy.LLM.Model, legacy.LLM.BaseURL = "fixture", "https://provider.test/v1"
 		legacy.LLM.Enabled = properties
 		legacyFingerprint, err := legacy.CanonicalFingerprint()
 		if err != nil {

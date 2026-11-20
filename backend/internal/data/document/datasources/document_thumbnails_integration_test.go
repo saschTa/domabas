@@ -44,7 +44,7 @@ func newThumbnailFixture(t *testing.T) *thumbnailFixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { conn.Close(context.Background()) })
-	sched := scheduler.NewSchedulerDataSource(db.Database(), 128, "http://ollama.test:11434")
+	sched := scheduler.NewSchedulerDataSource(db.Database(), 128)
 	if err = sched.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}

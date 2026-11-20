@@ -11,7 +11,6 @@ part of openapi.api;
 class ChatConfiguration {
   ChatConfiguration({
     this.thinkingEnabled = false,
-    required this.contextLength,
     required this.enabled,
     required this.provider,
     required this.model,
@@ -21,8 +20,6 @@ class ChatConfiguration {
   });
 
   bool thinkingEnabled;
-
-  int contextLength;
 
   bool enabled;
 
@@ -39,7 +36,6 @@ class ChatConfiguration {
   @override
   bool operator ==(Object other) => identical(this, other) || other is ChatConfiguration &&
     other.thinkingEnabled == thinkingEnabled &&
-    other.contextLength == contextLength &&
     other.enabled == enabled &&
     other.provider == provider &&
     other.model == model &&
@@ -51,7 +47,6 @@ class ChatConfiguration {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (thinkingEnabled.hashCode) +
-    (contextLength.hashCode) +
     (enabled.hashCode) +
     (provider.hashCode) +
     (model.hashCode) +
@@ -60,12 +55,11 @@ class ChatConfiguration {
     (hasApiKey.hashCode);
 
   @override
-  String toString() => 'ChatConfiguration[thinkingEnabled=$thinkingEnabled, contextLength=$contextLength, enabled=$enabled, provider=$provider, model=$model, revision=$revision, baseUrl=$baseUrl, hasApiKey=$hasApiKey]';
+  String toString() => 'ChatConfiguration[thinkingEnabled=$thinkingEnabled, enabled=$enabled, provider=$provider, model=$model, revision=$revision, baseUrl=$baseUrl, hasApiKey=$hasApiKey]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'thinkingEnabled'] = this.thinkingEnabled;
-      json[r'contextLength'] = this.contextLength;
       json[r'enabled'] = this.enabled;
       json[r'provider'] = this.provider;
       json[r'model'] = this.model;
@@ -81,8 +75,6 @@ class ChatConfiguration {
       final json = value.cast<String, dynamic>();
 
       assert(() {
-        assert(json.containsKey(r'contextLength'), 'Required key "ChatConfiguration[contextLength]" is missing from JSON.');
-        assert(json[r'contextLength'] != null, 'Required key "ChatConfiguration[contextLength]" has a null value in JSON.');
         assert(json.containsKey(r'enabled'), 'Required key "ChatConfiguration[enabled]" is missing from JSON.');
         assert(json[r'enabled'] != null, 'Required key "ChatConfiguration[enabled]" has a null value in JSON.');
         assert(json.containsKey(r'provider'), 'Required key "ChatConfiguration[provider]" is missing from JSON.');
@@ -100,7 +92,6 @@ class ChatConfiguration {
 
       return ChatConfiguration(
         thinkingEnabled: mapValueOfType<bool>(json, r'thinkingEnabled') ?? false,
-        contextLength: mapValueOfType<int>(json, r'contextLength')!,
         enabled: mapValueOfType<bool>(json, r'enabled')!,
         provider: ChatConfigurationProviderEnum.fromJson(json[r'provider'])!,
         model: mapValueOfType<String>(json, r'model')!,
@@ -152,7 +143,6 @@ class ChatConfiguration {
   }
 
   static const requiredKeys = <String>{
-    'contextLength',
     'enabled',
     'provider',
     'model',
@@ -163,7 +153,6 @@ class ChatConfiguration {
 }
 
 enum ChatConfigurationProviderEnum {
-  ollama._(r'ollama'),
   openai._(r'openai'),
   ;
 
@@ -205,7 +194,6 @@ class ChatConfigurationProviderEnumTypeTransformer {
     }
     if (data != null) {
       switch (data) {
-        case r'ollama': return ChatConfigurationProviderEnum.ollama;
         case r'openai': return ChatConfigurationProviderEnum.openai;
         default:
           if (!allowNull) {

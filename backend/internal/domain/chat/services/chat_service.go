@@ -9,14 +9,12 @@ import (
 )
 
 type ChatService struct {
-	repository   p.ChatRepository
-	provider     p.ChatProvider
-	modelContext p.ChatModelContextProvider
-	authority    p.ChatAuthority
+	repository p.ChatRepository
+	authority  p.ChatAuthority
 }
 
-func NewChatService(repository p.ChatRepository, provider p.ChatProvider, modelContext p.ChatModelContextProvider, authority p.ChatAuthority) *ChatService {
-	return &ChatService{repository: repository, provider: provider, modelContext: modelContext, authority: authority}
+func NewChatService(repository p.ChatRepository, authority p.ChatAuthority) *ChatService {
+	return &ChatService{repository: repository, authority: authority}
 }
 func chatAuthorityError(err error) error {
 	if errors.Is(err, i.ErrUnauthorized) {
@@ -66,11 +64,7 @@ func (s *ChatService) UpdateConfiguration(ctx context.Context, a m.ChatActor, in
 	if err != nil {
 		return m.ChatConfiguration{}, err
 	}
-	if s.provider == nil {
-		return m.ChatConfiguration{}, m.ChatProcessingError{Code: "configuration_unavailable"}
-	}
-	internal := s.provider.UsesInternalRuntime(m.ChatConfiguration{Provider: input.Provider, BaseURL: input.BaseURL})
-	plan, err := m.PlanChatConfiguration(current, input, internal)
+	plan, err := m.PlanChatConfiguration(current, input, false)
 	if err != nil {
 		return m.ChatConfiguration{}, err
 	}
@@ -131,22 +125,4 @@ func (s *ChatService) Cancel(ctx context.Context, a m.ChatActor, conversation, t
 		return m.ChatMessage{}, err
 	}
 	return s.repository.Cancel(ctx, a, conversation, turn, m.ChatCancellation())
-}
-func (s *ChatService) Models(ctx context.Context, actor m.ChatActor, limit, offset int) (m.ChatModelPage, error) {
-	if limit < 1 || limit > 50 || offset < 0 {
-		return m.ChatModelPage{}, m.ChatValidationError{Message: "invalid model page"}
-	}
-	if _, err := s.Configuration(ctx, actor, true); err != nil {
-		return m.ChatModelPage{}, err
-	}
-	return s.provider.Models(ctx, limit, offset)
-}
-func (s *ChatService) ModelContext(ctx context.Context, actor m.ChatActor, model string) (m.ChatModelContext, error) {
-	if !m.ChatValidModel(model) {
-		return m.ChatModelContext{}, m.ChatValidationError{Message: "invalid chat model"}
-	}
-	if _, err := s.Configuration(ctx, actor, true); err != nil {
-		return m.ChatModelContext{}, err
-	}
-	return s.modelContext.ModelContext(ctx, model)
 }

@@ -1,10 +1,6 @@
 import '../models/document_processing.dart';
 
 abstract interface class DocumentProcessingRepository {
-  Future<DocumentModelContext> modelContext(
-    String model, {
-    Future<void>? cancel,
-  });
   Future<DocumentProcessingPipeline> getNamespacePipeline({
     Future<void>? cancel,
   });

@@ -47,7 +47,7 @@ func TestDocumentAdmissionYieldsToBusySchedulerAndSettingsSave(t *testing.T) {
 			}
 			configuration, err = f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{
 				Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision,
-				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(true), Provider: "ollama", Model: "scheduler-save-model", ContextLength: new(65536)},
+				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(true), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "scheduler-save-model", LMStudioCompatibility: new(true)},
 			})
 			if err != nil || configuration.LLM.Model != "scheduler-save-model" || !configuration.LLM.InvoiceExtractionEnabled() {
 				t.Fatalf("settings must save while scheduler remains busy: %+v %v", configuration.LLM, err)
@@ -117,10 +117,10 @@ func TestAISettingsSaveDuringPausedAdmissionTransaction(t *testing.T) {
 		saveCtx, saveCancel := context.WithTimeout(t.Context(), time.Second)
 		updated, saveErr := f.service.SetProcessingConfiguration(saveCtx, f.actor, m.DocumentProcessingConfiguration{
 			Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision,
-			LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: enabled, InvoiceEnabled: new(enabled), Provider: "ollama", Model: "paused-admission-model", ContextLength: new(65536)},
+			LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: enabled, InvoiceEnabled: new(enabled), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "paused-admission-model", LMStudioCompatibility: new(true)},
 		})
 		saveCancel()
-		if saveErr != nil || updated.LLM.Enabled != enabled || updated.LLM.InvoiceExtractionEnabled() != enabled || updated.LLM.ContextLength != 65536 {
+		if saveErr != nil || updated.LLM.Enabled != enabled || updated.LLM.InvoiceExtractionEnabled() != enabled || !updated.LLM.LMStudioCompatibility {
 			t.Fatalf("settings blocked by unrelated admission: %+v %v", updated.LLM, saveErr)
 		}
 		configuration = updated
@@ -163,7 +163,7 @@ func TestAISettingsSaveWithLargeSaturatedQueue(t *testing.T) {
 	}
 	configuration, err = f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{
 		Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision,
-		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: new(false), Provider: "ollama", Model: "large-queue-model", ContextLength: new(65536)},
+		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: new(false), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "large-queue-model", LMStudioCompatibility: new(true)},
 	})
 	if err != nil || configuration.LLM.Model != "large-queue-model" || configuration.LLM.Enabled || configuration.LLM.InvoiceExtractionEnabled() {
 		t.Fatalf("settings save failed with large queue: %+v %v", configuration.LLM, err)
@@ -181,7 +181,7 @@ func TestAISettingsRemainEditableWhileMaintenanceCandidateIsBusy(t *testing.T) {
 			lease := aiIndependentClaim(t, source, doc.ID)
 			update := m.DocumentProcessingConfiguration{
 				Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision,
-				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(false), Provider: "ollama", Model: "replacement-model"},
+				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(false), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "replacement-model"},
 			}
 			configuration, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, update)
 			if err != nil {
@@ -213,13 +213,13 @@ func TestAISettingsRemainEditableWhileMaintenanceCandidateIsBusy(t *testing.T) {
 				t.Fatalf("busy candidate was skipped permanently: revision=%v cursor=%d", revision, cursor)
 			}
 			update.ExpectedRevision = &configuration.Revision
-			update.LLMUpdate.ContextLength = new(65536)
+			update.LLMUpdate.LMStudioCompatibility = new(true)
 			update.LLMUpdate.InvoiceEnabled = new(true)
 			configuration, err = f.service.SetProcessingConfiguration(ctx, f.actor, update)
 			if err != nil {
 				t.Fatalf("model/context/invoice update blocked by active AI: %v", err)
 			}
-			if configuration.LLM.Model != "replacement-model" || configuration.LLM.ContextLength != 65536 || !configuration.LLM.InvoiceExtractionEnabled() {
+			if configuration.LLM.Model != "replacement-model" || !configuration.LLM.LMStudioCompatibility || !configuration.LLM.InvoiceExtractionEnabled() {
 				t.Fatalf("settings were not retained: %+v", configuration.LLM)
 			}
 			if err = blocker.Rollback(t.Context()); err != nil {
@@ -266,7 +266,7 @@ func TestAIClaimSkipsBusyCandidateAndRetriesAfterRelease(t *testing.T) {
 	}
 	_, err = f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{
 		Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision,
-		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(true), Provider: "ollama", Model: "replacement-model", ContextLength: new(65536)},
+		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(true), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "replacement-model", LMStudioCompatibility: new(true)},
 	})
 	if err != nil {
 		t.Fatalf("claim contention blocked settings save: %v", err)
@@ -349,7 +349,7 @@ func TestAIRecoveryResolutionYieldsWithoutLosingExecutionOwnership(t *testing.T)
 	}
 	_, err = f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{
 		Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision,
-		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(true), Provider: "ollama", Model: "replacement-model", ContextLength: new(65536)},
+		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: new(true), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "replacement-model", LMStudioCompatibility: new(true)},
 	})
 	if err != nil {
 		t.Fatalf("resolution contention blocked settings save: %v", err)

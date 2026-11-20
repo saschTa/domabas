@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { parseArgs } from "node:util";
-import { withDevelopmentInfrastructure } from "./development-infrastructure.ts";
+import { developmentComposeOverrides } from "./development-infrastructure.ts";
+import { infraUp } from "./compose.ts";
 import { ROOT, command, environment, requireFreePort, runCLI, waitHTTP, withCleanup } from "../shared/runtime.ts";
 
 if (import.meta.main) await runCLI(async scope => {
@@ -44,6 +45,6 @@ if (import.meta.main) await runCLI(async scope => {
       console.log("Application processes stopped. Docker infrastructure and caches are retained; stop containers with task infra:down.");
     });
   };
-  if (values["external-db"] || values["external-services"]) return await startDevelopment();
-  return await withDevelopmentInfrastructure(scope, env, startDevelopment);
+  if (!values["external-db"] && !values["external-services"]) await infraUp(scope, env, developmentComposeOverrides(env));
+  return await startDevelopment();
 });

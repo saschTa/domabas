@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/document/models/document_processing.dart';
 import '../../../ui/domabas_ui.dart';
 import '../cubits/document_processing_settings_cubit.dart';
 
@@ -23,9 +22,6 @@ final class _DocumentPropertyExtractionSettingsState
   late final _model = TextEditingController(text: widget.state.llm.model);
   late final _url = TextEditingController(text: widget.state.llm.baseUrl);
   late final _key = TextEditingController(text: widget.state.llm.apiKey);
-  late final _contextLength = TextEditingController(
-    text: widget.state.llm.contextLength,
-  );
 
   @override
   void didUpdateWidget(PropertyExtractionSettings oldWidget) {
@@ -34,7 +30,6 @@ final class _DocumentPropertyExtractionSettingsState
       (_model, widget.state.llm.model),
       (_url, widget.state.llm.baseUrl),
       (_key, widget.state.llm.apiKey),
-      (_contextLength, widget.state.llm.contextLength),
     ]) {
       if (entry.$1.text != entry.$2) entry.$1.text = entry.$2;
     }
@@ -45,7 +40,6 @@ final class _DocumentPropertyExtractionSettingsState
     _model.dispose();
     _url.dispose();
     _key.dispose();
-    _contextLength.dispose();
     super.dispose();
   }
 
@@ -56,7 +50,6 @@ final class _DocumentPropertyExtractionSettingsState
     final saved = state.configuration!.llm;
     final editable =
         widget.cubit.active && !state.saving && !state.reconcileRequired;
-    final external = draft.provider == 'openai';
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,44 +123,6 @@ final class _DocumentPropertyExtractionSettingsState
         Text('Shared model connection', style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         GlacierModelConnection(
-          provider: external ? 'external' : 'local',
-          enabled: editable,
-          providerField: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
-                  GlacierChoice(
-                    key: const Key('llmProviderOllama'),
-                    label: 'Internal Ollama',
-                    compact: true,
-                    selected: !external,
-                    onChanged: editable
-                        ? (_) => widget.cubit.editLLM(provider: 'ollama')
-                        : null,
-                  ),
-                  GlacierChoice(
-                    key: const Key('llmProviderOpenAI'),
-                    label: 'External service',
-                    compact: true,
-                    selected: external,
-                    onChanged: editable
-                        ? (_) => widget.cubit.editLLM(provider: 'openai')
-                        : null,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                external
-                    ? 'Sends extracted document text to your OpenAI-compatible service.'
-                    : 'Runs on this installation. The model is downloaded when first needed; the first run can take longer.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-          ),
           modelField: Semantics(
             container: true,
             child: TextField(
@@ -177,9 +132,7 @@ final class _DocumentPropertyExtractionSettingsState
               autocorrect: false,
               decoration: InputDecoration(
                 labelText: 'Model',
-                hintText: external
-                    ? 'Your service model name'
-                    : const DocumentLLMSettingsDraft().model,
+                hintText: 'Your service model name',
                 errorText: draft.modelError,
                 errorMaxLines: 3,
               ),
@@ -217,10 +170,6 @@ final class _DocumentPropertyExtractionSettingsState
           credentialField: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
-              const Text(
-                'Context length is managed by the external service. Your Ollama setting is retained.',
-              ),
               const SizedBox(height: 16),
               Semantics(
                 container: true,
@@ -278,27 +227,6 @@ final class _DocumentPropertyExtractionSettingsState
               ),
             ],
           ),
-          contextField: external
-              ? const SizedBox.shrink()
-              : AppModelContextField(
-                  controller: _contextLength,
-                  fieldKey: const Key('llmContextLength'),
-                  checkKey: const Key('checkLLMModelContext'),
-                  defaultKey: const Key('resetLLMContextLength'),
-                  scope: 'Shared by AI property and invoice extraction. Independent of AI chat.',
-                  enabled: editable,
-                  loading: state.loadingModelContext,
-                  errorText: draft.contextLengthError,
-                  lookupError: state.modelContextError,
-                  maxContextLength: state.modelContext?.maxContextLength,
-                  requestedContextLength: draft.contextLengthValue,
-                  onChanged: (value) =>
-                      widget.cubit.editLLM(contextLength: value),
-                  onCheck: draft.modelError != null
-                      ? null
-                      : widget.cubit.checkModelContext,
-                  onDefault: () => widget.cubit.editLLM(contextLength: '32768'),
-                ),
         ),
         const SizedBox(height: 20),
         GlacierWorkspaceGeometry.measureEndActions(

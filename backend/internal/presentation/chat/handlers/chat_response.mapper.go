@@ -28,7 +28,7 @@ func chatMessageMapper(v m.ChatMessage) contract.ChatMessage {
 	return r
 }
 func chatConfigurationMapper(v m.ChatConfiguration) contract.ChatConfiguration {
-	return contract.ChatConfiguration{ThinkingEnabled: new(v.ThinkingEnabled), Enabled: v.Enabled, Provider: contract.ChatConfigurationProvider(v.Provider), Model: v.Model, Revision: v.Revision, BaseUrl: v.BaseURL, HasApiKey: v.HasAPIKey, ContextLength: v.ContextLength}
+	return contract.ChatConfiguration{ThinkingEnabled: new(v.ThinkingEnabled), Enabled: v.Enabled, Provider: contract.ChatConfigurationProvider(v.Provider), Model: v.Model, Revision: v.Revision, BaseUrl: v.BaseURL, HasApiKey: v.HasAPIKey}
 }
 func chatPageMapper(limit *int, cursor *string) m.ChatPageRequest {
 	r := m.ChatPageRequest{Limit: 20}

@@ -6,8 +6,8 @@ import (
 )
 
 func TestSchedulerPlanRejectsUnknownCapacityAndPreservesNoop(t *testing.T) {
-	settings := SchedulerSettings{Revision: 2, OllamaQueueSize: 16, Resources: []SchedulerResource{{ID: "worker", Limit: 12, MaximumLimit: 256}, {ID: "ollama", Limit: 8, MaximumLimit: 8}}}
-	for _, update := range []SchedulerSettingsUpdate{{ExpectedRevision: 1, Resources: []SchedulerResourceUpdate{{ID: "worker", Limit: 12}}}, {ExpectedRevision: 2, Resources: []SchedulerResourceUpdate{{ID: "unknown", Limit: 1}}}, {ExpectedRevision: 2, Resources: []SchedulerResourceUpdate{{ID: "ollama", Limit: 9}}}} {
+	settings := SchedulerSettings{Revision: 2, EmbeddingQueueSize: 16, Resources: []SchedulerResource{{ID: "worker", Limit: 12, MaximumLimit: 256}, {ID: "embedding-runtime", Limit: 8, MaximumLimit: 8}}}
+	for _, update := range []SchedulerSettingsUpdate{{ExpectedRevision: 1, Resources: []SchedulerResourceUpdate{{ID: "worker", Limit: 12}}}, {ExpectedRevision: 2, Resources: []SchedulerResourceUpdate{{ID: "unknown", Limit: 1}}}, {ExpectedRevision: 2, Resources: []SchedulerResourceUpdate{{ID: "embedding-runtime", Limit: 9}}}} {
 		if _, err := PlanSchedulerSettings(settings, update); err == nil {
 			t.Fatal("invalid update accepted", update)
 		}
@@ -30,7 +30,7 @@ func TestSchedulerAdmissionRequiresCompleteVectorAndNoOlderFeasibleWork(t *testi
 			t.Fatal(test, got)
 		}
 	}
-	if SchedulerResourceMaximum("ollama", 17) != 8 || SchedulerResourceMaximum("ollama", 1024) != 256 || SchedulerResourceMaximum("worker", 16) != 256 {
+	if SchedulerResourceMaximum("embedding-runtime", 17) != 8 || SchedulerResourceMaximum("embedding-runtime", 1024) != 256 || SchedulerResourceMaximum("worker", 16) != 256 {
 		t.Fatal("resource limits changed")
 	}
 }

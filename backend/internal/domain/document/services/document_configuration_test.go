@@ -9,7 +9,7 @@ import (
 func TestLMStudioCompatibilityUpdatesOnlyAIAndPreservesOmission(t *testing.T) {
 	service := &DocumentIngestionService{}
 	current := m.DefaultConfiguration()
-	current.LLM.Provider, current.LLM.BaseURL = "openai", "http://model.test/v1"
+	current.LLM.Provider, current.LLM.Model, current.LLM.BaseURL = "openai", "fixture", "http://model.test/v1"
 	current.Fingerprint, _ = current.CanonicalFingerprint()
 	update := m.DocumentLLMConfigurationUpdate{Provider: current.LLM.Provider, Model: current.LLM.Model, BaseURL: current.LLM.BaseURL, LMStudioCompatibility: new(true)}
 	for _, choice := range []*bool{new(true), nil, new(false)} {

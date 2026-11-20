@@ -16,7 +16,7 @@ func SchedulerResourceRequirements(providers []SchedulerProviderResource) ([]str
 			continue
 		}
 		resources = append(resources, provider.ID)
-		if provider.ID != "ollama" {
+		if provider.ID != "embedding-runtime" {
 			defaults = append(defaults, SchedulerResource{ID: provider.ID, Label: provider.Origin, Limit: SchedulerExternalDefaultLimit, MaximumLimit: SchedulerMaximumLimit})
 		}
 	}
@@ -25,20 +25,17 @@ func SchedulerResourceRequirements(providers []SchedulerProviderResource) ([]str
 }
 
 func SchedulerConfiguredProviders(provider, baseURL string) []string {
-	if provider == "" {
-		return nil
+	if provider == "openai" && baseURL != "" {
+		return []string{baseURL}
 	}
-	if provider == "ollama" {
-		return []string{"ollama"}
-	}
-	return []string{baseURL}
+	return nil
 }
 
 func SchedulerPipelineRequirements(document, chat []string) []SchedulerPipeline {
 	document = slices.DeleteFunc(slices.Clone(document), func(id string) bool { return id == "worker" })
 	return []SchedulerPipeline{
 		{ID: "document_thumbnail", Label: "Document thumbnails", ResourceIDs: []string{"worker", "stage:thumbnail"}},
-		{ID: "document_ingestion", Label: "Document ingestion", ResourceIDs: []string{"worker", "stage:thumbnail", "stage:ocr", "stage:embedding", "ollama"}},
+		{ID: "document_ingestion", Label: "Document ingestion", ResourceIDs: []string{"worker", "stage:thumbnail", "stage:ocr", "stage:embedding", "embedding-runtime"}},
 		{ID: "document_ai", Label: "Document enrichment", ResourceIDs: []string{"worker", "pipeline:invoice", "pipeline:tags"}},
 		{ID: "invoice", Label: "Invoice extraction", ResourceIDs: append([]string{"stage:llm"}, document...)},
 		{ID: "tags", Label: "Tags and properties", ResourceIDs: append([]string{"stage:llm"}, document...)},
@@ -51,7 +48,7 @@ func SchedulerPipelineRequirements(document, chat []string) []SchedulerPipeline 
 func SchedulerRetainedProviders(configuration SchedulerRetainedConfiguration) ([]string, error) {
 	providers := []string{}
 	if configuration.Pipeline == "document_ingestion" {
-		providers = append(providers, "ollama")
+		providers = append(providers, "embedding-runtime")
 	}
 	if configuration.Pipeline == "chat" {
 		return SchedulerConfiguredProviders(configuration.Provider, configuration.BaseURL), nil
@@ -63,11 +60,7 @@ func SchedulerRetainedProviders(configuration SchedulerRetainedConfiguration) ([
 		return nil, fmt.Errorf("retained %s workload has no provider snapshot", configuration.Pipeline)
 	}
 	if configuration.PropertiesEnabled || configuration.InvoicesEnabled {
-		provider := "ollama"
-		if configuration.LLMProvider == "openai" {
-			provider = configuration.LLMBaseURL
-		}
-		providers = append(providers, provider)
+		providers = append(providers, SchedulerConfiguredProviders(configuration.LLMProvider, configuration.LLMBaseURL)...)
 	}
 	return providers, nil
 }

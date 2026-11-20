@@ -53,7 +53,7 @@ func TestPaperlessHistoryAndOutcomesContinuePastLegacyLimits(t *testing.T) {
 		return a
 	}
 	a, other := actor(), actor()
-	scheduler := schedulersources.NewSchedulerDataSource(source.Database(), 512, "http://ollama.test:11434")
+	scheduler := schedulersources.NewSchedulerDataSource(source.Database(), 512)
 	if err := scheduler.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}

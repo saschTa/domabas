@@ -21,7 +21,7 @@ type LocalDocumentProcessorDataSource struct {
 	weights, executable    string
 	pdfCacheDirectory      string
 	cache                  *documentProcessorCache
-	runtime                *OllamaEmbeddingDataSource
+	runtime                *LlamaEmbeddingDataSource
 	extractSlot, embedSlot chan struct{}
 	ctx                    context.Context
 	cancel                 context.CancelFunc
@@ -31,15 +31,15 @@ type LocalDocumentProcessorDataSource struct {
 	jobs                   sync.WaitGroup
 }
 
-func NewLocalDocumentProcessorDataSource(ctx context.Context, weightsRoot, ollamaRoot, ollamaURL string, ollamaMaxQueue int) (*LocalDocumentProcessorDataSource, error) {
-	if ollamaMaxQueue < 1 {
-		return nil, errors.New("Ollama queue capacity must be positive")
+func NewLocalDocumentProcessorDataSource(ctx context.Context, weightsRoot, modelPath, embeddingURL string, embeddingQueueSize int) (*LocalDocumentProcessorDataSource, error) {
+	if embeddingQueueSize < 1 {
+		return nil, errors.New("Embedding queue capacity must be positive")
 	}
-	runtime, err := NewOllamaEmbeddingDataSource(ollamaURL)
+	runtime, err := NewLlamaEmbeddingDataSource(embeddingURL)
 	if err != nil {
 		return nil, err
 	}
-	verified, err := openCache(weightsRoot, ollamaRoot, runtime)
+	verified, err := openCache(weightsRoot, modelPath, runtime)
 	if err != nil {
 		runtime.Close()
 		return nil, err
@@ -88,7 +88,7 @@ func NewLocalDocumentProcessorDataSource(ctx context.Context, weightsRoot, ollam
 		return fail(errors.Join(err, os.RemoveAll(pdfCacheDirectory)))
 	}
 	lifetime, stop := context.WithCancel(ctx)
-	return &LocalDocumentProcessorDataSource{weights: weightsRoot, executable: executable, pdfCacheDirectory: pdfCacheDirectory, cache: verified, runtime: runtime, extractSlot: make(chan struct{}, models.MaxConcurrentProcessing), embedSlot: make(chan struct{}, max(1, ollamaMaxQueue/2)), ctx: lifetime, cancel: stop}, nil
+	return &LocalDocumentProcessorDataSource{weights: weightsRoot, executable: executable, pdfCacheDirectory: pdfCacheDirectory, cache: verified, runtime: runtime, extractSlot: make(chan struct{}, models.MaxConcurrentProcessing), embedSlot: make(chan struct{}, max(1, embeddingQueueSize/2)), ctx: lifetime, cancel: stop}, nil
 }
 func (l *LocalDocumentProcessorDataSource) begin(ctx context.Context, slot chan struct{}) (context.Context, func(), error) {
 	job, finish, err := l.register(ctx)

@@ -81,41 +81,23 @@ lazy-list layout changes and stops when the user scrolls or the controller chang
 Loading earlier messages retains the visible message's position and temporarily
 suspends automatic following.
 
-Administrator settings support the internal Ollama default `qwen3.5:4b`, a
-paginated installed-model catalog and explicit model entry. External service
-fields contain an API URL, model and obscured replacement key. Read responses
+Administrator settings accept an OpenAI-compatible API base URL, a model identifier and an obscured replacement key. Read responses
 contain only `hasApiKey`. A successful save clears the typed secret. Configuration
 writes use expected revisions; conflicts and uncertain results require refresh
-while retaining the draft. Catalog errors do not replace saved configuration.
+while retaining the draft.
 Disabled chat retains readable history while blocking new messages.
 
 **Enable thinking for chat** sits below the chat enable switch and defaults off.
-It remains editable while chat is disabled and visible for either provider.
+It remains editable while chat is disabled.
 The existing save/reset actions and dirty-state handling include this preference;
-provider changes and refresh preserve the draft. Missing fields in older API
+settings changes and refresh preserve the draft. Missing fields in older API
 responses mean off. Supported models may take longer with thinking enabled.
 
 Successful settings saves show a brief accessible SnackBar outside the form.
 The unsaved badge, credential status and removal action keep stable space through
 the save response, so clearing the draft does not move the controls.
 
-Internal Ollama settings include a requested context length, initially 32,768
-tokens, with whole-number validation from 1,024 through 1,048,576 and a separate
-Use 32k default action. This value is independent of document AI processing.
-Optional Check model limit reads the exact model through the chat administrator
-API and shows the advertised maximum and effective capped value. Unavailable
-metadata does not block settings saves or invent a limit. Inference verifies the
-maximum before requesting the smaller of the saved context and that maximum.
-Accepted messages retain the setting captured when they were submitted.
-
-The settings Cubit preserves invalid text through refreshes and fences model
-lookups after model/provider changes or disposal. Lookup failures remain separate
-from save errors. External mode retains the Ollama choice and explains that the
-external service manages context. A temporary invalid Ollama draft is omitted
-when saving external settings, preserving the server's existing value.
-`AppModelContextField` is a shared dumb presenter also used by AI extraction.
-Pull down on the settings form to load current saved values without replacing
-drafts. Model discovery and conflict reconciliation remain explicit actions.
+The configured provider manages the context window. Pull down on the settings form to load current saved values while preserving drafts.
 
 Tests cover generated-client transport, private response errors, uncertain
 acceptance, pagination, deletion confirmation and retry, late deletion reads,

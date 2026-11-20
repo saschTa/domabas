@@ -39,7 +39,7 @@ func TestProcessingCommandsRejectChangedRoutingAndManualFacts(t *testing.T) {
 				f.exec(t, "UPDATE documents SET ocr_manual_text='retained correction' WHERE account_id=$1 AND id=$2", job.AccountID, job.DocumentID)
 			case "retained_llm":
 				configuration := work.Configuration
-				configuration.LLM.Enabled = true
+				configuration.LLM = m.DocumentLLMConfiguration{Enabled: true, Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}
 				configuration.Fingerprint, err = configuration.CanonicalFingerprint()
 				if err != nil {
 					t.Fatal(err)

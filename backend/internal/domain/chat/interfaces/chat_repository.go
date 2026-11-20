@@ -37,9 +37,4 @@ type ChatExecutionRepository interface {
 }
 type ChatProvider interface {
 	Generate(context.Context, m.ChatInferenceInput) (m.ChatAction, error)
-	Models(context.Context, int, int) (m.ChatModelPage, error)
-	UsesInternalRuntime(m.ChatConfiguration) bool
-}
-type ChatModelContextProvider interface {
-	ModelContext(context.Context, string) (m.ChatModelContext, error)
 }

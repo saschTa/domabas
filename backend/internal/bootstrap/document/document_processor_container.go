@@ -11,8 +11,8 @@ import (
 )
 
 type DocumentProcessorConfig struct {
-	ModelCacheRoot, OllamaCacheRoot, OllamaURL string
-	OllamaMaxQueue                             int
+	ModelCacheRoot, EmbeddingModelPath, EmbeddingURL string
+	EmbeddingQueueSize                               int
 }
 type DocumentProcessorContainer struct {
 	source  *processor.LocalDocumentProcessorDataSource
@@ -20,7 +20,7 @@ type DocumentProcessorContainer struct {
 }
 
 func NewDocumentProcessorContainer(ctx context.Context, configuration DocumentProcessorConfig) (*DocumentProcessorContainer, error) {
-	source, err := processor.NewLocalDocumentProcessorDataSource(ctx, configuration.ModelCacheRoot, configuration.OllamaCacheRoot, configuration.OllamaURL, configuration.OllamaMaxQueue)
+	source, err := processor.NewLocalDocumentProcessorDataSource(ctx, configuration.ModelCacheRoot, configuration.EmbeddingModelPath, configuration.EmbeddingURL, configuration.EmbeddingQueueSize)
 	if err != nil {
 		return nil, err
 	}

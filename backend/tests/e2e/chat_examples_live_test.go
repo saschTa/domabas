@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -23,9 +22,7 @@ import (
 )
 
 func TestAIChatLiveExampleDocuments(t *testing.T) {
-	if os.Getenv("LLM_OLLAMA_URL") == "" {
-		t.Fatal("LLM_OLLAMA_URL is required for live example document validation")
-	}
+	model, endpoint := liveChatProvider(t)
 	databaseURL := testdb.New(t)
 	env := newServerEnvironment(t, databaseURL)
 	binary := filepath.Join(t.TempDir(), "server")
@@ -46,7 +43,7 @@ func TestAIChatLiveExampleDocuments(t *testing.T) {
 	api := &ingestionAPI{t: t, baseURL: base, client: &http.Client{Timeout: 15 * time.Second}, spec: spec}
 	token := api.request("", "POST", "/api/v1/auth/register", `{"accountName":"Live chat examples","email":"chat-examples@example.test","password":"Live chat examples password 2026!"}`, 201, "AuthSession")["token"].(string)
 	settings := api.request(token, "GET", "/api/v1/system/chat/configuration", "", 200, "ChatConfiguration")
-	api.request(token, "PUT", "/api/v1/system/chat/configuration", fmt.Sprintf(`{"expectedRevision":%v,"enabled":true,"provider":"ollama","model":"qwen3.5:4b","baseUrl":"","clearApiKey":true}`, settings["revision"]), 200, "ChatConfiguration")
+	configureLiveChat(api, token, settings["revision"], endpoint, model)
 	older := api.upload(token, "arbeitsvertrag-2024.pdf", fixtures.PDF(t,
 		fixtures.Page{Text: "Arbeitsvertrag ab 01.01.2024. Arbeitgeber: Beispiel GmbH."},
 		fixtures.Page{Text: "Monatliches Gehalt: 4200 EUR brutto."},

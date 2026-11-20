@@ -6,7 +6,7 @@ import (
 )
 
 func schedulerSettingsMapper(record r.SchedulerSettingsRecord) m.SchedulerSettings {
-	settings := m.SchedulerSettings{Revision: record.Revision, OllamaQueueSize: record.OllamaQueueSize, Resources: make([]m.SchedulerResource, 0, len(record.Resources)), Pipelines: make([]m.SchedulerPipeline, 0, len(record.Pipelines))}
+	settings := m.SchedulerSettings{Revision: record.Revision, EmbeddingQueueSize: record.EmbeddingQueueSize, Resources: make([]m.SchedulerResource, 0, len(record.Resources)), Pipelines: make([]m.SchedulerPipeline, 0, len(record.Pipelines))}
 	for _, resource := range record.Resources {
 		settings.Resources = append(settings.Resources, m.SchedulerResource{ID: resource.ID, Label: resource.Label, Limit: resource.Limit, MaximumLimit: resource.MaximumLimit, ActiveJobs: resource.ActiveJobs})
 	}

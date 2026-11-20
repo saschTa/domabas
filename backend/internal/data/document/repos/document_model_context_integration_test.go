@@ -11,74 +11,64 @@ import (
 	m "github.com/domabas/domabas/backend/internal/domain/document/models"
 )
 
-func TestDocumentContextDefaultsUpdatesAndRetainedAdoption(t *testing.T) {
-	f := newIngestionFixture(t)
-	source := llmSource(t, f)
-	ctx := t.Context()
-	current, err := f.service.GetProcessingConfiguration(ctx, f.actor)
-	if err != nil || current.LLM.ContextLength != 32768 || current.LLM.Defaults().Model != "qwen3.5:4b" {
-		t.Fatalf("new context default: %+v %v", current.LLM, err)
-	}
-	legacy := current
-	legacy.LLM.Model = ""
-	legacy.LLM.ContextLength = 0
-	legacy.Fingerprint, err = legacy.CanonicalFingerprint()
-	if err != nil {
-		t.Fatal(err)
-	}
-	encoded, err := json.Marshal(legacy)
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.exec(t, `UPDATE document_processing_configuration SET configuration=$1::jsonb #- '{LLM,ContextLength}',fingerprint=$2,automatic_batch_id=NULL,ai_reschedule_revision=NULL,ai_reschedule_cutoff=NULL WHERE id`, encoded, legacy.Fingerprint)
-	f.exec(t, `UPDATE document_processing_configurations SET configuration=$1::jsonb #- '{LLM,ContextLength}',fingerprint=$2 WHERE revision=$3`, encoded, legacy.Fingerprint, legacy.Revision)
-	if err := initializeDocumentSource(ctx, source); err != nil {
-		t.Fatal(err)
-	}
-	adopted, err := f.service.GetProcessingConfiguration(ctx, f.actor)
-	if err != nil || adopted.Revision != legacy.Revision+1 || adopted.LLM.ContextLength != 32768 || adopted.LLM.Defaults().Model != "gemma3:4b" || adopted.AutomaticBatchID != "" {
-		t.Fatalf("context adoption: %+v %v", adopted, err)
-	}
-	var active, snapshotContext, reschedule int
-	var batches int
-	if err := f.connection.QueryRow(ctx, `SELECT llm_context_length,(configuration->'LLM'->>'ContextLength')::integer,ai_reschedule_revision,(SELECT count(*) FROM document_reindex_batches) FROM document_processing_configuration WHERE id`).Scan(&active, &snapshotContext, &reschedule, &batches); err != nil {
-		t.Fatal(err)
-	}
-	if active != 32768 || snapshotContext != active || int64(reschedule) != adopted.Revision || batches != 0 {
-		t.Fatalf("adoption storage or scheduling changed: %d %d %d %d", active, snapshotContext, reschedule, batches)
-	}
-	var retained []byte
-	if err := f.connection.QueryRow(ctx, `SELECT configuration FROM document_processing_configurations WHERE revision=$1`, legacy.Revision).Scan(&retained); err != nil {
-		t.Fatal(err)
-	}
-	var retainedConfiguration m.DocumentProcessingConfiguration
-	if err := json.Unmarshal(retained, &retainedConfiguration); err != nil {
-		t.Fatal(err)
-	}
-	if retainedConfiguration.LLM.ContextLength != 0 || retainedConfiguration.LLM.RequestedContextLength() != 16384 || retainedConfiguration.Fingerprint != legacy.Fingerprint {
-		t.Fatal("historical configuration changed")
-	}
-	if err := initializeDocumentSource(ctx, source); err != nil {
-		t.Fatal(err)
-	}
-	restarted, err := f.service.GetProcessingConfiguration(ctx, f.actor)
-	if err != nil || restarted.Revision != adopted.Revision {
-		t.Fatalf("repeated adoption: %+v %v", restarted, err)
-	}
-	update := m.DocumentLLMConfigurationUpdate{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: new(65536)}
-	input := m.DocumentProcessingConfiguration{Language: adopted.Language, Segmentation: adopted.Segmentation, ExpectedRevision: &adopted.Revision, LLMUpdate: &update}
-	saved, err := f.service.SetProcessingConfiguration(ctx, f.actor, input)
-	if err != nil || saved.LLM.ContextLength != 65536 || saved.Revision != adopted.Revision+1 || saved.AutomaticBatchID != "" {
-		t.Fatalf("context update: %+v %v", saved, err)
-	}
-	update.ContextLength = nil
-	input.ExpectedRevision = &saved.Revision
-	unchanged, err := f.service.SetProcessingConfiguration(ctx, f.actor, input)
-	if err != nil || unchanged.LLM.ContextLength != 65536 || unchanged.Revision != saved.Revision {
-		t.Fatalf("old client omission: %+v %v", unchanged, err)
-	}
-	if err := f.connection.QueryRow(ctx, `SELECT count(*) FROM document_reindex_batches`).Scan(&batches); err != nil || batches != 0 {
-		t.Fatalf("context update reindexed OCR: %d %v", batches, err)
+func TestEmbeddingUpgradePreservesExternalConsentAndSchedulesOneReindex(t *testing.T) {
+	for _, provider := range []string{"ollama", "openai"} {
+		t.Run(provider, func(t *testing.T) {
+			f := newIngestionFixture(t)
+			source := llmSource(t, f)
+			ctx := t.Context()
+			legacy, err := f.service.GetProcessingConfiguration(ctx, f.actor)
+			if err != nil {
+				t.Fatal(err)
+			}
+			legacy.ManifestRevision = 2
+			legacy.EmbeddingDigest = "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
+			legacy.LLM = m.DocumentLLMConfiguration{Provider: provider, Enabled: true, Model: "retained-model", ContextLength: 32768}
+			if provider == "openai" {
+				legacy.LLM.BaseURL = "https://saved.test/v1"
+			}
+			legacy.Fingerprint, err = legacy.CanonicalFingerprint()
+			if err != nil {
+				t.Fatal(err)
+			}
+			manifest, err := legacy.ManifestFingerprint()
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(legacy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f.exec(t, `UPDATE document_processing_configuration SET configuration=$1,fingerprint=$2,manifest_revision=2,manifest_fingerprint=$3,automatic_batch_id=NULL WHERE id`, encoded, legacy.Fingerprint, manifest)
+			f.exec(t, `UPDATE document_processing_configurations SET configuration=$1,fingerprint=$2 WHERE revision=$3`, encoded, legacy.Fingerprint, legacy.Revision)
+			for range 2 {
+				if err := initializeDocumentSource(ctx, source); err != nil {
+					t.Fatal(err)
+				}
+			}
+			current, err := f.service.GetProcessingConfiguration(ctx, f.actor)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if current.Revision != legacy.Revision+1 || current.ManifestRevision != 3 || current.EmbeddingDigest == legacy.EmbeddingDigest || current.AutomaticBatchID == "" {
+				t.Fatal("incompatible embedding upgrade was not enrolled", current)
+			}
+			if provider == "openai" {
+				if !current.LLM.Equal(legacy.LLM) {
+					t.Fatal("saved external connection changed", current.LLM)
+				}
+			} else if current.LLM.Enabled || current.LLM.InvoiceExtractionEnabled() || current.LLM.Provider != "openai" || current.LLM.Model != "" || current.LLM.BaseURL != "" {
+				t.Fatal("native consent survived upgrade", current.LLM)
+			}
+			var count int
+			if err := f.connection.QueryRow(ctx, `SELECT count(*) FROM document_reindex_batches`).Scan(&count); err != nil || count != 1 {
+				t.Fatal("duplicate migration batch", count, err)
+			}
+			var fingerprint string
+			if err := f.connection.QueryRow(ctx, `SELECT document_pipeline_fingerprint(configuration) FROM document_processing_configurations WHERE revision=$1`, legacy.Revision).Scan(&fingerprint); err != nil || fingerprint != legacy.Fingerprint {
+				t.Fatal("retained snapshot was changed", fingerprint, err)
+			}
+		})
 	}
 }
 
@@ -104,7 +94,7 @@ func TestRetainedSchedulersDoNotInheritCurrentContext(t *testing.T) {
 				t.Fatal(err)
 			}
 			f.exec(t, `UPDATE document_processing_configurations SET configuration=$1::jsonb #- '{LLM,ContextLength}',fingerprint=$2 WHERE revision=$3`, encoded, legacy.Fingerprint, legacy.Revision)
-			current, err := f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{Language: legacy.Language, Segmentation: legacy.Segmentation, ExpectedRevision: &legacy.Revision, LLMUpdate: &m.DocumentLLMConfigurationUpdate{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: new(65536)}})
+			current, err := f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{Language: legacy.Language, Segmentation: legacy.Segmentation, ExpectedRevision: &legacy.Revision, LLMUpdate: &m.DocumentLLMConfigurationUpdate{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1", ContextLength: new(65536)}})
 			if err != nil {
 				t.Fatal(err)
 			}

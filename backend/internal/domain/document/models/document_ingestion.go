@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-const EmbeddingDigest = "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
+const EmbeddingDigest = "f7af6f66802f4df86eda10fe9bbcfc75c39562bed48ef6ace719a251cf1c2fdb"
 const EmbeddingDimensions = 768
 const MaxFileBytes int64 = 100 << 20
 const MaxPDFPages = 200
@@ -40,7 +40,7 @@ func ValidFailureCode(code string) bool {
 }
 func DefaultConfiguration() DocumentProcessingConfiguration {
 	c := DocumentProcessingConfiguration{ManifestRevision: InstalledPipelineManifestRevision, ExtractionRevision: CurrentExtractionRevision, ChunkingRevision: LegacyChunkingRevision, EmbeddingInputRevision: LegacyEmbeddingInputRevision, IndexingRevision: LegacyIndexingRevision, Revision: 1, Language: "eng+deu", Segmentation: "auto", Engine: "tesseract", EngineVersion: "5.5.3", EmbeddingModel: "nomic-embed-text:v1.5", EmbeddingDigest: EmbeddingDigest, Dimensions: EmbeddingDimensions, Weights: []DocumentWeight{{"eng", "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"}, {"deu", "19d219bbb6672c869d20a9636c6816a81eb9a71796cb93ebe0cb1530e2cdb22d"}, {"osd", "9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff"}}}
-	c.LLM = DocumentLLMConfiguration{Model: "qwen3.5:4b", ContextLength: DefaultDocumentContextLength}
+	c.LLM = DocumentLLMConfiguration{Provider: "openai", ContextLength: DefaultDocumentContextLength}
 	c.Fingerprint, _ = c.CanonicalFingerprint()
 	return c
 }

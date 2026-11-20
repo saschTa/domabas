@@ -12,7 +12,7 @@ class DocumentProcessingScheduling {
   DocumentProcessingScheduling({
     required this.ingestionConcurrency,
     required this.aiConcurrency,
-    required this.ollamaQueueSize,
+    required this.embeddingQueueSize,
     required this.ingestionConcurrencyMode,
     required this.aiConcurrencyMode,
     required this.providerStepRetries,
@@ -23,7 +23,7 @@ class DocumentProcessingScheduling {
 
   int aiConcurrency;
 
-  int ollamaQueueSize;
+  int embeddingQueueSize;
 
   DocumentProcessingSchedulingIngestionConcurrencyModeEnum ingestionConcurrencyMode;
 
@@ -37,7 +37,7 @@ class DocumentProcessingScheduling {
   bool operator ==(Object other) => identical(this, other) || other is DocumentProcessingScheduling &&
     other.ingestionConcurrency == ingestionConcurrency &&
     other.aiConcurrency == aiConcurrency &&
-    other.ollamaQueueSize == ollamaQueueSize &&
+    other.embeddingQueueSize == embeddingQueueSize &&
     other.ingestionConcurrencyMode == ingestionConcurrencyMode &&
     other.aiConcurrencyMode == aiConcurrencyMode &&
     other.providerStepRetries == providerStepRetries &&
@@ -48,20 +48,20 @@ class DocumentProcessingScheduling {
     // ignore: unnecessary_parenthesis
     (ingestionConcurrency.hashCode) +
     (aiConcurrency.hashCode) +
-    (ollamaQueueSize.hashCode) +
+    (embeddingQueueSize.hashCode) +
     (ingestionConcurrencyMode.hashCode) +
     (aiConcurrencyMode.hashCode) +
     (providerStepRetries.hashCode) +
     (priorityPolicy.hashCode);
 
   @override
-  String toString() => 'DocumentProcessingScheduling[ingestionConcurrency=$ingestionConcurrency, aiConcurrency=$aiConcurrency, ollamaQueueSize=$ollamaQueueSize, ingestionConcurrencyMode=$ingestionConcurrencyMode, aiConcurrencyMode=$aiConcurrencyMode, providerStepRetries=$providerStepRetries, priorityPolicy=$priorityPolicy]';
+  String toString() => 'DocumentProcessingScheduling[ingestionConcurrency=$ingestionConcurrency, aiConcurrency=$aiConcurrency, embeddingQueueSize=$embeddingQueueSize, ingestionConcurrencyMode=$ingestionConcurrencyMode, aiConcurrencyMode=$aiConcurrencyMode, providerStepRetries=$providerStepRetries, priorityPolicy=$priorityPolicy]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'ingestionConcurrency'] = this.ingestionConcurrency;
       json[r'aiConcurrency'] = this.aiConcurrency;
-      json[r'ollamaQueueSize'] = this.ollamaQueueSize;
+      json[r'embeddingQueueSize'] = this.embeddingQueueSize;
       json[r'ingestionConcurrencyMode'] = this.ingestionConcurrencyMode;
       json[r'aiConcurrencyMode'] = this.aiConcurrencyMode;
       json[r'providerStepRetries'] = this.providerStepRetries;
@@ -79,8 +79,8 @@ class DocumentProcessingScheduling {
         assert(json[r'ingestionConcurrency'] != null, 'Required key "DocumentProcessingScheduling[ingestionConcurrency]" has a null value in JSON.');
         assert(json.containsKey(r'aiConcurrency'), 'Required key "DocumentProcessingScheduling[aiConcurrency]" is missing from JSON.');
         assert(json[r'aiConcurrency'] != null, 'Required key "DocumentProcessingScheduling[aiConcurrency]" has a null value in JSON.');
-        assert(json.containsKey(r'ollamaQueueSize'), 'Required key "DocumentProcessingScheduling[ollamaQueueSize]" is missing from JSON.');
-        assert(json[r'ollamaQueueSize'] != null, 'Required key "DocumentProcessingScheduling[ollamaQueueSize]" has a null value in JSON.');
+        assert(json.containsKey(r'embeddingQueueSize'), 'Required key "DocumentProcessingScheduling[embeddingQueueSize]" is missing from JSON.');
+        assert(json[r'embeddingQueueSize'] != null, 'Required key "DocumentProcessingScheduling[embeddingQueueSize]" has a null value in JSON.');
         assert(json.containsKey(r'ingestionConcurrencyMode'), 'Required key "DocumentProcessingScheduling[ingestionConcurrencyMode]" is missing from JSON.');
         assert(json[r'ingestionConcurrencyMode'] != null, 'Required key "DocumentProcessingScheduling[ingestionConcurrencyMode]" has a null value in JSON.');
         assert(json.containsKey(r'aiConcurrencyMode'), 'Required key "DocumentProcessingScheduling[aiConcurrencyMode]" is missing from JSON.');
@@ -95,7 +95,7 @@ class DocumentProcessingScheduling {
       return DocumentProcessingScheduling(
         ingestionConcurrency: mapValueOfType<int>(json, r'ingestionConcurrency')!,
         aiConcurrency: mapValueOfType<int>(json, r'aiConcurrency')!,
-        ollamaQueueSize: mapValueOfType<int>(json, r'ollamaQueueSize')!,
+        embeddingQueueSize: mapValueOfType<int>(json, r'embeddingQueueSize')!,
         ingestionConcurrencyMode: DocumentProcessingSchedulingIngestionConcurrencyModeEnum.fromJson(json[r'ingestionConcurrencyMode'])!,
         aiConcurrencyMode: DocumentProcessingSchedulingAiConcurrencyModeEnum.fromJson(json[r'aiConcurrencyMode'])!,
         providerStepRetries: mapValueOfType<int>(json, r'providerStepRetries')!,
@@ -147,7 +147,7 @@ class DocumentProcessingScheduling {
   static const requiredKeys = <String>{
     'ingestionConcurrency',
     'aiConcurrency',
-    'ollamaQueueSize',
+    'embeddingQueueSize',
     'ingestionConcurrencyMode',
     'aiConcurrencyMode',
     'providerStepRetries',
@@ -157,7 +157,7 @@ class DocumentProcessingScheduling {
 
 enum DocumentProcessingSchedulingIngestionConcurrencyModeEnum {
   fixed._(r'fixed'),
-  ollamaHalfQueue._(r'ollama_half_queue'),
+  embeddingHalfQueue._(r'embedding_half_queue'),
   ;
 
   const DocumentProcessingSchedulingIngestionConcurrencyModeEnum._(this._value);
@@ -199,7 +199,7 @@ class DocumentProcessingSchedulingIngestionConcurrencyModeEnumTypeTransformer {
     if (data != null) {
       switch (data) {
         case r'fixed': return DocumentProcessingSchedulingIngestionConcurrencyModeEnum.fixed;
-        case r'ollama_half_queue': return DocumentProcessingSchedulingIngestionConcurrencyModeEnum.ollamaHalfQueue;
+        case r'embedding_half_queue': return DocumentProcessingSchedulingIngestionConcurrencyModeEnum.embeddingHalfQueue;
         default:
           if (!allowNull) {
             throw ArgumentError('Unknown enum value to decode: $data');
@@ -214,7 +214,7 @@ class DocumentProcessingSchedulingIngestionConcurrencyModeEnumTypeTransformer {
 
 enum DocumentProcessingSchedulingAiConcurrencyModeEnum {
   fixed._(r'fixed'),
-  ollamaHalfQueue._(r'ollama_half_queue'),
+  embeddingHalfQueue._(r'embedding_half_queue'),
   ;
 
   const DocumentProcessingSchedulingAiConcurrencyModeEnum._(this._value);
@@ -256,7 +256,7 @@ class DocumentProcessingSchedulingAiConcurrencyModeEnumTypeTransformer {
     if (data != null) {
       switch (data) {
         case r'fixed': return DocumentProcessingSchedulingAiConcurrencyModeEnum.fixed;
-        case r'ollama_half_queue': return DocumentProcessingSchedulingAiConcurrencyModeEnum.ollamaHalfQueue;
+        case r'embedding_half_queue': return DocumentProcessingSchedulingAiConcurrencyModeEnum.embeddingHalfQueue;
         default:
           if (!allowNull) {
             throw ArgumentError('Unknown enum value to decode: $data');

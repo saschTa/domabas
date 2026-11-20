@@ -15,7 +15,7 @@ func SchedulerResourceMaximum(id string, queueSize int) int {
 	if id == "stage:paperless" {
 		return 10
 	}
-	if id == "ollama" {
+	if id == "embedding-runtime" {
 		return min(SchedulerMaximumLimit, queueSize/2)
 	}
 	return SchedulerMaximumLimit
@@ -35,7 +35,7 @@ func PlanSchedulerSettings(current SchedulerSettings, update SchedulerSettingsUp
 	if len(current.Resources) > SchedulerMaximumResources {
 		return SchedulerSettingsPlan{}, SchedulerValidationError{Message: "workload provider resource limit reached"}
 	}
-	plan := SchedulerSettingsPlan{ExpectedRevision: current.Revision, ExpectedQueueSize: current.OllamaQueueSize, ExpectedResources: append([]SchedulerResource(nil), current.Resources...)}
+	plan := SchedulerSettingsPlan{ExpectedRevision: current.Revision, ExpectedQueueSize: current.EmbeddingQueueSize, ExpectedResources: append([]SchedulerResource(nil), current.Resources...)}
 	for _, resource := range current.Resources {
 		if strings.HasPrefix(resource.ID, "external:") {
 			plan.Materialize = append(plan.Materialize, resource)

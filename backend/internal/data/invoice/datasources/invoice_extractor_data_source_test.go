@@ -86,7 +86,7 @@ func TestAIExtractionPreservesTaxCurrenciesAndRejectsUnpairedAmounts(t *testing.
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			f := &inferenceFixture{response: `{"isInvoice":true,"invoice":{"number":"TAX-1","currency":"EUR","totalGross":"119.00","seller":{"name":"Supplier"},` + scenario.fields + `}}`}
-			v, err := NewInvoiceExtractorDataSource(f).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "ollama", Model: "fixture"}, "", "Invoice No. TAX-1\nSeller: Supplier\nGrand Total: 119.00 EUR\nVAT: 42.28 EUR\nAccounting VAT: 46.50 USD")
+			v, err := NewInvoiceExtractorDataSource(f).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}, "", "Invoice No. TAX-1\nSeller: Supplier\nGrand Total: 119.00 EUR\nVAT: 42.28 EUR\nAccounting VAT: 46.50 USD")
 			if !scenario.valid {
 				if err == nil || v != nil {
 					t.Fatal("accepted an accounting amount without a valid accounting currency")

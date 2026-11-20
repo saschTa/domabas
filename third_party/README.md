@@ -46,10 +46,13 @@ Upstream has not published an exact build attestation for the custom-patched
 standalone artifact. This inventory identifies pinned shipped bytes and retains
 matching and supplemental notices; it does not claim reproducible compilation.
 
-Tesseract 5.5.3 and the selected `tessdata_fast` 4.1.0 weights use Apache-2.0;
-Leptonica 1.87.0 uses its BSD-style notice. Ollama 0.34.1 uses MIT, and the
-Nomic v1.5 model has its own Apache-2.0 license. Runtime and model licenses are
-separate. The model notices in `models/` come from the exact researched versions.
+Tesseract 5.5.3 and the selected `tessdata_fast` 4.1.0 weights use Apache-2.0.
+Leptonica 1.87.0 uses its BSD-style notice. Compose pulls the upstream CPU
+or Vulkan llama.cpp b12464 image by digest. The engine is MIT-licensed and
+its image packages carry their own notices. Domabas downloads Nomic's
+unmodified v1.5 F16 GGUF under Apache-2.0. The runtime and model licenses
+are retained in [models](models/). See the [runtime source](https://github.com/ggml-org/llama.cpp/tree/d3c3e242c16b8cbf51400fad410cd69b22d64f35)
+and [Nomic model repository](https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/tree/0188c9bf409793f810680a5a431e7b899c46104c).
 
 See [document ingestion](../docs/arch/backend/document-ingestion.md) for the
 processor design. The pinned module versions are in [`backend/go.mod`](../backend/go.mod);

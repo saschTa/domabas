@@ -31,7 +31,7 @@ COPY --from=go-build /out/document-processor /app/document-processor
 COPY LICENSE /usr/share/doc/domabas/LICENSE
 COPY third_party/ /usr/share/doc/domabas/third-party/
 WORKDIR /app
-ENV HTTP_ADDR=0.0.0.0:8091 MODEL_CACHE_ROOT=/models/tesseract OLLAMA_CACHE_ROOT=/models/ollama/models OMP_THREAD_LIMIT=1 TMPDIR=/app/tmp
+ENV HTTP_ADDR=0.0.0.0:8091 MODEL_CACHE_ROOT=/models/tesseract EMBEDDING_MODEL_PATH=/models/embedding/nomic-embed-text-v1.5.f16.gguf OMP_THREAD_LIMIT=1 TMPDIR=/app/tmp
 USER 65532:65532
 EXPOSE 8091
 ENTRYPOINT ["/app/document-processor"]

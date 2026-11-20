@@ -25,8 +25,8 @@ func TestEmbeddingPreservesCallerDeadlineAndCancellationAcrossBothHops(t *testin
 		deadline, _ := ctx.Deadline()
 		entered := make(chan struct{})
 		transport := documentEmbeddingTransport(func(request *http.Request) (*http.Response, error) {
-			if request.URL.Path == "/api/tags" {
-				data, _ := json.Marshal(map[string]any{"models": []map[string]string{{"name": ModelName, "digest": ModelDigest}}})
+			if request.URL.Path == "/v1/models" {
+				data, _ := json.Marshal(map[string]any{"data": []map[string]string{{"id": ModelName}}})
 				return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(string(data)))}, nil
 			}
 			got, ok := request.Context().Deadline()
@@ -39,7 +39,7 @@ func TestEmbeddingPreservesCallerDeadlineAndCancellationAcrossBothHops(t *testin
 		})
 		var embed func(context.Context, records.DocumentEmbeddingSpaceRecord, string, []string) (records.DocumentEmbeddingResult, error)
 		if direct {
-			remote, err := NewOllamaEmbeddingDataSource("http://ollama.test")
+			remote, err := NewLlamaEmbeddingDataSource("http://embeddings.test")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -81,14 +81,14 @@ func TestEmbeddingPreservesCallerDeadlineAndCancellationAcrossBothHops(t *testin
 func TestProcessorShutdownKeepsInterruptedEmbeddingRetryable(t *testing.T) {
 	lifetime, stop := context.WithCancel(t.Context())
 	defer stop()
-	remote, err := NewOllamaEmbeddingDataSource("http://ollama.test")
+	remote, err := NewLlamaEmbeddingDataSource("http://embeddings.test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer remote.Close()
 	remote.client.Transport = documentEmbeddingTransport(func(request *http.Request) (*http.Response, error) {
-		if request.URL.Path == "/api/tags" {
-			data, _ := json.Marshal(map[string]any{"models": []map[string]string{{"name": ModelName, "digest": ModelDigest}}})
+		if request.URL.Path == "/v1/models" {
+			data, _ := json.Marshal(map[string]any{"data": []map[string]string{{"id": ModelName}}})
 			return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(string(data)))}, nil
 		}
 		stop()
@@ -109,8 +109,8 @@ func TestProcessorSupportsMoreThanTenConcurrentEmbeddingRequests(t *testing.T) {
 	defer cancel()
 	entered := make(chan struct{}, 65)
 	local.runtime.client.Transport = documentEmbeddingTransport(func(request *http.Request) (*http.Response, error) {
-		if request.URL.Path == "/api/tags" {
-			data, _ := json.Marshal(map[string]any{"models": []map[string]string{{"name": ModelName, "digest": ModelDigest}}})
+		if request.URL.Path == "/v1/models" {
+			data, _ := json.Marshal(map[string]any{"data": []map[string]string{{"id": ModelName}}})
 			return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(string(data)))}, nil
 		}
 		entered <- struct{}{}

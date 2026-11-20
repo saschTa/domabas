@@ -54,9 +54,6 @@ func (response DocumentErrorResponse) VisitGetDocumentProcessingConfigurationRes
 	return response.write(w)
 }
 
-func (response DocumentErrorResponse) VisitGetDocumentModelContextResponse(w http.ResponseWriter) error {
-	return response.write(w)
-}
 func (response DocumentErrorResponse) VisitUpdateDocumentProcessingConfigurationResponse(w http.ResponseWriter) error {
 	return response.write(w)
 }

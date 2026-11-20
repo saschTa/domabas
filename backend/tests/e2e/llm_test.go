@@ -100,10 +100,10 @@ func TestIssue27OptionalPropertiesAdminAuthorityAndDurableProcessing(t *testing.
 	api.request(user, "PUT", path, "{", 403, "Error")
 	configuration := api.request(admin, "GET", path, "", 200, "DocumentProcessingConfiguration")
 	llm := configuration["llm"].(map[string]any)
-	if llm["enabled"] != false || llm["model"] != "qwen3.5:4b" || llm["credentialConfigured"] != false || llm["lmStudioCompatibility"] != false || llm["propertyThinkingEnabled"] != false || llm["invoiceThinkingEnabled"] != false {
+	if llm["enabled"] != false || llm["model"] != "" || llm["baseUrl"] != "" || llm["credentialConfigured"] != false || llm["lmStudioCompatibility"] != false || llm["propertyThinkingEnabled"] != false || llm["invoiceThinkingEnabled"] != false {
 		t.Fatal("wrong defaults", llm)
 	}
-	for _, invalid := range []string{`null`, `{}`, `{"enabled":true,"provider":"openai","model":"fixture","baseUrl":"http://localhost/v1","apiKey":null}`, `{"enabled":true,"enabled":false,"provider":"ollama","model":"fixture","baseUrl":""}`, `{"enabled":true,"provider":"ollama","model":"fixture","baseUrl":"","credentialConfigured":true}`} {
+	for _, invalid := range []string{`null`, `{}`, `{"enabled":true,"provider":"openai","model":"fixture","baseUrl":"http://localhost/v1","apiKey":null}`, `{"enabled":true,"enabled":false,"provider":"openai","model":"fixture","baseUrl":"https://provider.test/v1"}`, `{"enabled":true,"provider":"openai","model":"fixture","baseUrl":"https://provider.test/v1","credentialConfigured":true}`} {
 		api.request(admin, "PUT", path, `{"language":"eng+deu","segmentation":"auto","llm":`+invalid+`}`, 400, "Error")
 	}
 	body := fmt.Sprintf(`{"language":"eng+deu","segmentation":"auto","expectedRevision":%.0f,"llm":{"enabled":true,"provider":"openai","model":"test-model","baseUrl":%q,"apiKey":"private-api-key","lmStudioCompatibility":true,"propertyThinkingEnabled":true,"invoiceThinkingEnabled":false}}`, configuration["revision"], provider.URL+"/v1")

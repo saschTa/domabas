@@ -23,12 +23,6 @@ func (r ChatErrorResponse) VisitGetChatAdminConfigurationResponse(w http.Respons
 func (r ChatErrorResponse) VisitUpdateChatConfigurationResponse(w http.ResponseWriter) error {
 	return r.write(w)
 }
-func (r ChatErrorResponse) VisitListChatModelsResponse(w http.ResponseWriter) error {
-	return r.write(w)
-}
-func (r ChatErrorResponse) VisitGetChatModelContextResponse(w http.ResponseWriter) error {
-	return r.write(w)
-}
 func (r ChatErrorResponse) VisitCreateChatConversationResponse(w http.ResponseWriter) error {
 	return r.write(w)
 }

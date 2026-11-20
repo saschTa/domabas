@@ -24,7 +24,7 @@ func ValidateChatObject(body []byte, operation string) error {
 		fields["content"] = "string"
 		required = []string{"requestId", "content"}
 	case "settings":
-		fields = map[string]string{"expectedRevision": "number", "contextLength": "number", "enabled": "bool", "thinkingEnabled": "bool", "provider": "string", "model": "string", "baseUrl": "string", "apiKey": "string", "clearApiKey": "bool"}
+		fields = map[string]string{"expectedRevision": "number", "enabled": "bool", "thinkingEnabled": "bool", "provider": "string", "model": "string", "baseUrl": "string", "apiKey": "string", "clearApiKey": "bool"}
 		required = []string{"expectedRevision", "enabled", "provider", "model", "baseUrl"}
 	default:
 		return invalid

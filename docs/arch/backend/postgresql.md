@@ -60,7 +60,7 @@ explains index and pagination behavior.
 ## Files, keys and recovery
 
 Compose keeps PostgreSQL data, staged uploads, final originals, credential keys,
-Tesseract models and Ollama models in named volumes. Thumbnail JPEG bytes live
+Tesseract weights and the Nomic GGUF in named volumes. Thumbnail JPEG bytes live
 in the application database. Document rows retain file identity; background
 cleanup coordinates physical deletion with committed application state.
 

@@ -92,11 +92,6 @@ func (server *validatedDocumentServer) UpdateDocumentProcessingConfiguration(w h
 	}
 }
 
-func (server *validatedDocumentServer) GetDocumentModelContext(w http.ResponseWriter, r *http.Request, params contract.GetDocumentModelContextParams) {
-	if validProcessingQuery(w, r, "model") {
-		server.ServerInterface.GetDocumentModelContext(w, r, params)
-	}
-}
 func (server *validatedDocumentServer) UploadDocument(w http.ResponseWriter, r *http.Request) {
 	select {
 	case server.uploads <- struct{}{}:

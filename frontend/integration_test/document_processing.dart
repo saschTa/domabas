@@ -136,9 +136,18 @@ Future<void> exerciseDocumentProcessing(
     () => find.text('Job details').evaluate().isNotEmpty,
     'new job detail loaded',
   );
-  expect(find.text('Succeeded'), findsOneWidget);
-  await _reveal(tester, find.byKey(const Key('openJobDocument')));
-  await tester.tap(find.byKey(const Key('openJobDocument')));
+  final openDocument = find.byKey(const Key('openJobDocument'));
+  await _wait(tester, () => openDocument.evaluate().isNotEmpty, 'Job loaded');
+  final summary = find
+      .ancestor(of: openDocument, matching: find.byType(AppSurface))
+      .first;
+  expect(
+    find.descendant(of: summary, matching: find.text('Succeeded')),
+    findsOneWidget,
+  );
+  await tester.ensureVisible(openDocument);
+  await tester.pumpAndSettle();
+  await tester.tap(openDocument);
   await _wait(
     tester,
     () => find.byKey(const Key('closeDocument')).evaluate().isNotEmpty,

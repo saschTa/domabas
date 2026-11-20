@@ -6,7 +6,7 @@ import (
 )
 
 func schedulerSettingsResponseMapper(settings m.SchedulerSettings) contract.WorkloadSettings {
-	response := contract.WorkloadSettings{Revision: settings.Revision, OllamaQueueSize: settings.OllamaQueueSize, Resources: make([]contract.WorkloadResource, 0, len(settings.Resources)), Pipelines: make([]contract.WorkloadPipeline, 0, len(settings.Pipelines))}
+	response := contract.WorkloadSettings{Revision: settings.Revision, EmbeddingQueueSize: settings.EmbeddingQueueSize, Resources: make([]contract.WorkloadResource, 0, len(settings.Resources)), Pipelines: make([]contract.WorkloadPipeline, 0, len(settings.Pipelines))}
 	for _, resource := range settings.Resources {
 		response.Resources = append(response.Resources, contract.WorkloadResource{Id: resource.ID, Label: resource.Label, Limit: resource.Limit, MaximumLimit: resource.MaximumLimit, ActiveJobs: resource.ActiveJobs})
 	}

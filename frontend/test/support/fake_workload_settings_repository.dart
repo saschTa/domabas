@@ -4,12 +4,12 @@ import 'package:domabas/domain/workload/models/workload_settings.dart';
 WorkloadSettings testWorkloadSettings({
   int revision = 1,
   int workerLimit = 4,
-  int ollamaLimit = 8,
-  int ollamaMaximum = 64,
-  int activeOllama = 0,
+  int embeddingLimit = 8,
+  int embeddingMaximum = 64,
+  int activeEmbeddings = 0,
 }) => WorkloadSettings(
   revision: revision,
-  ollamaQueueSize: 128,
+  embeddingQueueSize: 128,
   resources: [
     WorkloadResource(
       id: 'worker',
@@ -19,11 +19,11 @@ WorkloadSettings testWorkloadSettings({
       activeJobs: 2,
     ),
     WorkloadResource(
-      id: 'ollama',
-      label: 'Ollama',
-      limit: ollamaLimit,
-      maximumLimit: ollamaMaximum,
-      activeJobs: activeOllama,
+      id: 'embedding-runtime',
+      label: 'Embedding runtime',
+      limit: embeddingLimit,
+      maximumLimit: embeddingMaximum,
+      activeJobs: activeEmbeddings,
     ),
     const WorkloadResource(
       id: 'external:abc',
@@ -42,7 +42,7 @@ WorkloadSettings testWorkloadSettings({
     WorkloadPipeline(
       id: 'document',
       label: 'Document ingestion',
-      resourceIds: ['worker', 'ollama'],
+      resourceIds: ['worker', 'embedding-runtime'],
     ),
     WorkloadPipeline(
       id: 'chat',
@@ -79,7 +79,7 @@ final class FakeWorkloadSettingsRepository
     current = testWorkloadSettings(
       revision: expectedRevision + 1,
       workerLimit: limits['worker']!,
-      ollamaLimit: limits['ollama']!,
+      embeddingLimit: limits['embedding-runtime']!,
     );
     return current;
   }

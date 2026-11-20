@@ -234,45 +234,6 @@ class ChatApi {
     return null;
   }
 
-  Future<Response> getChatModelContextWithHttpInfo(String model, { Future<void>? abortTrigger, }) async {
-    // ignore: prefer_const_declarations
-    final path = r'/api/v1/system/chat/model-context';
-
-    // ignore: prefer_final_locals
-    Object? postBody;
-
-    final queryParams = <QueryParam>[];
-    final headerParams = <String, String>{};
-    final formParams = <String, String>{};
-
-      queryParams.addAll(_queryParams('', 'model', model));
-
-    const contentTypes = <String>[];
-
-    return apiClient.invokeAPI(
-      path,
-      'GET',
-      queryParams,
-      postBody,
-      headerParams,
-      formParams,
-      contentTypes.isEmpty ? null : contentTypes.first,
-      abortTrigger: abortTrigger,
-    );
-  }
-
-  Future<OllamaModelContext?> getChatModelContext(String model, { Future<void>? abortTrigger, }) async {
-    final response = await getChatModelContextWithHttpInfo(model, abortTrigger: abortTrigger,);
-    if (response.statusCode >= HttpStatus.badRequest) {
-      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
-    }
-    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OllamaModelContext',) as OllamaModelContext;
-
-    }
-    return null;
-  }
-
   Future<Response> listChatConversationsWithHttpInfo({ int? limit, String? cursor, Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final path = r'/api/v1/chat/conversations';
@@ -357,50 +318,6 @@ class ChatApi {
     }
     if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
       return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ChatMessagePage',) as ChatMessagePage;
-
-    }
-    return null;
-  }
-
-  Future<Response> listChatModelsWithHttpInfo({ int? limit, int? offset, Future<void>? abortTrigger, }) async {
-    // ignore: prefer_const_declarations
-    final path = r'/api/v1/system/chat/models';
-
-    // ignore: prefer_final_locals
-    Object? postBody;
-
-    final queryParams = <QueryParam>[];
-    final headerParams = <String, String>{};
-    final formParams = <String, String>{};
-
-    if (limit != null) {
-      queryParams.addAll(_queryParams('', 'limit', limit));
-    }
-    if (offset != null) {
-      queryParams.addAll(_queryParams('', 'offset', offset));
-    }
-
-    const contentTypes = <String>[];
-
-    return apiClient.invokeAPI(
-      path,
-      'GET',
-      queryParams,
-      postBody,
-      headerParams,
-      formParams,
-      contentTypes.isEmpty ? null : contentTypes.first,
-      abortTrigger: abortTrigger,
-    );
-  }
-
-  Future<ChatModelPage?> listChatModels({ int? limit, int? offset, Future<void>? abortTrigger, }) async {
-    final response = await listChatModelsWithHttpInfo(limit: limit, offset: offset, abortTrigger: abortTrigger,);
-    if (response.statusCode >= HttpStatus.badRequest) {
-      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
-    }
-    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'ChatModelPage',) as ChatModelPage;
 
     }
     return null;

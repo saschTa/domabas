@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../domain/chat/models/chat.dart';
 import '../../../ui/domabas_ui.dart';
 import '../cubits/chat_settings_cubit.dart';
 
@@ -22,9 +21,6 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
   late final _secret = TextEditingController(
     text: widget.cubit.state.draft.apiKey,
   );
-  late final _contextLength = TextEditingController(
-    text: widget.cubit.state.draft.contextLength,
-  );
   ChatSettingsCubit get cubit => widget.cubit;
   late String? _notice = widget.cubit.state.notice;
   @override
@@ -32,7 +28,6 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     _model.dispose();
     _url.dispose();
     _secret.dispose();
-    _contextLength.dispose();
     super.dispose();
   }
 
@@ -52,7 +47,6 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         (_model, state.draft.model),
         (_url, state.draft.baseUrl),
         (_secret, state.draft.apiKey),
-        (_contextLength, state.draft.contextLength),
       ]) {
         if (entry.$1.text != entry.$2) {
           entry.$1.value = TextEditingValue(
@@ -64,7 +58,6 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     },
     builder: (context, state) {
       final draft = state.draft;
-      final external = draft.provider == 'openai';
       final editable = !state.saving;
       return AppPage(
         glacier: true,
@@ -145,104 +138,16 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     ),
                     const SizedBox(height: 16),
                     GlacierModelConnection(
-                      provider: external ? 'external' : 'local',
-                      enabled: editable,
-                      providerField: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
-                            children: [
-                              GlacierChoice(
-                                key: const Key('chatProviderOllama'),
-                                label: 'Internal Ollama',
-                                compact: true,
-                                selected: !external,
-                                onChanged: editable
-                                    ? (_) => cubit.edit(provider: 'ollama')
-                                    : null,
-                              ),
-                              GlacierChoice(
-                                key: const Key('chatProviderOpenAI'),
-                                label: 'External service',
-                                compact: true,
-                                selected: external,
-                                onChanged: editable
-                                    ? (_) => cubit.edit(provider: 'openai')
-                                    : null,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            external
-                                ? 'Sends chat messages and selected document text to your OpenAI-compatible service.'
-                                : 'Runs on this installation. A model may need to download before its first reply.',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                      modelField: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextField(
-                            key: const Key('chatModel'),
-                            controller: _model,
-                            enabled: editable,
-                            autocorrect: false,
-                            decoration: InputDecoration(
-                              labelText: 'Model',
-                              hintText: external
-                                  ? 'Your service model name'
-                                  : const ChatConfigurationDraft().model,
-                            ),
-                            onChanged: (value) => cubit.edit(model: value),
-                          ),
-                          if (!external) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              'Installed models',
-                              style: Theme.of(context).textTheme.labelLarge,
-                            ),
-                            AppProgressSlot(active: state.loadingModels),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final model in state.models)
-                                  GlacierButton(
-                                    label: model,
-                                    onPressed: editable
-                                        ? () => cubit.edit(model: model)
-                                        : null,
-                                    kind: GlacierButtonKind.quiet,
-                                  ),
-                                if (state.nextModelOffset != null)
-                                  GlacierButton(
-                                    key: const Key('moreChatModels'),
-                                    onPressed: state.loadingModels
-                                        ? null
-                                        : () => cubit.loadModels(more: true),
-                                    label: 'Load more models',
-                                    kind: GlacierButtonKind.quiet,
-                                  ),
-                              ],
-                            ),
-                            if (state.modelsError != null)
-                              Text(
-                                state.modelsError!,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            GlacierButton(
-                              onPressed: state.loadingModels
-                                  ? null
-                                  : cubit.loadModels,
-                              label: 'Refresh installed models',
-                              kind: GlacierButtonKind.quiet,
-                            ),
-                          ],
-                        ],
+                      modelField: TextField(
+                        key: const Key('chatModel'),
+                        controller: _model,
+                        enabled: editable,
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          labelText: 'Model',
+                          hintText: 'Your service model name',
+                        ),
+                        onChanged: (value) => cubit.edit(model: value),
                       ),
                       endpointField: TextField(
                         key: const Key('chatBaseUrl'),
@@ -261,10 +166,6 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                       credentialField: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Context length is managed by the external service. Your Ollama setting is retained.',
-                          ),
                           const SizedBox(height: 16),
                           TextField(
                             key: const Key('chatApiKey'),
@@ -321,29 +222,6 @@ final class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                           ),
                         ],
                       ),
-                      contextField: external
-                          ? const SizedBox.shrink()
-                          : AppModelContextField(
-                              controller: _contextLength,
-                              fieldKey: const Key('chatContextLength'),
-                              checkKey: const Key('checkChatModelContext'),
-                              defaultKey: const Key('resetChatContextLength'),
-                              scope: 'Applies to new chat messages. Independent of AI processing.',
-                              enabled: editable,
-                              loading: state.loadingModelContext,
-                              errorText: draft.contextLengthError,
-                              lookupError: state.modelContextError,
-                              maxContextLength:
-                                  state.modelContext?.maxContextLength,
-                              requestedContextLength: draft.contextLengthValue,
-                              onChanged: (value) =>
-                                  cubit.edit(contextLength: value),
-                              onCheck: draft.model.trim().isEmpty
-                                  ? null
-                                  : cubit.checkModelContext,
-                              onDefault: () =>
-                                  cubit.edit(contextLength: '32768'),
-                            ),
                     ),
                     if (draft.error != null && state.dirty)
                       Padding(

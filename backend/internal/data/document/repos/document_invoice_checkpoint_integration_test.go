@@ -21,7 +21,7 @@ func TestInvoiceClassificationCheckpointRecoveryAndStaleWrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = f.service.SetProcessingConfiguration(ctx, f.actor, document.DocumentProcessingConfiguration{Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision, LLMUpdate: &document.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: new(true), Provider: "ollama", Model: "qwen3.5:4b"}})
+	_, err = f.service.SetProcessingConfiguration(ctx, f.actor, document.DocumentProcessingConfiguration{Language: configuration.Language, Segmentation: configuration.Segmentation, ExpectedRevision: &configuration.Revision, LLMUpdate: &document.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: new(true), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"}})
 	if err != nil {
 		t.Fatal(err)
 	}

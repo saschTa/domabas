@@ -205,55 +205,79 @@ func TestVerifiedCacheRejectsCorruption(t *testing.T) {
 		t.Fatal("corrupt cache accepted")
 	}
 }
-func TestOllamaChecksIdentityAndPrefixesWithoutTruncation(t *testing.T) {
+func TestLlamaEmbeddingUsesPinnedAliasAndOrderedNormalizedVectors(t *testing.T) {
 	requests := 0
-	digest := ModelDigest
-	contextError := false
+	alias := ModelName
+	status := http.StatusOK
+	var indices = []int{1, 0}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/api/tags":
-			json.NewEncoder(w).Encode(map[string]any{"models": []map[string]string{{"name": ModelName, "digest": digest}}})
-		case "/api/embed":
+		case "/v1/models":
+			json.NewEncoder(w).Encode(map[string]any{"data": []map[string]string{{"id": alias}}})
+		case "/v1/embeddings":
 			requests++
-			var body documentProcessorOllamaEmbedRequest
-			if json.NewDecoder(r.Body).Decode(&body) != nil {
-				t.Error("invalid request")
-			}
-			if body.Model != ModelName || body.Truncate || len(body.Input) != 1 || body.Input[0] != "search_query: query" {
-				t.Errorf("embedding request %+v", body)
-			}
-			if contextError {
-				w.WriteHeader(400)
-				json.NewEncoder(w).Encode(map[string]string{"error": "the input length exceeds the maximum context length"})
+			var body documentProcessorLlamaEmbedRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Error(err)
 				return
 			}
-			vector := make([]float64, 768)
-			vector[0] = 2
-			json.NewEncoder(w).Encode(documentProcessorOllamaEmbedResponse{Model: ModelName, Embeddings: [][]float64{vector}})
+			if body.Model != ModelName || body.EncodingFormat != "float" || len(body.Input) != 2 || body.Input[0] != "search_document: one" || body.Input[1] != "search_document: two" {
+				t.Errorf("unexpected request: %+v", body)
+			}
+			w.WriteHeader(status)
+			if status == http.StatusBadRequest {
+				json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"type": "exceed_context_size_error"}})
+				return
+			}
+			if status == http.StatusInternalServerError {
+				json.NewEncoder(w).Encode(map[string]any{"error": map[string]string{"type": "server_error", "message": "input (999 tokens) is too large to process. increase the physical batch size (current batch size: 512)"}})
+				return
+			}
+			var data []map[string]any
+			for i, index := range indices {
+				vector := make([]float64, Dimensions)
+				vector[1-i] = 2
+				data = append(data, map[string]any{"index": index, "embedding": vector})
+			}
+			json.NewEncoder(w).Encode(map[string]any{"model": ModelName, "data": data})
 		default:
 			t.Errorf("unexpected path %s", r.URL.Path)
 		}
 	}))
 	defer server.Close()
-	runtime, err := NewOllamaEmbeddingDataSource(server.URL)
+	runtime, err := NewLlamaEmbeddingDataSource(server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer runtime.Close()
-	result, err := runtime.Embed(context.Background(), installedEmbeddingSpace(), "query", []string{"query"})
-	if err != nil || result.Vectors[0][0] != 1 {
-		t.Fatalf("embedding %v %v", result, err)
+	embed := func() (records.DocumentEmbeddingResult, error) {
+		return runtime.Embed(t.Context(), installedEmbeddingSpace(), "document", []string{"one", "two"})
 	}
-	digest = "drift"
-	if _, err = runtime.Embed(context.Background(), installedEmbeddingSpace(), "query", []string{"query"}); err == nil || requests != 1 {
-		t.Fatal("drift reached inference")
+	result, err := embed()
+	if err != nil || len(result.Vectors) != 2 || result.Vectors[0][0] != 1 || result.Vectors[1][1] != 1 {
+		t.Fatalf("unexpected normalized batch: %+v, %v", result, err)
 	}
-	digest = ModelDigest
-	contextError = true
-	_, err = runtime.Embed(context.Background(), installedEmbeddingSpace(), "query", []string{"query"})
-	var failure records.DocumentProcessorError
-	if !errors.As(err, &failure) || failure.Code != "context_length" {
-		t.Fatalf("context rejection: %v", err)
+	alias = "wrong-model"
+	if _, err = embed(); err == nil || requests != 1 {
+		t.Fatal("wrong model reached inference")
+	}
+	alias = ModelName
+	for _, invalid := range [][]int{{0, 0}, {-1, 1}, {0, 2}, {0}} {
+		indices = invalid
+		if _, err := embed(); err == nil {
+			t.Errorf("accepted invalid indices %v", invalid)
+		}
+	}
+	for _, tc := range []struct {
+		status int
+		want   string
+	}{{400, "context_length"}, {500, "context_length"}, {429, "overloaded"}, {503, "overloaded"}} {
+		status = tc.status
+		_, err := embed()
+		var failure records.DocumentProcessorError
+		if !errors.As(err, &failure) || failure.Code != tc.want {
+			t.Errorf("status %d: %v", status, err)
+		}
 	}
 }
 func TestEXIFOrientationParsingAndMalformedSegments(t *testing.T) {

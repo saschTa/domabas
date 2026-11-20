@@ -134,7 +134,7 @@ void main() {
       final controller = tester.widget<TextField>(field).controller;
       repository.saved = const ChatConfiguration(
         enabled: true,
-        provider: 'ollama',
+        provider: 'openai',
         model: 'new-saved-model',
         revision: 2,
       );
@@ -163,7 +163,7 @@ void main() {
     repository.current = testWorkloadSettings(
       revision: 2,
       workerLimit: 5,
-      ollamaLimit: 12,
+      embeddingLimit: 12,
     );
     final reads = repository.reads;
     await _pull(tester, 'workloadSettingsScroll');
@@ -171,7 +171,7 @@ void main() {
     expect(repository.reads, reads + 1);
     expect(cubit.state.settings!.revision, 2);
     expect(cubit.state.drafts['worker'], '7');
-    expect(cubit.state.drafts['ollama'], '12');
+    expect(cubit.state.drafts['embedding-runtime'], '12');
     expect(find.byKey(const Key('refreshWorkloadSettings')), findsNothing);
     expect(tester.takeException(), isNull);
   });

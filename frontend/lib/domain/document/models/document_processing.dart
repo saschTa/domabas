@@ -50,11 +50,10 @@ final class DocumentLLMConfiguration {
     this.propertyThinkingEnabled = false,
     this.invoiceThinkingEnabled = false,
     this.lmStudioCompatibility = false,
-    this.provider = 'ollama',
-    this.model = 'qwen3.5:4b',
+    this.provider = 'openai',
+    this.model = '',
     this.baseUrl = '',
     this.credentialConfigured = false,
-    this.contextLength = 32768,
   });
   final bool enabled,
       invoiceEnabled,
@@ -63,16 +62,6 @@ final class DocumentLLMConfiguration {
       lmStudioCompatibility,
       credentialConfigured;
   final String provider, model, baseUrl;
-  final int contextLength;
-}
-
-final class DocumentModelContext {
-  const DocumentModelContext({
-    required this.model,
-    required this.maxContextLength,
-  });
-  final String model;
-  final int maxContextLength;
 }
 
 final class DocumentLLMSettingsDraft {
@@ -82,12 +71,11 @@ final class DocumentLLMSettingsDraft {
     this.propertyThinkingEnabled = false,
     this.invoiceThinkingEnabled = false,
     this.lmStudioCompatibility = false,
-    this.provider = 'ollama',
-    this.model = 'qwen3.5:4b',
+    this.provider = 'openai',
+    this.model = '',
     this.baseUrl = '',
     this.apiKey = '',
     this.clearApiKey = false,
-    this.contextLength = '32768',
   });
   factory DocumentLLMSettingsDraft.fromConfiguration(
     DocumentLLMConfiguration configuration,
@@ -100,7 +88,6 @@ final class DocumentLLMSettingsDraft {
     provider: configuration.provider,
     model: configuration.model,
     baseUrl: configuration.baseUrl,
-    contextLength: configuration.contextLength.toString(),
   );
   final bool enabled,
       invoiceEnabled,
@@ -108,7 +95,7 @@ final class DocumentLLMSettingsDraft {
       invoiceThinkingEnabled,
       lmStudioCompatibility,
       clearApiKey;
-  final String provider, model, baseUrl, apiKey, contextLength;
+  final String provider, model, baseUrl, apiKey;
   DocumentLLMSettingsDraft copyWith({
     bool? enabled,
     bool? invoiceEnabled,
@@ -120,7 +107,6 @@ final class DocumentLLMSettingsDraft {
     String? baseUrl,
     String? apiKey,
     bool? clearApiKey,
-    String? contextLength,
   }) => DocumentLLMSettingsDraft(
     enabled: enabled ?? this.enabled,
     invoiceEnabled: invoiceEnabled ?? this.invoiceEnabled,
@@ -134,7 +120,6 @@ final class DocumentLLMSettingsDraft {
     baseUrl: baseUrl ?? this.baseUrl,
     apiKey: apiKey ?? this.apiKey,
     clearApiKey: clearApiKey ?? this.clearApiKey,
-    contextLength: contextLength ?? this.contextLength,
   );
   bool matches(DocumentLLMConfiguration configuration) =>
       enabled == configuration.enabled &&
@@ -144,17 +129,21 @@ final class DocumentLLMSettingsDraft {
       lmStudioCompatibility == configuration.lmStudioCompatibility &&
       provider == configuration.provider &&
       model.trim() == configuration.model &&
-      (contextLengthValue != null
-          ? contextLengthValue == configuration.contextLength
-          : provider != 'ollama') &&
-      (provider == 'ollama' ? '' : baseUrl.trim()) == configuration.baseUrl;
+      baseUrl.trim() == configuration.baseUrl;
   bool changed(DocumentLLMConfiguration configuration) =>
       !matches(configuration) || apiKey.isNotEmpty || clearApiKey;
-  String? get modelError => model.trim().isEmpty || model.trim().length > 128
+  bool get unconfigured =>
+      !enabled &&
+      !invoiceEnabled &&
+      model.trim().isEmpty &&
+      baseUrl.trim().isEmpty &&
+      apiKey.isEmpty;
+  String? get modelError =>
+      !unconfigured && (model.trim().isEmpty || model.trim().length > 128)
       ? 'Enter a model name of up to 128 characters.'
       : null;
   String? get baseUrlError {
-    if (provider != 'openai') return null;
+    if (unconfigured) return null;
     final uri = Uri.tryParse(baseUrl.trim());
     return uri == null ||
             !{'http', 'https'}.contains(uri.scheme) ||
@@ -169,23 +158,14 @@ final class DocumentLLMSettingsDraft {
   }
 
   bool get valid =>
-      {'ollama', 'openai'}.contains(provider) &&
+      provider == 'openai' &&
       modelError == null &&
-      (provider != 'ollama' || contextLengthError == null) &&
       baseUrlError == null &&
       apiKeyError == null &&
       !(clearApiKey && apiKey.isNotEmpty);
   String? get apiKeyError =>
       apiKey.length > 4096 || apiKey.contains('\n') || apiKey.contains('\r')
       ? 'Enter a single-line API key of up to 4096 characters.'
-      : null;
-  int? get contextLengthValue {
-    final value = int.tryParse(contextLength.trim());
-    return value != null && value >= 1024 && value <= 1048576 ? value : null;
-  }
-
-  String? get contextLengthError => contextLengthValue == null
-      ? 'Enter a whole number from 1,024 to 1,048,576 tokens.'
       : null;
 }
 
@@ -208,14 +188,14 @@ final class DocumentProcessingScheduling {
   const DocumentProcessingScheduling({
     required this.ingestionConcurrency,
     required this.aiConcurrency,
-    required this.ollamaQueueSize,
+    required this.embeddingQueueSize,
     required this.ingestionConcurrencyMode,
     required this.aiConcurrencyMode,
     required this.providerStepRetries,
     required this.priorityPolicy,
   });
 
-  final int ingestionConcurrency, aiConcurrency, ollamaQueueSize;
+  final int ingestionConcurrency, aiConcurrency, embeddingQueueSize;
   final int providerStepRetries;
   final String ingestionConcurrencyMode, aiConcurrencyMode, priorityPolicy;
 }

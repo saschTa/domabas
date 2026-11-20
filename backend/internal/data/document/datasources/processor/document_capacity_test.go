@@ -13,7 +13,7 @@ import (
 func newCapacityTestProcessor(t *testing.T, embeddingSlots int) *LocalDocumentProcessorDataSource {
 	t.Helper()
 	lifetime, cancel := context.WithCancel(t.Context())
-	runtime, err := NewOllamaEmbeddingDataSource("http://ollama.test")
+	runtime, err := NewLlamaEmbeddingDataSource("http://embeddings.test")
 	if err != nil {
 		t.Fatal(err)
 	}

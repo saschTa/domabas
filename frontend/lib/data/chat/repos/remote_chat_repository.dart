@@ -34,12 +34,9 @@ final class RemoteChatRepository implements ChatRepository {
           expectedRevision: expectedRevision,
           enabled: draft.enabled,
           thinkingEnabled: draft.thinkingEnabled,
-          provider: draft.provider == 'openai'
-              ? api.UpdateChatConfigurationRequestProviderEnum.openai
-              : api.UpdateChatConfigurationRequestProviderEnum.ollama,
+          provider: api.UpdateChatConfigurationRequestProviderEnum.openai,
           model: draft.model.trim(),
-          contextLength: draft.contextLengthValue,
-          baseUrl: draft.provider == 'openai' ? draft.baseUrl.trim() : '',
+          baseUrl: draft.baseUrl.trim(),
           apiKey: draft.apiKey.isEmpty || draft.clearApiKey
               ? null
               : draft.apiKey,
@@ -49,23 +46,6 @@ final class RemoteChatRepository implements ChatRepository {
       ),
     ),
   );
-  @override
-  Future<ChatModelContext> modelContext(String model, {Future<void>? cancel}) =>
-      _translate(
-        () async => chatModelContextMapper(
-          await _source.modelContext(model, cancel),
-          model,
-        ),
-      );
-  @override
-  Future<ChatModelPage> models({int offset = 0, Future<void>? cancel}) =>
-      _translate(() async {
-        final page = await _source.models(offset, cancel);
-        return ChatModelPage(
-          items: page.items.map((model) => model.name),
-          nextOffset: page.nextOffset,
-        );
-      });
   @override
   Future<ChatPage<ChatConversation>> conversations({
     String? cursor,

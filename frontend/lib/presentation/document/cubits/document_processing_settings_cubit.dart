@@ -23,9 +23,6 @@ final class DocumentProcessingSettingsState {
     this.reconcileRequired = false,
     this.browsingHistory = false,
     this.llm = const DocumentLLMSettingsDraft(),
-    this.modelContext,
-    this.loadingModelContext = false,
-    this.modelContextError,
   }) : batches = List.unmodifiable(batches);
   final DocumentProcessingConfiguration? configuration;
   final List<DocumentReindexBatch> batches;
@@ -34,9 +31,6 @@ final class DocumentProcessingSettingsState {
   final bool loading, saving, reconcileRequired, browsingHistory;
   final DocumentReindexRequest? pendingRequest;
   final DocumentLLMSettingsDraft llm;
-  final DocumentModelContext? modelContext;
-  final bool loadingModelContext;
-  final String? modelContextError;
   bool get dirty =>
       configuration != null &&
       (language != configuration!.pipeline.configuration.language ||
@@ -75,11 +69,6 @@ final class DocumentProcessingSettingsCubit
   int? _draftRevision;
   DocumentReindexRequest? _pending;
   DocumentLLMSettingsDraft _llm = const DocumentLLMSettingsDraft();
-  int _contextEpoch = 0;
-  Completer<void>? _contextCancel;
-  DocumentModelContext? _modelContext;
-  bool _loadingModelContext = false;
-  String? _modelContextError;
   ({String language, String segmentation, DocumentLLMSettingsDraft? llm})?
   _uncertainSettings;
   bool get active => _active && !isClosed && allowed;
@@ -103,7 +92,6 @@ final class DocumentProcessingSettingsCubit
   void setActive(bool value) {
     if (isClosed || value == _active) return;
     _active = value;
-    if (!value) _clearModelContext();
     _refresh.setActive(value);
     _epoch++;
     _cancel(_readCancel);
@@ -149,7 +137,6 @@ final class DocumentProcessingSettingsCubit
     String? baseUrl,
     String? apiKey,
     bool? clearApiKey,
-    String? contextLength,
   }) {
     if (!active ||
         _saving ||
@@ -167,9 +154,8 @@ final class DocumentProcessingSettingsCubit
       provider: provider,
       model: model,
       baseUrl: baseUrl,
-      apiKey: clearApiKey == true || provider == 'ollama' ? '' : apiKey,
+      apiKey: clearApiKey == true ? '' : apiKey,
       clearApiKey: apiKey != null && apiKey.isNotEmpty ? false : clearApiKey,
-      contextLength: contextLength,
     );
     _error = null;
     _notice = null;
@@ -240,46 +226,6 @@ final class DocumentProcessingSettingsCubit
         _publish();
       }
     }
-  }
-
-  Future<void> checkModelContext() async {
-    final model = _llm.model.trim();
-    if (!active ||
-        _saving ||
-        _loadingModelContext ||
-        _llm.provider != 'ollama' ||
-        model.isEmpty) {
-      return;
-    }
-    _clearModelContext();
-    final epoch = _contextEpoch;
-    final cancel = _contextCancel = Completer<void>();
-    _loadingModelContext = true;
-    _publish();
-    try {
-      final result = await _repository.modelContext(
-        model,
-        cancel: cancel.future,
-      );
-      if (!active || epoch != _contextEpoch) return;
-      _modelContext = result;
-    } on DocumentProcessingFailure catch (_) {
-      if (!active || epoch != _contextEpoch) return;
-      _modelContextError = 'Could not check this model’s context limit. Check that the model is installed, then retry.';
-    } finally {
-      if (active && epoch == _contextEpoch) {
-        _loadingModelContext = false;
-        _publish();
-      }
-    }
-  }
-
-  void _clearModelContext() {
-    _contextEpoch++;
-    _cancel(_contextCancel);
-    _modelContext = null;
-    _loadingModelContext = false;
-    _modelContextError = null;
   }
 
   void _acceptConfiguration(DocumentProcessingConfiguration config) {
@@ -449,10 +395,6 @@ final class DocumentProcessingSettingsCubit
 
   void _publish() {
     if (!isClosed) {
-      if (_llm.model.trim() != state.llm.model.trim() ||
-          _llm.provider != state.llm.provider) {
-        _clearModelContext();
-      }
       emit(
         DocumentProcessingSettingsState(
           configuration: _configuration,
@@ -469,9 +411,6 @@ final class DocumentProcessingSettingsCubit
           reconcileRequired: _uncertainSettings != null,
           browsingHistory: _olderBatches,
           llm: _llm,
-          modelContext: _modelContext,
-          loadingModelContext: _loadingModelContext,
-          modelContextError: _modelContextError,
         ),
       );
     }

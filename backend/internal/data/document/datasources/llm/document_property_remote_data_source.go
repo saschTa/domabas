@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/domabas/domabas/backend/internal/data/jobs"
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -18,25 +16,18 @@ import (
 	m "github.com/domabas/domabas/backend/internal/domain/document/models"
 )
 
-var errMissingModel = errors.New("model unavailable")
-
 type DocumentPropertyRemoteDataSource struct {
-	ollama string
 	client *http.Client
 	logger *slog.Logger
 }
 
-func NewDocumentPropertyRemoteDataSource(ollama string, loggers ...*slog.Logger) (*DocumentPropertyRemoteDataSource, error) {
-	u, err := url.Parse(ollama)
-	if err != nil || u.Hostname() == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
-		return nil, errors.New("LLM_OLLAMA_URL must be an HTTP(S) origin")
-	}
+func NewDocumentPropertyRemoteDataSource(loggers ...*slog.Logger) *DocumentPropertyRemoteDataSource {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	var logger *slog.Logger
 	if len(loggers) > 0 {
 		logger = loggers[0]
 	}
-	return &DocumentPropertyRemoteDataSource{ollama: strings.TrimRight(ollama, "/"), client: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, logger: logger}, nil
+	return &DocumentPropertyRemoteDataSource{client: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, logger: logger}
 }
 
 func (r *DocumentPropertyRemoteDataSource) Close() { r.client.CloseIdleConnections() }
@@ -72,9 +63,6 @@ func (r *DocumentPropertyRemoteDataSource) send(ctx context.Context, endpoint, k
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
 		stopReading.Stop()
 		var cause error = m.DocumentProcessingError{Code: "inference_unavailable", Retryable: response.StatusCode >= 500}
-		if response.StatusCode == http.StatusNotFound {
-			cause = errors.Join(errMissingModel, cause)
-		}
 		if response.StatusCode == http.StatusTooManyRequests || response.StatusCode == http.StatusServiceUnavailable {
 			cause = m.ErrOverloaded
 		}
@@ -182,124 +170,43 @@ func (r *DocumentPropertyRemoteDataSource) Generate(ctx context.Context, provide
 	}
 	instruction := prompt + "\nRequired JSON schema:\n" + schema
 	messages := []map[string]string{{"role": "system", "content": instruction}, {"role": "user", "content": text}}
-	var content string
-	if provider == "ollama" {
-		var installed documentOllamaModelInfo
-		err := r.request(ctx, r.ollama+"/api/show", "", map[string]any{"model": model}, &installed)
-		if errors.Is(err, errMissingModel) {
-			var pull struct {
-				Status string `json:"status"`
-			}
-			if err = r.request(ctx, r.ollama+"/api/pull", "", map[string]any{"model": model, "stream": false}, &pull); err != nil {
-				return "", err
-			}
-			if pull.Status != "success" {
-				return "", m.DocumentProcessingError{Code: "inference_unavailable", Retryable: true}
-			}
-			err = r.request(ctx, r.ollama+"/api/show", "", map[string]any{"model": model}, &installed)
-		} else if err != nil {
-			return "", err
-		}
-		if err != nil {
-			return "", err
-		}
-		maximum, err := installed.contextLength()
-		if err != nil {
-			return "", err
-		}
-		requested := 16384
-		if len(contextLengths) > 0 {
-			requested = (m.DocumentLLMConfiguration{ContextLength: contextLengths[0]}).RequestedContextLength()
-		}
-		var response documentInferenceResponse
-		thinking := thinkingEnabled
-		outputBudget := outputTokens
-		payload := map[string]any{"model": model, "stream": false, "format": json.RawMessage(schema), "keep_alive": "5m", "options": map[string]any{"temperature": temperature, "num_ctx": min(requested, maximum), "num_predict": outputBudget}}
-		payload["think"] = thinking
-		messages = []map[string]string{{"role": "user", "content": instruction + "\nBEGIN OCR DOCUMENT\n" + text + "\nEND OCR DOCUMENT"}}
-		payload["messages"] = messages
-		start := time.Now()
-		err = r.request(ctx, r.ollama+"/api/chat", "", payload, &response, responseLimit)
+	if provider != "openai" {
+		return "", m.DocumentProcessingError{Code: "configuration_unavailable"}
+	}
+	reasoningEffort := "none"
+	if thinkingEnabled {
+		reasoningEffort = "medium"
+	}
+	var response documentExternalInferenceResponse
+	format := map[string]any{"type": "json_object"}
+	if lmStudioCompatibility {
+		format = map[string]any{"type": "json_schema", "json_schema": map[string]any{"name": "document_response", "schema": json.RawMessage(schema)}}
+	}
+	start := time.Now()
+	defer func() {
 		task := "document_properties"
 		if invoiceClassification {
 			task = "invoice_classification"
 		} else if invoiceExtraction {
 			task = "invoice_extraction"
 		}
-		defer func() {
-			r.logInference(ctx, task, model, messages[0]["content"], requested, min(requested, maximum), utf8.RuneCountInString(text), outputBudget, thinking, start, response, resultError)
-		}()
-		if err != nil {
-			return "", err
-		}
-		if response.DoneReason == "length" {
-			return "", m.DocumentProcessingError{Code: "output_limit"}
-		}
-		if !response.Done || response.DoneReason != "stop" {
-			return "", m.DocumentProcessingError{Code: "processing_failed"}
-		}
-		content = response.Message.Content
-	} else if provider == "openai" {
-		reasoningEffort := "none"
-		if thinkingEnabled {
-			reasoningEffort = "medium"
-		}
-		var response documentExternalInferenceResponse
-		format := map[string]any{"type": "json_object"}
-		if lmStudioCompatibility {
-			format = map[string]any{"type": "json_schema", "json_schema": map[string]any{"name": "document_response", "schema": json.RawMessage(schema)}}
-		}
-		start := time.Now()
-		defer func() {
-			task := "document_properties"
-			if invoiceClassification {
-				task = "invoice_classification"
-			} else if invoiceExtraction {
-				task = "invoice_extraction"
-			}
-			r.logExternalInference(ctx, task, model, format["type"].(string), utf8.RuneCountInString(text), outputTokens, start, response, resultError)
-		}()
-		err := r.request(ctx, strings.TrimRight(baseURL, "/")+"/chat/completions", key, map[string]any{"model": model, "stream": false, "temperature": temperature, "max_tokens": outputTokens, "reasoning_effort": reasoningEffort, "response_format": format, "messages": messages}, &response, responseLimit)
-		if err != nil {
-			return "", err
-		}
-		if len(response.Choices) == 1 && response.Choices[0].FinishReason == "length" {
-			return "", m.DocumentProcessingError{Code: "output_limit"}
-		}
-		if len(response.Choices) != 1 || response.Choices[0].FinishReason != "stop" {
-			return "", m.DocumentProcessingError{Code: "processing_failed"}
-		}
-		content = response.Choices[0].Message.Content
-	} else {
-		return "", m.DocumentProcessingError{Code: "configuration_unavailable"}
+		r.logExternalInference(ctx, task, model, format["type"].(string), utf8.RuneCountInString(text), outputTokens, start, response, resultError)
+	}()
+	err := r.request(ctx, strings.TrimRight(baseURL, "/")+"/chat/completions", key, map[string]any{"model": model, "stream": false, "temperature": temperature, "max_tokens": outputTokens, "reasoning_effort": reasoningEffort, "response_format": format, "messages": messages}, &response, responseLimit)
+	if err != nil {
+		return "", err
 	}
+	if len(response.Choices) == 1 && response.Choices[0].FinishReason == "length" {
+		return "", m.DocumentProcessingError{Code: "output_limit"}
+	}
+	if len(response.Choices) != 1 || response.Choices[0].FinishReason != "stop" {
+		return "", m.DocumentProcessingError{Code: "processing_failed"}
+	}
+	content := response.Choices[0].Message.Content
 	if strings.TrimSpace(content) == "" {
 		return "", m.DocumentProcessingError{Code: "empty_response"}
 	}
 	return content, nil
-}
-
-type documentOllamaModelInfo struct {
-	ModelInfo map[string]json.RawMessage `json:"model_info"`
-}
-
-func (info documentOllamaModelInfo) contextLength() (int, error) {
-	var architecture string
-	var maximum int
-	if json.Unmarshal(info.ModelInfo["general.architecture"], &architecture) != nil || strings.TrimSpace(architecture) == "" || json.Unmarshal(info.ModelInfo[architecture+".context_length"], &maximum) != nil || maximum <= 0 || maximum > 2147483647 {
-		return 0, m.DocumentProcessingError{Code: "configuration_unavailable"}
-	}
-	return maximum, nil
-}
-
-func (r *DocumentPropertyRemoteDataSource) ModelContext(ctx context.Context, model string) (int, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	var info documentOllamaModelInfo
-	if err := r.request(ctx, r.ollama+"/api/show", "", map[string]string{"model": model}, &info); err != nil {
-		return 0, err
-	}
-	return info.contextLength()
 }
 
 func boundedPropertyText(text string) string {

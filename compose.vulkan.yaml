@@ -1,0 +1,9 @@
+services:
+  embeddings:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:5c73025f2072135ad37e306db9a57c685d8a349cfa5cb82b5c0f385b97567c94
+    devices:
+      - ${VULKAN_RENDER_DEVICE:-/dev/dri/renderD128}:${VULKAN_RENDER_DEVICE:-/dev/dri/renderD128}
+    group_add:
+      - "${VULKAN_RENDER_GROUP:-107}"
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: "all"

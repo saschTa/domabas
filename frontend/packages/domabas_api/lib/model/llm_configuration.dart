@@ -12,7 +12,6 @@ class LLMConfiguration {
   LLMConfiguration({
     this.propertyThinkingEnabled = false,
     this.invoiceThinkingEnabled = false,
-    required this.contextLength,
     required this.enabled,
     required this.invoiceEnabled,
     required this.provider,
@@ -25,8 +24,6 @@ class LLMConfiguration {
   bool propertyThinkingEnabled;
 
   bool invoiceThinkingEnabled;
-
-  int contextLength;
 
   bool enabled;
 
@@ -46,7 +43,6 @@ class LLMConfiguration {
   bool operator ==(Object other) => identical(this, other) || other is LLMConfiguration &&
     other.propertyThinkingEnabled == propertyThinkingEnabled &&
     other.invoiceThinkingEnabled == invoiceThinkingEnabled &&
-    other.contextLength == contextLength &&
     other.enabled == enabled &&
     other.invoiceEnabled == invoiceEnabled &&
     other.provider == provider &&
@@ -60,7 +56,6 @@ class LLMConfiguration {
     // ignore: unnecessary_parenthesis
     (propertyThinkingEnabled.hashCode) +
     (invoiceThinkingEnabled.hashCode) +
-    (contextLength.hashCode) +
     (enabled.hashCode) +
     (invoiceEnabled.hashCode) +
     (provider.hashCode) +
@@ -70,13 +65,12 @@ class LLMConfiguration {
     (lmStudioCompatibility.hashCode);
 
   @override
-  String toString() => 'LLMConfiguration[propertyThinkingEnabled=$propertyThinkingEnabled, invoiceThinkingEnabled=$invoiceThinkingEnabled, contextLength=$contextLength, enabled=$enabled, invoiceEnabled=$invoiceEnabled, provider=$provider, model=$model, baseUrl=$baseUrl, credentialConfigured=$credentialConfigured, lmStudioCompatibility=$lmStudioCompatibility]';
+  String toString() => 'LLMConfiguration[propertyThinkingEnabled=$propertyThinkingEnabled, invoiceThinkingEnabled=$invoiceThinkingEnabled, enabled=$enabled, invoiceEnabled=$invoiceEnabled, provider=$provider, model=$model, baseUrl=$baseUrl, credentialConfigured=$credentialConfigured, lmStudioCompatibility=$lmStudioCompatibility]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'propertyThinkingEnabled'] = this.propertyThinkingEnabled;
       json[r'invoiceThinkingEnabled'] = this.invoiceThinkingEnabled;
-      json[r'contextLength'] = this.contextLength;
       json[r'enabled'] = this.enabled;
       json[r'invoiceEnabled'] = this.invoiceEnabled;
       json[r'provider'] = this.provider;
@@ -93,8 +87,6 @@ class LLMConfiguration {
       final json = value.cast<String, dynamic>();
 
       assert(() {
-        assert(json.containsKey(r'contextLength'), 'Required key "LLMConfiguration[contextLength]" is missing from JSON.');
-        assert(json[r'contextLength'] != null, 'Required key "LLMConfiguration[contextLength]" has a null value in JSON.');
         assert(json.containsKey(r'enabled'), 'Required key "LLMConfiguration[enabled]" is missing from JSON.');
         assert(json[r'enabled'] != null, 'Required key "LLMConfiguration[enabled]" has a null value in JSON.');
         assert(json.containsKey(r'invoiceEnabled'), 'Required key "LLMConfiguration[invoiceEnabled]" is missing from JSON.');
@@ -113,7 +105,6 @@ class LLMConfiguration {
       return LLMConfiguration(
         propertyThinkingEnabled: mapValueOfType<bool>(json, r'propertyThinkingEnabled') ?? false,
         invoiceThinkingEnabled: mapValueOfType<bool>(json, r'invoiceThinkingEnabled') ?? false,
-        contextLength: mapValueOfType<int>(json, r'contextLength')!,
         enabled: mapValueOfType<bool>(json, r'enabled')!,
         invoiceEnabled: mapValueOfType<bool>(json, r'invoiceEnabled')!,
         provider: LLMConfigurationProviderEnum.fromJson(json[r'provider'])!,
@@ -166,7 +157,6 @@ class LLMConfiguration {
   }
 
   static const requiredKeys = <String>{
-    'contextLength',
     'enabled',
     'invoiceEnabled',
     'provider',
@@ -177,7 +167,6 @@ class LLMConfiguration {
 }
 
 enum LLMConfigurationProviderEnum {
-  ollama._(r'ollama'),
   openai._(r'openai'),
   ;
 
@@ -219,7 +208,6 @@ class LLMConfigurationProviderEnumTypeTransformer {
     }
     if (data != null) {
       switch (data) {
-        case r'ollama': return LLMConfigurationProviderEnum.ollama;
         case r'openai': return LLMConfigurationProviderEnum.openai;
         default:
           if (!allowNull) {

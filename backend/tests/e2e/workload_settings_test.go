@@ -14,7 +14,7 @@ func verifyWorkloadSettings(api *ingestionAPI, admin, namespaceOwner string) {
 	api.request(namespaceOwner, "GET", path, "", 403, "Error")
 	api.request(namespaceOwner, "PUT", path, "{", 403, "Error")
 	settings := api.request(admin, "GET", path, "", 200, "WorkloadSettings")
-	if settings["ollamaQueueSize"] != float64(9) {
+	if settings["embeddingQueueSize"] != float64(9) {
 		api.t.Fatal("wrong queue ceiling", settings)
 	}
 	limits := map[string]int{}
@@ -24,7 +24,7 @@ func verifyWorkloadSettings(api *ingestionAPI, admin, namespaceOwner string) {
 		limits[resource["id"].(string)] = int(resource["limit"].(float64))
 		maximum[resource["id"].(string)] = int(resource["maximumLimit"].(float64))
 	}
-	if limits["worker"] != 10 || limits["ollama"] != 1 || maximum["ollama"] != 4 {
+	if limits["worker"] != 10 || limits["embedding-runtime"] != 1 || maximum["embedding-runtime"] != 4 {
 		api.t.Fatal("unsafe scheduler defaults or half-queue ceiling", settings)
 	}
 	requirements := map[string][]any{}
@@ -41,20 +41,20 @@ func verifyWorkloadSettings(api *ingestionAPI, admin, namespaceOwner string) {
 	for pipeline, expected := range map[string][]any{
 		"email":              {"worker"},
 		"paperless":          {"worker", "stage:paperless"},
-		"document_ingestion": {"worker", "stage:thumbnail", "stage:ocr", "stage:embedding", "ollama"},
+		"document_ingestion": {"worker", "stage:thumbnail", "stage:ocr", "stage:embedding", "embedding-runtime"},
 	} {
 		if !reflect.DeepEqual(requirements[pipeline], expected) {
 			api.t.Fatalf("unexpected resource requirements for %s: %v", pipeline, requirements[pipeline])
 		}
 	}
 	revision := settings["revision"]
-	changed := api.request(admin, "PUT", path, fmt.Sprintf(`{"expectedRevision":%.0f,"resources":[{"id":"worker","limit":11},{"id":"ollama","limit":2}]}`, revision), 200, "WorkloadSettings")
+	changed := api.request(admin, "PUT", path, fmt.Sprintf(`{"expectedRevision":%.0f,"resources":[{"id":"worker","limit":11},{"id":"embedding-runtime","limit":2}]}`, revision), 200, "WorkloadSettings")
 	if changed["revision"].(float64) != revision.(float64)+1 {
 		api.t.Fatal("settings revision did not advance", changed)
 	}
 	api.request(admin, "PUT", path, fmt.Sprintf(`{"expectedRevision":%.0f,"resources":[{"id":"worker","limit":12}]}`, revision), 409, "Error")
 	revision = changed["revision"]
-	for _, resources := range []string{`[{"id":"ollama","limit":5}]`, `[{"id":"worker","limit":0}]`, `[{"id":"missing","limit":1}]`, `[{"id":"worker","limit":1},{"id":"worker","limit":2}]`} {
+	for _, resources := range []string{`[{"id":"embedding-runtime","limit":5}]`, `[{"id":"worker","limit":0}]`, `[{"id":"missing","limit":1}]`, `[{"id":"worker","limit":1},{"id":"worker","limit":2}]`} {
 		api.request(admin, "PUT", path, fmt.Sprintf(`{"expectedRevision":%.0f,"resources":%s}`, revision, resources), 400, "Error")
 	}
 	updates := []map[string]any{}

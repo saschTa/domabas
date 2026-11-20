@@ -23,20 +23,17 @@ void main() {
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: GlacierModelConnection(
-                provider: 'external',
-                onProviderChanged: (_) {},
                 modelField: const GlacierField(label: 'Model'),
-                contextField: const SizedBox.shrink(),
                 credentialField: const SizedBox.shrink(),
-                endpointField: const SizedBox.shrink(),
+                endpointField: const GlacierField(label: 'API base URL'),
               ),
             ),
           ),
         ),
       );
       expect(
-        tester.getTopLeft(find.byType(DropdownButtonFormField<String>)).dy,
-        tester.getTopLeft(find.byType(GlacierField)).dy,
+        tester.getTopLeft(find.widgetWithText(GlacierField, 'API base URL')).dy,
+        tester.getTopLeft(find.widgetWithText(GlacierField, 'Model')).dy,
       );
       expect(tester.takeException(), isNull);
     });

@@ -9,23 +9,7 @@ Tests remain beside the code they exercise; Bun and TypeScript discover them
 recursively. All folders use `scripts/shared/runtime.ts` for repository paths and
 process ownership. Task names remain the public interface.
 
-`OLLAMA_RUNTIME` selects CPU, CUDA, ROCm or native Apple Silicon MLX for `task dev`
-and `task infra:up`. Development passes explicit Compose overrides; deployment
-and disposable test helpers retain their Docker baseline. MLX uses the official
-checksum-pinned macOS runtime in `.cache/tools`, an owned loopback listener and
-a retained `.cache/ollama` cache mounted read-only into the processor. A container
-probe checks host gateway connectivity before infrastructure starts. The processor
-still verifies the runtime version and pinned embedding artifacts. Model choice
-determines whether Ollama uses its MLX engine; saved application choices are
-preserved. No HTTP contract, stored configuration or authorization boundary changes.
-
-The native inference process has a separate process scope. Application processes
-drain before that scope closes; startup failure, native process failure and
-cancellation also close the owned server. `task infra:up` keeps the native scope
-in the foreground until interrupted. Docker data and both model caches survive.
-The [development runtime guide](../development/compose.md#select-the-development-ollama-runtime)
-describes the user-facing selector and prerequisites. The
-[infrastructure tests](../../scripts/development/development-infrastructure.test.ts) cover runtime selection.
+The development commands `task dev` and `task infra:up` select CPU or Linux Vulkan through `EMBEDDING_RUNTIME`. The latter adds a Compose override exposing the render node to the private embedding server. Tests reuse an explicitly prepared GGUF. See [runtime setup](../development/compose.md#select-the-embedding-runtime) and the [selector tests](../../scripts/development/development-infrastructure.test.ts).
 
 ## Process ownership
 

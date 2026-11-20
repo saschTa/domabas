@@ -3,9 +3,9 @@
 package model
 
 type SchedulerSettings struct {
-	Singleton       bool `sql:"primary_key"`
-	Revision        int64
-	OllamaQueueSize int32
-	Initialized     bool
-	ExecutorEpoch   int64
+	Singleton          bool `sql:"primary_key"`
+	Revision           int64
+	EmbeddingQueueSize int32
+	Initialized        bool
+	ExecutorEpoch      int64
 }

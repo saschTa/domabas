@@ -57,13 +57,13 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 		source.Close()
 		return nil, err
 	}
-	scheduler, err := schedulercontainer.NewSchedulerContainer(ctx, source.Database(), identities.Service(), config.OllamaMaxQueue, config.LLMOllamaURL)
+	scheduler, err := schedulercontainer.NewSchedulerContainer(ctx, source.Database(), identities.Service(), config.EmbeddingQueueSize)
 	if err != nil {
 
 		source.Close()
 		return nil, fmt.Errorf("initialize workload scheduler: %w", err)
 	}
-	documents, err := documentcontainer.NewDocumentContainer(ctx, source.Database(), identities.Service(), documentcontainer.DocumentOptions{Logger: logger, Scheduler: scheduler.Admission(), IngestionConcurrency: config.DocumentIngestionConcurrency, AIConcurrency: config.DocumentAIConcurrency, OllamaQueueSize: config.OllamaMaxQueue, IngestionConcurrencyMode: config.DocumentIngestionConcurrencyMode, AIConcurrencyMode: config.DocumentAIConcurrencyMode, LLMOllamaURL: config.LLMOllamaURL, LLMCredentialKey: config.LLMCredentialKey, LLMCredentialKeyFile: config.LLMCredentialKeyFile, IngestionRoot: config.DocumentIngestionRoot, StorageRoot: config.DocumentStorageRoot, ProcessorURL: config.DocumentProcessorURL, DashboardURL: ""}, time.Now)
+	documents, err := documentcontainer.NewDocumentContainer(ctx, source.Database(), identities.Service(), documentcontainer.DocumentOptions{Logger: logger, Scheduler: scheduler.Admission(), IngestionConcurrency: config.DocumentIngestionConcurrency, AIConcurrency: config.DocumentAIConcurrency, EmbeddingQueueSize: config.EmbeddingQueueSize, IngestionConcurrencyMode: config.DocumentIngestionConcurrencyMode, AIConcurrencyMode: config.DocumentAIConcurrencyMode, LLMCredentialKey: config.LLMCredentialKey, LLMCredentialKeyFile: config.LLMCredentialKeyFile, IngestionRoot: config.DocumentIngestionRoot, StorageRoot: config.DocumentStorageRoot, ProcessorURL: config.DocumentProcessorURL, DashboardURL: ""}, time.Now)
 	if err != nil {
 
 		source.Close()
@@ -94,7 +94,7 @@ func NewBackendApp(ctx context.Context, config config.BackendConfig, logger *slo
 	}
 	app := &BackendApp{source: source, documents: documents}
 	chatQueue := "native-chat"
-	chat, err := chatcontainer.NewChatContainer(ctx, source.Database(), identities.Service(), scheduler.Admission(), config.DocumentStorageRoot, config.LLMOllamaURL, chatQueue, logger)
+	chat, err := chatcontainer.NewChatContainer(ctx, source.Database(), identities.Service(), scheduler.Admission(), config.DocumentStorageRoot, chatQueue)
 	if err != nil {
 		app.Close()
 		return nil, fmt.Errorf("initialize chat: %w", err)

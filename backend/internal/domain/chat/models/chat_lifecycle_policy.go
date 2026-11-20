@@ -21,10 +21,3 @@ func ChatAcquisition(replay bool) ChatAcquisitionCommand {
 func ChatValidExecutionStage(stage string) bool {
 	return slices.Contains([]string{"preparing", "generating", "searching_documents", "reading_document"}, stage)
 }
-
-func ChatSchedulerProviders(endpoint string, internal bool) []string {
-	if internal {
-		return []string{"ollama"}
-	}
-	return []string{endpoint}
-}

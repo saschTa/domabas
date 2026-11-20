@@ -3,7 +3,6 @@ import 'dart:async';
 import 'document_job_counts_mapper.dart';
 import '../models/document_invoice_classification_mapper.dart';
 import 'document_processing_scheduling_mapper.dart';
-import 'document_model_context_mapper.dart';
 
 import 'package:domabas_api/api.dart' as api;
 import 'package:http/http.dart' as http;
@@ -23,17 +22,6 @@ final class RemoteDocumentProcessingRepository
   static final _hash = RegExp(r'^[a-f0-9]{64}$');
   @override
   void cancelRequests() => _source.cancelRequests();
-
-  @override
-  Future<DocumentModelContext> modelContext(
-    String model, {
-    Future<void>? cancel,
-  }) => _translate(
-    () async => documentModelContextMapper(
-      await _source.modelContext(model, cancel: cancel),
-      model,
-    ),
-  );
 
   @override
   Future<DocumentProcessingPipeline> getNamespacePipeline({
@@ -205,13 +193,10 @@ final class RemoteDocumentProcessingRepository
                 propertyThinkingEnabled: llm.propertyThinkingEnabled,
                 invoiceThinkingEnabled: llm.invoiceThinkingEnabled,
                 lmStudioCompatibility: llm.lmStudioCompatibility,
-                provider: api.UpdateLLMConfigurationProviderEnum.fromJson(
-                  llm.provider,
-                )!,
+                provider: api.UpdateLLMConfigurationProviderEnum.openai,
                 model: llm.model.trim(),
-                contextLength: llm.contextLengthValue,
-                baseUrl: llm.provider == 'ollama' ? '' : llm.baseUrl.trim(),
-                apiKey: llm.provider == 'openai' && llm.apiKey.isNotEmpty
+                baseUrl: llm.baseUrl.trim(),
+                apiKey: !llm.clearApiKey && llm.apiKey.isNotEmpty
                     ? llm.apiKey
                     : null,
                 clearApiKey: llm.clearApiKey,
@@ -278,7 +263,6 @@ final class RemoteDocumentProcessingRepository
       model: value.model,
       baseUrl: value.baseUrl,
       credentialConfigured: value.credentialConfigured,
-      contextLength: value.contextLength,
     );
     if (!DocumentLLMSettingsDraft.fromConfiguration(config).valid) {
       throw const FormatException('Invalid property extraction settings');

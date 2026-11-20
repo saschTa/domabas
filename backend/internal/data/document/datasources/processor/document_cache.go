@@ -12,21 +12,21 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-const manifestName = "manifests/registry.ollama.ai/library/nomic-embed-text/v1.5"
-
 type documentProcessorCache struct {
-	weights, ollama *os.Root
-	client          *http.Client
-	runtime         *OllamaEmbeddingDataSource
+	weights   *os.Root
+	modelPath string
+	client    *http.Client
+	runtime   *LlamaEmbeddingDataSource
 }
 
-func openCache(weightsPath, ollamaPath string, runtime *OllamaEmbeddingDataSource) (*documentProcessorCache, error) {
+func openCache(weightsPath, modelPath string, runtime *LlamaEmbeddingDataSource) (*documentProcessorCache, error) {
 	if err := os.MkdirAll(weightsPath, 0700); err != nil {
 		return nil, err
 	}
@@ -34,16 +34,10 @@ func openCache(weightsPath, ollamaPath string, runtime *OllamaEmbeddingDataSourc
 	if err != nil {
 		return nil, err
 	}
-	ollama, err := os.OpenRoot(ollamaPath)
-	if err != nil {
-		weights.Close()
-		return nil, err
-	}
-	return &documentProcessorCache{weights: weights, ollama: ollama, client: &http.Client{Timeout: 90 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, runtime: runtime}, nil
+	return &documentProcessorCache{weights: weights, modelPath: modelPath, client: &http.Client{Timeout: 90 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, runtime: runtime}, nil
 }
 func (c *documentProcessorCache) Close() {
 	c.weights.Close()
-	c.ollama.Close()
 	c.client.CloseIdleConnections()
 }
 func verifyArtifact(ctx context.Context, root *os.Root, expected documentProcessorArtifact) error {
@@ -110,52 +104,6 @@ func (c *documentProcessorCache) downloadWeight(ctx context.Context, expected do
 	}
 	return syncCacheDirectory(c.weights)
 }
-func verifyManifest(ctx context.Context, root *os.Root) error {
-	file, err := root.Open(manifestName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(documentProcessorContextReader{ctx: ctx, reader: file}, 8193))
-	if err != nil {
-		return err
-	}
-	digest := sha256.Sum256(data)
-	if len(data) > 8192 || hex.EncodeToString(digest[:]) != ModelDigest {
-		return errors.New("embedding manifest drift or corruption")
-	}
-	var manifest documentProcessorCacheManifest
-	if err = json.Unmarshal(data, &manifest); err != nil {
-		return err
-	}
-	layers := append([]documentProcessorCacheLayer{manifest.Config}, manifest.Layers...)
-	expected := modelArtifacts()
-	if manifest.SchemaVersion != 2 || len(layers) != len(expected) {
-		return errors.New("unexpected embedding manifest")
-	}
-	for i, layer := range layers {
-		if layer.Digest != "sha256:"+expected[i].SHA256 || layer.Size != expected[i].Size {
-			return errors.New("unexpected embedding artifact")
-		}
-	}
-	return nil
-}
-func (c *documentProcessorCache) verifyModel(ctx context.Context) (bool, error) {
-	missing := false
-	if err := verifyManifest(ctx, c.ollama); errors.Is(err, fs.ErrNotExist) {
-		missing = true
-	} else if err != nil {
-		return false, err
-	}
-	for _, artifact := range modelArtifacts() {
-		if err := verifyArtifact(ctx, c.ollama, artifact); errors.Is(err, fs.ErrNotExist) {
-			missing = true
-		} else if err != nil {
-			return false, err
-		}
-	}
-	return !missing, nil
-}
 func (c *documentProcessorCache) removeInterruptedDownloads(ctx context.Context) error {
 	directory, err := c.weights.Open(".")
 	if err != nil {
@@ -208,27 +156,13 @@ func (c *documentProcessorCache) bootstrap(ctx context.Context) error {
 			return err
 		}
 	}
-	complete, err := c.verifyModel(ctx)
+	modelDirectory, err := os.OpenRoot(filepath.Dir(c.modelPath))
 	if err != nil {
-		return err
+		return fmt.Errorf("open embedding model directory: %w", err)
 	}
-	if !complete {
-		if err = c.runtime.wait(ctx); err != nil {
-			return err
-		}
-		if err = c.runtime.pull(ctx); err != nil {
-			return err
-		}
-		complete, err = c.verifyModel(ctx)
-		if err != nil {
-			return err
-		}
-		if !complete {
-			return errors.New("embedding cache incomplete after pull")
-		}
-	}
-	if err = c.runtime.Ready(ctx); err != nil {
-		return err
+	defer modelDirectory.Close()
+	if err := verifyArtifact(ctx, modelDirectory, documentProcessorArtifact{filepath.Base(c.modelPath), modelSize, ModelDigest}); err != nil {
+		return fmt.Errorf("verify embedding GGUF: %w", err)
 	}
 	_, err = c.runtime.Embed(ctx, installedEmbeddingSpace(), "query", []string{"document processor readiness"})
 	return err

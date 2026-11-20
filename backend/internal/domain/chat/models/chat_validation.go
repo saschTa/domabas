@@ -46,24 +46,24 @@ func (p ChatPageRequest) Normalize() (ChatPageRequest, error) {
 func (u ChatConfigurationUpdate) Normalize() (ChatConfigurationUpdate, error) {
 	u.Model = strings.TrimSpace(u.Model)
 	u.BaseURL = strings.TrimRight(strings.TrimSpace(u.BaseURL), "/")
-	if u.ExpectedRevision < 1 || !ChatValidModel(u.Model) {
+	if u.ExpectedRevision < 1 || (u.Model != "" && !ChatValidModel(u.Model)) {
 		return u, ChatValidationError{"invalid chat model or revision"}
 	}
 	if u.ContextLength != nil && (*u.ContextLength < ChatMinimumContextLength || *u.ContextLength > ChatMaximumContextLength) {
 		return u, ChatValidationError{"invalid chat context length"}
 	}
-	if u.Provider != "ollama" && u.Provider != "openai" {
+	if u.Provider != "openai" {
 		return u, ChatValidationError{"invalid chat provider"}
 	}
-	if u.Provider == "ollama" {
-		if u.BaseURL != "" || u.APIKey != nil {
-			return u, ChatValidationError{"internal Ollama uses no external endpoint or secret"}
-		}
-	} else {
-		v, e := url.Parse(u.BaseURL)
-		if e != nil || len(u.BaseURL) > 2048 || v.Hostname() == "" || (v.Scheme != "http" && v.Scheme != "https") || v.User != nil || v.RawQuery != "" || v.ForceQuery || v.Fragment != "" || strings.ContainsAny(u.BaseURL, "\\\r\n\t") {
-			return u, ChatValidationError{"invalid provider base URL"}
-		}
+	if u.Model == "" && u.BaseURL == "" && !u.Enabled && u.APIKey == nil {
+		return u, nil
+	}
+	if u.Model == "" {
+		return u, ChatValidationError{"external chat model is required"}
+	}
+	v, e := url.Parse(u.BaseURL)
+	if e != nil || len(u.BaseURL) > 2048 || v.Hostname() == "" || (v.Scheme != "http" && v.Scheme != "https") || v.User != nil || v.RawQuery != "" || v.ForceQuery || v.Fragment != "" || strings.ContainsAny(u.BaseURL, "\\\r\n\t") {
+		return u, ChatValidationError{"invalid provider base URL"}
 	}
 	if u.APIKey != nil && (u.ClearAPIKey || *u.APIKey == "" || len(*u.APIKey) > 4096 || strings.TrimSpace(*u.APIKey) != *u.APIKey || strings.ContainsAny(*u.APIKey, "\r\n\x00")) {
 		return u, ChatValidationError{"invalid provider secret"}

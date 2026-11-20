@@ -314,17 +314,6 @@ func (handler *DocumentHandler) GetDocumentProcessingConfiguration(ctx context.C
 	return contract.GetDocumentProcessingConfiguration200JSONResponse(documentConfigurationResponseMapper(configuration)), nil
 }
 
-func (handler *DocumentHandler) GetDocumentModelContext(ctx context.Context, request contract.GetDocumentModelContextRequestObject) (contract.GetDocumentModelContextResponseObject, error) {
-	a, err := actor(ctx)
-	if err != nil {
-		return handler.failure(ctx, err), nil
-	}
-	value, err := handler.ingestion.ModelContext(ctx, a, request.Params.Model)
-	if err != nil {
-		return handler.failure(ctx, err), nil
-	}
-	return contract.GetDocumentModelContext200JSONResponse{Model: value.Model, MaxContextLength: value.MaxContextLength}, nil
-}
 func (handler *DocumentHandler) UpdateDocumentProcessingConfiguration(ctx context.Context, request contract.UpdateDocumentProcessingConfigurationRequestObject) (contract.UpdateDocumentProcessingConfigurationResponseObject, error) {
 	a, err := actor(ctx)
 	if err != nil {
@@ -335,7 +324,7 @@ func (handler *DocumentHandler) UpdateDocumentProcessingConfiguration(ctx contex
 	}
 	input := domain.DocumentProcessingConfiguration{ExpectedRevision: request.Body.ExpectedRevision, Language: string(request.Body.Language), Segmentation: string(request.Body.Segmentation)}
 	if v := request.Body.Llm; v != nil {
-		input.LLMUpdate = &domain.DocumentLLMConfigurationUpdate{PropertyThinkingEnabled: v.PropertyThinkingEnabled, InvoiceThinkingEnabled: v.InvoiceThinkingEnabled, LMStudioCompatibility: v.LmStudioCompatibility, Enabled: v.Enabled, InvoiceEnabled: v.InvoiceEnabled, ContextLength: v.ContextLength, Provider: string(v.Provider), Model: v.Model, BaseURL: v.BaseUrl, APIKey: v.ApiKey, ClearAPIKey: v.ClearApiKey != nil && *v.ClearApiKey}
+		input.LLMUpdate = &domain.DocumentLLMConfigurationUpdate{PropertyThinkingEnabled: v.PropertyThinkingEnabled, InvoiceThinkingEnabled: v.InvoiceThinkingEnabled, LMStudioCompatibility: v.LmStudioCompatibility, Enabled: v.Enabled, InvoiceEnabled: v.InvoiceEnabled, Provider: string(v.Provider), Model: v.Model, BaseURL: v.BaseUrl, APIKey: v.ApiKey, ClearAPIKey: v.ClearApiKey != nil && *v.ClearApiKey}
 	}
 	configuration, err := handler.ingestion.SetProcessingConfiguration(ctx, a, input)
 	if err != nil {

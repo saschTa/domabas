@@ -70,7 +70,7 @@ func newIngestionFixture(t *testing.T, limits ...records.DocumentIngestionLimits
 	if err != nil {
 		t.Fatal(err)
 	}
-	scheduler := schedulersources.NewSchedulerDataSource(source.Database(), 512, "http://ollama.test:11434")
+	scheduler := schedulersources.NewSchedulerDataSource(source.Database(), 512)
 	if err := scheduler.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -758,7 +758,7 @@ func (f *ingestionFixture) resourceCapacity(t *testing.T, capacity int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = service.UpdateSettings(t.Context(), actor, schedulermodels.SchedulerSettingsUpdate{ExpectedRevision: settings.Revision, Resources: []schedulermodels.SchedulerResourceUpdate{{ID: "worker", Limit: capacity}, {ID: "pipeline:document_ai", Limit: capacity}, {ID: "pipeline:document_ingestion", Limit: capacity}, {ID: "ollama", Limit: capacity}}})
+	_, err = service.UpdateSettings(t.Context(), actor, schedulermodels.SchedulerSettingsUpdate{ExpectedRevision: settings.Revision, Resources: []schedulermodels.SchedulerResourceUpdate{{ID: "worker", Limit: capacity}, {ID: "pipeline:document_ai", Limit: capacity}, {ID: "pipeline:document_ingestion", Limit: capacity}, {ID: "embedding-runtime", Limit: capacity}}})
 	if err != nil {
 		t.Fatal(err)
 	}

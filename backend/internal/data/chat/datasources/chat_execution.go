@@ -17,18 +17,17 @@ func (s *ChatDataSource) Dispatch(ctx context.Context) ([]m.ChatDispatch, error)
 		if err := tx.QueryRow(ctx, "SELECT singleton FROM chat_admission WHERE singleton FOR UPDATE").Scan(&singleton); err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, `SELECT c.id,c.workflow_id,c.provider,c.base_url,c.internal_runtime FROM chat_turns c LEFT JOIN scheduler_waiting_requests q ON q.workflow_id=c.workflow_id WHERE c.status='queued' AND c.admitted_at IS NULL AND NOT c.execution_closed ORDER BY CASE WHEN q.feasible THEN 0 WHEN q.workflow_id IS NULL THEN 1 ELSE 2 END,q.sequence NULLS LAST,c.created_at,c.id LIMIT 20 FOR UPDATE OF c`)
+		rows, err := tx.Query(ctx, `SELECT c.id,c.workflow_id,c.base_url FROM chat_turns c LEFT JOIN scheduler_waiting_requests q ON q.workflow_id=c.workflow_id WHERE c.status='queued' AND c.admitted_at IS NULL AND NOT c.execution_closed ORDER BY CASE WHEN q.feasible THEN 0 WHEN q.workflow_id IS NULL THEN 1 ELSE 2 END,q.sequence NULLS LAST,c.created_at,c.id LIMIT 20 FOR UPDATE OF c`)
 		if err != nil {
 			return err
 		}
 		type candidate struct {
-			id, workflow, provider, endpoint string
-			internal                         bool
+			id, workflow, endpoint string
 		}
 		var candidates []candidate
 		for rows.Next() {
 			var c candidate
-			if err = rows.Scan(&c.id, &c.workflow, &c.provider, &c.endpoint, &c.internal); err != nil {
+			if err = rows.Scan(&c.id, &c.workflow, &c.endpoint); err != nil {
 				rows.Close()
 				return err
 			}
@@ -39,7 +38,7 @@ func (s *ChatDataSource) Dispatch(ctx context.Context) ([]m.ChatDispatch, error)
 			return err
 		}
 		for _, c := range candidates {
-			providers := m.ChatSchedulerProviders(c.endpoint, c.internal)
+			providers := []string{c.endpoint}
 			if s.scheduler == nil {
 				return errors.New("chat resource scheduler is not configured")
 			}

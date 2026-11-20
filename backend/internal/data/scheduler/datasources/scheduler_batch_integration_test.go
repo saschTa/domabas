@@ -14,12 +14,12 @@ func TestSchedulerCandidateBatchReconcilesOnceAndRetainsFairness(t *testing.T) {
 	f := newSchedulerAdmissionFixture(t)
 	f.exec("UPDATE scheduler_resources SET concurrency_limit=1 WHERE id='worker'")
 	running := f.paperless()
-	if !f.reserve(running, "ollama") {
+	if !f.reserve(running, "embedding-runtime") {
 		t.Fatal("initial job was not admitted")
 	}
 	candidates := make([]m.SchedulerAdmissionCandidate, m.SchedulerMaximumAdmissionCandidates)
 	for i := range candidates {
-		candidates[i] = m.SchedulerAdmissionCandidate{WorkflowID: f.paperless(), Providers: []string{"ollama"}}
+		candidates[i] = m.SchedulerAdmissionCandidate{WorkflowID: f.paperless(), Providers: []string{"embedding-runtime"}}
 	}
 	f.exec("CREATE TABLE scheduler_reconciliation_probe(calls integer NOT NULL)")
 	f.exec("INSERT INTO scheduler_reconciliation_probe VALUES(0)")
@@ -74,7 +74,7 @@ func TestSchedulerCandidateBatchReconcilesOnceAndRetainsFairness(t *testing.T) {
 	if err = f.connection.QueryRow(t.Context(), "SELECT state FROM scheduler_requests WHERE workflow_id=$1", oldest).Scan(&state); err != nil || state != "waiting" {
 		t.Fatalf("rolled back admission lost waiting turn: %q %v", state, err)
 	}
-	if !f.reserve(oldest, "ollama") || f.active("worker") != 1 || f.active("ollama") != 0 {
+	if !f.reserve(oldest, "embedding-runtime") || f.active("worker") != 1 || f.active("embedding-runtime") != 0 {
 		t.Fatal("rolled back candidate did not retain its resource turn")
 	}
 }

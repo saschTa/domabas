@@ -60,18 +60,9 @@ See [native jobs](native-jobs.md) and [resource scheduling](resource-scheduler.m
 
 ## OCR and embeddings
 
-A private Go processor runs in a separate resource-limited Compose container.
-Startup downloads missing, immutable Tesseract language files and the pinned
-Ollama model, verifies cache hashes and warms inference before becoming ready.
-Retained complete caches start without downloading again; corrupt or drifted
-artifacts fail readiness. The processor keeps ten extraction slots and sizes embedding slots to half its
-configured Ollama queue (minimum one). Requests wait cancellably for private
-processor capacity within a bounded active/waiting envelope. Request bodies and
-private inference calls remain bounded and cancellation-aware.
-Ollama defaults to a 128-request scheduler queue and two loaded models. The pinned Ollama runtime forces embedding models to use one inference
-slot, so concurrent embedding requests wait inside Ollama. Semantic queries share
-embedding capacity with ingestion. Neither service is a public authenticated
-application API.
+The private Go processor downloads missing, pinned Tesseract language files. A separate `model-init` job verifies Nomic's F16 GGUF by size and SHA-256, downloading it when the installation cache needs provisioning. The private llama.cpp server and processor mount that cache read-only. Before becoming ready the processor verifies the GGUF and requests an embedding from the expected model.
+
+The server accepts batches through `/v1/embeddings` using one inference slot. Document passages retain the `search_document:` prefix and queries use `search_query:`. Both use 768-dimensional vectors. The processor bounds and validates batches and preserves input order using the returned indices. The processor has ten extraction slots and half the configured embedding queue budget for embedding operations, with a minimum of one. Ingestion and semantic queries share embedding capacity.
 
 PDFium runs the module's pinned WebAssembly binary in wazero with no mounted
 filesystem, a 1 GiB linear-memory ceiling and a hard child-process deadline.
@@ -125,15 +116,12 @@ creates its normal revision and automatic reindex through the existing pipeline.
 See [email ingestion](email-ingestion.md) for MIME and attachment failure bounds.
 
 Defaults are Tesseract 5.5.3 with Leptonica 1.87.0, `tessdata_fast` English and
-German language files, and Nomic Embed Text v1.5 on Ollama 0.34.1. The embedding
-model produces 768-dimensional vectors. Compose uses CPU inference by default;
-development can select supported acceleration through the
-[runtime selector](../../development/compose.md#select-the-development-ollama-runtime).
+German language files, and Nomic Embed Text v1.5 F16 GGUF on llama.cpp. CPU is the default and Linux hosts can enable Vulkan. See [embedding runtime selection](../../development/compose.md#select-the-embedding-runtime).
 Its semantic baseline is English;
 German OCR and lexical search do not imply equivalent cross-language semantic
 quality. Configuration supports English, German or both and automatic or single
 block segmentation. Each ingestion generation snapshots its mandatory configuration and provenance.
-OCR or embedding changes commit an automatic reindex batch for retained originals.
+OCR or embedding changes commit an automatic reindex batch for retained originals. Moving to the llama.cpp GGUF changes the embedding-space identity. Queries exclude vectors carrying the previous digest, and rebuilt vectors become available as their documents finish reindexing.
 AI-only changes commit a durable rescheduling revision, sequence cutoff and cursor;
 maintenance scans at most 100 accepted documents per transaction and queues
 follow-up attempts for ready documents. Pending ingestion snapshots current AI

@@ -11,8 +11,8 @@ void main() {
       final repository = FakeChatRepository()
         ..saved = const ChatConfiguration(
           enabled: false,
-          provider: 'ollama',
-          model: 'qwen3.5:4b',
+          provider: 'openai',
+          model: '',
           revision: 1,
         );
       final cubit = ChatSettingsCubit(repository, allowed: true)
@@ -50,7 +50,7 @@ void main() {
         baseUrl: 'https://models.example/v1',
       );
       await cubit.load();
-      cubit.edit(provider: 'ollama', baseUrl: '');
+      cubit.edit(provider: 'openai', baseUrl: '');
       expect(cubit.state.draft.thinkingEnabled, isFalse);
       cubit.reset();
       expect(cubit.state.draft.thinkingEnabled, isTrue);

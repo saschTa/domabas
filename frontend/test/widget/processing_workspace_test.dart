@@ -439,6 +439,7 @@ void main() {
           tester,
           find.byKey(const Key('saveProcessingSettings')),
           scrollable: scroll,
+          maxAttempts: 160,
         );
         expect(tester.takeException(), isNull);
         await revealWorkspaceContent(

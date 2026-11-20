@@ -11,22 +11,8 @@ import (
 )
 
 func TestDefaultAIModelMigrationPreservesExistingConfiguration(t *testing.T) {
-	files := fstest.MapFS{}
-	entries, err := migrations.ReadDir("migrations")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, entry := range entries {
-		if entry.Name() >= "036" {
-			continue
-		}
-		name := "migrations/" + entry.Name()
-		contents, err := migrations.ReadFile(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		files[name] = &fstest.MapFile{Data: contents}
-	}
+	files := migrationsThrough(t, "035")
+	underTest := migrationsThrough(t, "036")
 	for _, scenario := range []struct {
 		name, existingModel, expectedModel string
 	}{
@@ -47,7 +33,7 @@ func TestDefaultAIModelMigrationPreservesExistingConfiguration(t *testing.T) {
 				}
 			}
 			for range 2 {
-				if err := source.Migrate(t.Context()); err != nil {
+				if err := source.migrate(t.Context(), underTest); err != nil {
 					t.Fatal(err)
 				}
 				var model, columnDefault string
@@ -72,4 +58,25 @@ func TestDefaultAIModelMigrationPreservesExistingConfiguration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func migrationsThrough(t *testing.T, version string) fstest.MapFS {
+	t.Helper()
+	files := fstest.MapFS{}
+	entries, err := migrations.ReadDir("migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.Name()[:3] > version {
+			continue
+		}
+		name := "migrations/" + entry.Name()
+		contents, err := migrations.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[name] = &fstest.MapFile{Data: contents}
+	}
+	return files
 }

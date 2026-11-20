@@ -107,7 +107,7 @@ DocumentProcessingJob testProcessingJob({
     propertyExtractionEnabled: propertyExtractionEnabled,
     invoiceExtractionEnabled: invoiceExtractionEnabled,
     propertyExtractionModel: propertyExtractionEnabled == true
-        ? 'qwen3.5:4b'
+        ? 'example-model'
         : null,
   ),
   textSource: 'machine',
@@ -151,14 +151,6 @@ class FakeProcessingRepository implements DocumentProcessingRepository {
   Future<DocumentProcessingConfiguration> Function(String, String, int?)?
   onUpdate;
   final List<DocumentLLMSettingsDraft?> llmUpdates = [];
-  Future<DocumentModelContext> Function(String)? onModelContext;
-  @override
-  Future<DocumentModelContext> modelContext(
-    String model, {
-    Future<void>? cancel,
-  }) async => onModelContext != null
-      ? onModelContext!(model)
-      : DocumentModelContext(model: model, maxContextLength: 131072);
   @override
   void cancelRequests() {
     cancellations++;
@@ -361,8 +353,7 @@ class FakeProcessingRepository implements DocumentProcessingRepository {
               lmStudioCompatibility: llm.lmStudioCompatibility,
               provider: llm.provider,
               model: llm.model.trim(),
-              contextLength: llm.contextLengthValue ?? previous.contextLength,
-              baseUrl: llm.provider == 'ollama' ? '' : llm.baseUrl.trim(),
+              baseUrl: llm.baseUrl.trim(),
               credentialConfigured:
                   llm.apiKey.isNotEmpty ||
                   (!llm.clearApiKey &&

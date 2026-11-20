@@ -10,8 +10,6 @@ abstract interface class ChatRepository {
     required int expectedRevision,
     Future<void>? cancel,
   });
-  Future<ChatModelPage> models({int offset = 0, Future<void>? cancel});
-  Future<ChatModelContext> modelContext(String model, {Future<void>? cancel});
   Future<ChatPage<ChatConversation>> conversations({
     String? cursor,
     Future<void>? cancel,

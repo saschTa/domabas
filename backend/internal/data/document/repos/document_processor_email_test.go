@@ -77,6 +77,7 @@ func TestPrivateProcessorRetainsV1AndReportsMIMEEvidence(t *testing.T) {
 		config.ExtractionRevision = revision
 		if revision == m.LegacyExtractionRevision {
 			config.ManifestRevision = 1
+			config.EmbeddingDigest = m.LegacyEmbeddingDigest
 		}
 		result, err := repository.Extract(t.Context(), bytes.NewReader(retainedNativePDF()), "application/pdf", config)
 		if err != nil || result.ExtractionRevision != revision || !strings.Contains(result.Text, "Retained native invoice 123") || result.Engine != "tesseract" {

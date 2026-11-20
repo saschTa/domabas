@@ -29,10 +29,7 @@ func retainedProviders(execution r.SchedulerRetainedExecution) ([]string, error)
 
 func (s *SchedulerDataSource) Initialize(ctx context.Context) error {
 	if s.queueSize < 2 {
-		return fmt.Errorf("OLLAMA_MAX_QUEUE must be at least 2 for the shared 50%% workload budget")
-	}
-	if s.ollamaOrigin == "" {
-		return fmt.Errorf("workload scheduler requires a valid internal Ollama origin")
+		return fmt.Errorf("EMBEDDING_QUEUE_SIZE must be at least 2 for the shared 50%% workload budget")
 	}
 	return pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
 		if err := schedulerLock(ctx, tx); err != nil {
@@ -40,14 +37,14 @@ func (s *SchedulerDataSource) Initialize(ctx context.Context) error {
 		}
 		var initialized bool
 		var queueSize int
-		if err := tx.QueryRow(ctx, `SELECT initialized,ollama_queue_size FROM scheduler_settings WHERE singleton`).Scan(&initialized, &queueSize); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT initialized,embedding_queue_size FROM scheduler_settings WHERE singleton`).Scan(&initialized, &queueSize); err != nil {
 			return err
 		}
 		if queueSize != s.queueSize {
-			if _, err := tx.Exec(ctx, `UPDATE scheduler_settings SET ollama_queue_size=$1,revision=revision+1 WHERE singleton`, s.queueSize); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE scheduler_settings SET embedding_queue_size=$1,revision=revision+1 WHERE singleton`, s.queueSize); err != nil {
 				return err
 			}
-			if _, err := tx.Exec(ctx, `UPDATE scheduler_resources SET concurrency_limit=LEAST(concurrency_limit,$1) WHERE id='ollama'`, m.SchedulerResourceMaximum("ollama", s.queueSize)); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE scheduler_resources SET concurrency_limit=LEAST(concurrency_limit,$1) WHERE id='embedding-runtime'`, m.SchedulerResourceMaximum("embedding-runtime", s.queueSize)); err != nil {
 				return err
 			}
 		}
@@ -87,7 +84,7 @@ func (s *SchedulerDataSource) Initialize(ctx context.Context) error {
 				}
 			}
 			if blocksAdmission {
-				providers = []string{"ollama"}
+				providers = []string{"embedding-runtime"}
 			}
 			resources, err := s.requirements(ctx, tx, providers)
 			if err != nil {

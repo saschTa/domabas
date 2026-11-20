@@ -16,7 +16,7 @@ import (
 	"testing"
 
 	identitycontainer "github.com/domabas/domabas/backend/internal/bootstrap/identity"
-	chatprovider "github.com/domabas/domabas/backend/internal/data/chat/datasources/provider"
+
 	"github.com/domabas/domabas/backend/internal/data/postgres"
 	schedulersources "github.com/domabas/domabas/backend/internal/data/scheduler/datasources"
 	m "github.com/domabas/domabas/backend/internal/domain/chat/models"
@@ -43,6 +43,12 @@ type chatFixture struct {
 
 func newChatFixture(t *testing.T) *chatFixture {
 	t.Helper()
+	f := newUnconfiguredChatFixture(t)
+	f.exec("UPDATE chat_configuration SET enabled=true,model='fixture',base_url='https://default.test/v1',revision=1 WHERE singleton")
+	return f
+}
+func newUnconfiguredChatFixture(t *testing.T) *chatFixture {
+	t.Helper()
 	url := testdb.New(t)
 	database, err := postgres.NewPostgresDataSource(t.Context(), url)
 	if err != nil {
@@ -61,7 +67,7 @@ func newChatFixture(t *testing.T) *chatFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	scheduler := schedulersources.NewSchedulerDataSource(database.Database(), 512, "http://ollama.test:11434")
+	scheduler := schedulersources.NewSchedulerDataSource(database.Database(), 512)
 	if err := scheduler.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -70,12 +76,8 @@ func newChatFixture(t *testing.T) *chatFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	remote, err := chatprovider.NewChatProviderRemoteDataSource("http://ollama.test:11434")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(remote.Close)
-	f := &chatFixture{t: t, db: db, source: &chatServiceFixture{ChatService: chatservices.NewChatService(source, remote, remote, identities.Service()), ChatExecutionService: chatservices.NewChatExecutionService(source, nil, identities.Service())}, keyPath: keyPath, database: database}
+
+	f := &chatFixture{t: t, db: db, source: &chatServiceFixture{ChatService: chatservices.NewChatService(source, identities.Service()), ChatExecutionService: chatservices.NewChatExecutionService(source, nil, identities.Service())}, keyPath: keyPath, database: database}
 	f.actor = f.newActor()
 	return f
 }
@@ -114,10 +116,10 @@ func (f *chatFixture) send(id, content string) m.ChatSendResult {
 }
 
 func TestChatPrivateAcceptanceSettingsAndCredentials(t *testing.T) {
-	f := newChatFixture(t)
+	f := newUnconfiguredChatFixture(t)
 	ctx := t.Context()
 	c, err := f.source.Configuration(ctx, f.actor, true)
-	if err != nil || !c.Enabled || c.Model != "qwen3.5:4b" || c.Provider != "ollama" {
+	if err != nil || c.Enabled || c.Model != "" || c.BaseURL != "" || c.Provider != "openai" {
 		t.Fatal(c, err)
 	}
 	key := "very-private-chat-key"
@@ -174,7 +176,7 @@ func TestChatPrivateAcceptanceSettingsAndCredentials(t *testing.T) {
 	if err != nil || cancelled.Status != "cancelled" {
 		t.Fatal(cancelled, err)
 	}
-	if _, err := f.source.UpdateConfiguration(ctx, f.actor, m.ChatConfigurationUpdate{ExpectedRevision: 1, Enabled: true, Provider: "ollama", Model: "qwen3.5:4b"}); !errors.Is(err, m.ErrConflict) {
+	if _, err := f.source.UpdateConfiguration(ctx, f.actor, m.ChatConfigurationUpdate{ExpectedRevision: 1, Enabled: true, Provider: "openai", Model: "fixture", BaseURL: "https://second.test/v1"}); !errors.Is(err, m.ErrConflict) {
 		t.Fatal("stale settings save accepted", err)
 	}
 	updated, err := f.source.UpdateConfiguration(ctx, f.actor, m.ChatConfigurationUpdate{ExpectedRevision: c.Revision, Enabled: false, Provider: "openai", Model: "fixture", BaseURL: "https://another.test/v1"})
@@ -263,9 +265,9 @@ func TestChatAcceptanceRollbackAndImmutableProviderCredentials(t *testing.T) {
 	}
 	f.exec("ALTER TABLE chat_messages DROP CONSTRAINT test_reject_prompt")
 	firstKey := "first-provider-secret"
-	configuration, err := f.source.UpdateConfiguration(ctx, f.actor, m.ChatConfigurationUpdate{ExpectedRevision: 1, Enabled: true, Provider: "openai", Model: "first-model", BaseURL: "http://ollama.test:11434/v1", APIKey: &firstKey})
-	if err != nil || !configuration.InternalRuntime {
-		t.Fatal("same origin was not classified as the shared Ollama resource", configuration, err)
+	configuration, err := f.source.UpdateConfiguration(ctx, f.actor, m.ChatConfigurationUpdate{ExpectedRevision: 1, Enabled: true, Provider: "openai", Model: "first-model", BaseURL: "https://first-provider.test/v1", APIKey: &firstKey})
+	if err != nil || configuration.InternalRuntime {
+		t.Fatal("expected an external provider", configuration, err)
 	}
 	sent, err := f.source.Send(ctx, f.actor, conversation.ID, request)
 	if err != nil {
@@ -283,7 +285,7 @@ func TestChatAcceptanceRollbackAndImmutableProviderCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 	work, err := f.source.Work(ctx, sent.AssistantMessage.TurnID, token)
-	if err != nil || work.Configuration.Model != "first-model" || work.APIKey != firstKey || !work.Configuration.InternalRuntime {
+	if err != nil || work.Configuration.Model != "first-model" || work.APIKey != firstKey || work.Configuration.InternalRuntime {
 		t.Fatal("accepted settings changed", work.Configuration, err)
 	}
 }

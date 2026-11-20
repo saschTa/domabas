@@ -3,15 +3,15 @@ x-settings:
   backend_memory_limit: &backend-memory-limit 2g
   backend_go_memory_limit: &backend-go-memory-limit 1536MiB
   web_memory_limit: &web-memory-limit 512m
-  ollama_max_queue: &ollama-max-queue "128"
+  render_group: &render-group "107"
+  render_device: &render-device /dev/dri/renderD128:/dev/dri/renderD128
+  embedding_queue_size: &embedding-queue-size "128"
   postgres_admin_password: &postgres-admin-password ""
   postgres_password: &postgres-password ""
   web_bind_address: &web-bind-address 0.0.0.0
   web_port: &web-port "8088"
   public_origin: &public-origin https://domabas.example.com
   dataset_path: &dataset-path /mnt/POOL/domabas
-  gpu_render_gid: &gpu-render-gid "107"
-  gpu_video_gid: &gpu-video-gid "44"
 
 x-init: &init
   user: "950:950"
@@ -42,7 +42,7 @@ services:
           ["documents", 0o700],
           ["secrets", 0o700],
           ["tesseract", 0o700],
-          ["ollama", 0o755],
+          ["embedding", 0o755],
         ] as const;
 
         for (const [name] of directories) {
@@ -100,35 +100,38 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
-  ollama:
-    user: "950:950"
-    group_add:
-      - *gpu-render-gid
-      - *gpu-video-gid
-    image: ollama/ollama:0.34.1-rocm@sha256:7620e747881e59c2a6d5b67664dd2dbf2a1f557f2c808bd16f02aefa79e63da3
-    devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
-    restart: unless-stopped
+  model-init:
+    <<: *init
+    command: [embedding-model]
     depends_on:
       storage-init: {condition: service_completed_successfully}
-    environment:
-      HOME: /home/ollama
-      OLLAMA_MODELS: /home/ollama/.ollama/models
-      OLLAMA_HOST: 0.0.0.0:11434
-      OLLAMA_NUM_PARALLEL: "1"
-      OLLAMA_MAX_LOADED_MODELS: "2"
-      OLLAMA_MAX_QUEUE: *ollama-max-queue
-      OLLAMA_KEEP_ALIVE: -1
     volumes:
       - type: volume
         source: domabas-storage
-        target: /home/ollama/.ollama
-        volume: {subpath: ollama, nocopy: true}
+        target: /models/embedding
+        volume: {subpath: embedding, nocopy: true}
+
+  embeddings:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan@sha256:5c73025f2072135ad37e306db9a57c685d8a349cfa5cb82b5c0f385b97567c94
+    devices: [*render-device]
+    group_add: [*render-group]
+    environment:
+      LLAMA_ARG_N_GPU_LAYERS: "all"
+    user: "950:950"
+    restart: unless-stopped
+    command: ["--model", "/models/embedding/nomic-embed-text-v1.5.f16.gguf", "--alias", "nomic-embed-text:v1.5", "--embedding", "--pooling", "mean", "--host", "0.0.0.0", "--port", "8080", "--ctx-size", "2048", "--batch-size", "2048", "--ubatch-size", "2048", "--parallel", "1"]
+    depends_on:
+      model-init: {condition: service_completed_successfully}
+    volumes:
+      - type: volume
+        source: domabas-storage
+        target: /models/embedding
+        read_only: true
+        volume: {subpath: embedding, nocopy: true}
     cpus: 4
-    mem_limit: 8g
+    mem_limit: 2g
     healthcheck:
-      test: [CMD, ollama, list]
+      test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8080/health]
       interval: 30s
       start_interval: 3s
       timeout: 5s
@@ -145,9 +148,9 @@ services:
       HTTP_ADDR: 0.0.0.0:8091
       TMPDIR: /var/tmp
       MODEL_CACHE_ROOT: /models/tesseract
-      OLLAMA_CACHE_ROOT: /models/ollama/models
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MAX_QUEUE: *ollama-max-queue
+      EMBEDDING_MODEL_PATH: /models/embedding/nomic-embed-text-v1.5.f16.gguf
+      EMBEDDING_URL: http://embeddings:8080
+      EMBEDDING_QUEUE_SIZE: *embedding-queue-size
     volumes:
       - type: volume
         source: domabas-storage
@@ -155,9 +158,9 @@ services:
         volume: {subpath: tesseract, nocopy: true}
       - type: volume
         source: domabas-storage
-        target: /models/ollama
+        target: /models/embedding
         read_only: true
-        volume: {subpath: ollama, nocopy: true}
+        volume: {subpath: embedding, nocopy: true}
     tmpfs:
       - /tmp:size=2147483648,mode=1777
     cpus: 4
@@ -165,7 +168,7 @@ services:
     pids_limit: 256
     depends_on:
       storage-init: {condition: service_completed_successfully}
-      ollama: {condition: service_healthy}
+      embeddings: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --max-time, "4", http://127.0.0.1:8091/readyz]
       interval: 30s
@@ -189,8 +192,7 @@ services:
       HTTP_ADDR: 0.0.0.0:8080
       GOMEMLIMIT: *backend-go-memory-limit
       CORS_ORIGINS: *public-origin
-      LLM_OLLAMA_URL: http://ollama:11434
-      OLLAMA_MAX_QUEUE: *ollama-max-queue
+      EMBEDDING_QUEUE_SIZE: *embedding-queue-size
       LLM_CREDENTIAL_KEY_FILE: /var/lib/domabas/secrets/llm.key
       DOCUMENT_PROCESSOR_URL: http://document-processor:8091
       DOCUMENT_INGESTION_ROOT: /data/ingestion

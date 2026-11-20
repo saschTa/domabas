@@ -49,15 +49,6 @@ type ChatMessage struct {
 }
 type ChatSendInput struct{ RequestID, Content string }
 type ChatSendResult struct{ UserMessage, AssistantMessage ChatMessage }
-type ChatModel struct{ Name string }
-type ChatModelContext struct {
-	Model            string
-	MaxContextLength int
-}
-type ChatModelPage struct {
-	Items      []ChatModel
-	NextOffset *int
-}
 type ChatToolCall struct{ ID, Name, Arguments string }
 type ChatProviderMessage struct {
 	Role, Content, ToolCallID string

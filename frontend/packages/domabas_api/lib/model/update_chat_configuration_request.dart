@@ -11,7 +11,6 @@ part of openapi.api;
 class UpdateChatConfigurationRequest {
   UpdateChatConfigurationRequest({
     this.thinkingEnabled,
-    this.contextLength,
     required this.expectedRevision,
     required this.enabled,
     required this.provider,
@@ -22,8 +21,6 @@ class UpdateChatConfigurationRequest {
   });
 
   bool? thinkingEnabled;
-
-  int? contextLength;
 
   int expectedRevision;
 
@@ -42,7 +39,6 @@ class UpdateChatConfigurationRequest {
   @override
   bool operator ==(Object other) => identical(this, other) || other is UpdateChatConfigurationRequest &&
     other.thinkingEnabled == thinkingEnabled &&
-    other.contextLength == contextLength &&
     other.expectedRevision == expectedRevision &&
     other.enabled == enabled &&
     other.provider == provider &&
@@ -55,7 +51,6 @@ class UpdateChatConfigurationRequest {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (thinkingEnabled == null ? 0 : thinkingEnabled!.hashCode) +
-    (contextLength == null ? 0 : contextLength!.hashCode) +
     (expectedRevision.hashCode) +
     (enabled.hashCode) +
     (provider.hashCode) +
@@ -65,7 +60,7 @@ class UpdateChatConfigurationRequest {
     (clearApiKey == null ? 0 : clearApiKey!.hashCode);
 
   @override
-  String toString() => 'UpdateChatConfigurationRequest[thinkingEnabled=$thinkingEnabled, contextLength=$contextLength, expectedRevision=$expectedRevision, enabled=$enabled, provider=$provider, model=$model, baseUrl=$baseUrl, apiKey=$apiKey, clearApiKey=$clearApiKey]';
+  String toString() => 'UpdateChatConfigurationRequest[thinkingEnabled=$thinkingEnabled, expectedRevision=$expectedRevision, enabled=$enabled, provider=$provider, model=$model, baseUrl=$baseUrl, apiKey=$apiKey, clearApiKey=$clearApiKey]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -73,11 +68,6 @@ class UpdateChatConfigurationRequest {
       json[r'thinkingEnabled'] = this.thinkingEnabled;
     } else {
       json[r'thinkingEnabled'] = null;
-    }
-    if (this.contextLength != null) {
-      json[r'contextLength'] = this.contextLength;
-    } else {
-      json[r'contextLength'] = null;
     }
       json[r'expectedRevision'] = this.expectedRevision;
       json[r'enabled'] = this.enabled;
@@ -118,7 +108,6 @@ class UpdateChatConfigurationRequest {
 
       return UpdateChatConfigurationRequest(
         thinkingEnabled: mapValueOfType<bool>(json, r'thinkingEnabled'),
-        contextLength: mapValueOfType<int>(json, r'contextLength'),
         expectedRevision: mapValueOfType<int>(json, r'expectedRevision')!,
         enabled: mapValueOfType<bool>(json, r'enabled')!,
         provider: UpdateChatConfigurationRequestProviderEnum.fromJson(json[r'provider'])!,
@@ -180,7 +169,6 @@ class UpdateChatConfigurationRequest {
 }
 
 enum UpdateChatConfigurationRequestProviderEnum {
-  ollama._(r'ollama'),
   openai._(r'openai'),
   ;
 
@@ -222,7 +210,6 @@ class UpdateChatConfigurationRequestProviderEnumTypeTransformer {
     }
     if (data != null) {
       switch (data) {
-        case r'ollama': return UpdateChatConfigurationRequestProviderEnum.ollama;
         case r'openai': return UpdateChatConfigurationRequestProviderEnum.openai;
         default:
           if (!allowNull) {

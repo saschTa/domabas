@@ -75,7 +75,8 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                     _ when pipelines => 'Concurrent runs across all libraries.',
                     _ when resource.id.startsWith('stage:') =>
                       'Shared across all pipelines that use this stage.',
-                    'ollama' => 'Shared by background embedding jobs and AI pipelines configured to use Ollama.',
+                    'embedding-runtime' =>
+                      'Used by document indexing and semantic search.',
                     _ => 'Shared by background jobs using this provider address, including different models and API paths.',
                   },
                   limitField: _WorkloadLimitField(
@@ -92,8 +93,8 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                     ),
                     onChanged: (value) => cubit.edit(resource.id, value),
                   ),
-                  notice: resource.id == 'ollama'
-                      ? 'Ollama queue size ${settings.ollamaQueueSize}. The maximum is half the configured queue.'
+                  notice: resource.id == 'embedding-runtime'
+                      ? 'Embedding runtime queue size ${settings.embeddingQueueSize}. The maximum is half the configured queue.'
                       : null,
                 ),
                 const SizedBox(height: 16),

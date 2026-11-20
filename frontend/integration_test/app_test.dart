@@ -377,10 +377,7 @@ void main() {
       final signedOutDocuments = tester
           .widget<DocumentsScreen>(find.byType(DocumentsScreen))
           .cubit;
-      await tester.enterText(
-        find.byKey(const Key('documentSearchTerm')),
-        'pending session $suffix',
-      );
+      signedOutDocuments.editTerm('pending session $suffix', composing: false);
       expect(signedOutDocuments.state.debouncing, isTrue);
       await revealWorkspaceAction(tester, 'logout');
       await tester.tap(find.byKey(const Key('logout')));
@@ -689,7 +686,7 @@ Future<void> exerciseWorkloadSettings(
       'stage:thumbnail',
       'stage:ocr',
       'stage:embedding',
-      'ollama',
+      'embedding-runtime',
     ]),
   );
   final picker = find.byKey(const ValueKey('flow-pipeline-picker'));

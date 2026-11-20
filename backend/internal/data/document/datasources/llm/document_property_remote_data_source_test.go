@@ -15,28 +15,24 @@ import (
 const properties = `{"description":"Invoice summary","tags":["invoice"],"sender":"Example","recipients":[],"documentDate":"2026-09-19","subject":"Invoice"}`
 
 func TestPostalAddressPropertiesBecomeValidSingleLineMetadata(t *testing.T) {
-	for _, provider := range []string{"ollama", "openai"} {
-		t.Run(provider, func(t *testing.T) {
-			content := `{"description":"Consulting services.\nPayment due in 14 days.","tags":["office\tservices","invoice"],"sender":" Example Büro GmbH\r\nSample Street 1\n10115 Berlin ","recipients":["Sample Customer AG\nOther Street 2\t20095 Hamburg"],"documentDate":"2026-07-25","subject":" Invoice\r\nEXAMPLE-1001 "}`
-			server := propertyResponseServer(t, provider, content)
-			defer server.Close()
-			remote, err := NewDocumentPropertyRemoteDataSource(server.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer remote.Close()
-			got, err := remote.Extract(t.Context(), provider, "model", server.URL, "", "Synthetic invoice with postal addresses", false, false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got.Sender != "Example Büro GmbH Sample Street 1 10115 Berlin" || !slices.Equal(got.Recipients, []string{"Sample Customer AG Other Street 2 20095 Hamburg"}) || got.Subject != "Invoice EXAMPLE-1001" || !slices.Equal(got.Tags, []string{"office services", "invoice"}) || got.Description != "Consulting services.\nPayment due in 14 days." {
-				t.Fatalf("address content or description formatting changed: %+v", got)
-			}
-			if _, err := (m.DocumentMetadata{Title: "Invoice", Description: got.Description, Sender: got.Sender, Recipients: got.Recipients, Tags: got.Tags, Subject: got.Subject, DocumentDate: got.DocumentDate}).Normalize(); err != nil {
-				t.Fatalf("extracted properties cannot be saved: %v", err)
-			}
-		})
-	}
+	const provider = "openai"
+	t.Run(provider, func(t *testing.T) {
+		content := `{"description":"Consulting services.\nPayment due in 14 days.","tags":["office\tservices","invoice"],"sender":" Example Büro GmbH\r\nSample Street 1\n10115 Berlin ","recipients":["Sample Customer AG\nOther Street 2\t20095 Hamburg"],"documentDate":"2026-07-25","subject":" Invoice\r\nEXAMPLE-1001 "}`
+		server := propertyResponseServer(t, provider, content)
+		defer server.Close()
+		remote := NewDocumentPropertyRemoteDataSource()
+		defer remote.Close()
+		got, err := remote.Extract(t.Context(), provider, "model", server.URL, "", "Synthetic invoice with postal addresses", false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Sender != "Example Büro GmbH Sample Street 1 10115 Berlin" || !slices.Equal(got.Recipients, []string{"Sample Customer AG Other Street 2 20095 Hamburg"}) || got.Subject != "Invoice EXAMPLE-1001" || !slices.Equal(got.Tags, []string{"office services", "invoice"}) || got.Description != "Consulting services.\nPayment due in 14 days." {
+			t.Fatalf("address content or description formatting changed: %+v", got)
+		}
+		if _, err := (m.DocumentMetadata{Title: "Invoice", Description: got.Description, Sender: got.Sender, Recipients: got.Recipients, Tags: got.Tags, Subject: got.Subject, DocumentDate: got.DocumentDate}).Normalize(); err != nil {
+			t.Fatalf("extracted properties cannot be saved: %v", err)
+		}
+	})
 }
 
 func TestPropertyWhitespaceNormalizationPreservesInvalidDataForValidation(t *testing.T) {
@@ -62,10 +58,7 @@ func TestPropertyWhitespaceNormalizationPreservesInvalidDataForValidation(t *tes
 			}
 			server := propertyResponseServer(t, "openai", string(content))
 			defer server.Close()
-			remote, err := NewDocumentPropertyRemoteDataSource(server.URL)
-			if err != nil {
-				t.Fatal(err)
-			}
+			remote := NewDocumentPropertyRemoteDataSource()
 			defer remote.Close()
 			got, err := remote.Extract(t.Context(), "openai", "model", server.URL, "", "Synthetic invoice", false, false)
 			if err != nil {
@@ -81,160 +74,66 @@ func TestPropertyWhitespaceNormalizationPreservesInvalidDataForValidation(t *tes
 func propertyResponseServer(t *testing.T, provider, content string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/api/show" {
-			_, _ = w.Write([]byte(`{"model_info":{"general.architecture":"qwen35","qwen35.context_length":131072}}`))
-			return
-		}
 		message := map[string]string{"content": content}
-		if provider == "ollama" {
-			_ = json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": message})
-		} else {
-			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": message}}})
-		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": message}}})
 	}))
-}
-
-func TestOllamaPullSelectedMissingModelAndBoundedChat(t *testing.T) {
-	installed := false
-	pulls, chats, shows := 0, 0, 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		var body map[string]any
-		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-			t.Error(err)
-		}
-		if body["model"] != "qwen3.5:4b" || req.Header.Get("Authorization") != "" {
-			t.Error("wrong model or leaked external credential")
-		}
-		switch req.URL.Path {
-		case "/api/show":
-			shows++
-			if !installed {
-				w.WriteHeader(404)
-				return
-			}
-			_, _ = w.Write([]byte(`{"model_info":{"general.architecture":"qwen35","qwen35.context_length":131072}}`))
-		case "/api/pull":
-			pulls++
-			installed = true
-			if body["stream"] != false {
-				t.Error("unbounded pull")
-			}
-			_, _ = w.Write([]byte(`{"status":"success"}`))
-		case "/api/chat":
-			chats++
-			if body["options"].(map[string]any)["temperature"] != float64(0.2) {
-				t.Error("property extraction temperature changed")
-			}
-			format, ok := body["format"].(map[string]any)
-			if body["stream"] != false || !ok || format["additionalProperties"] != false || len(format["required"].([]any)) != 6 {
-				t.Error("unbounded completion")
-			}
-			messages := body["messages"].([]any)
-			if len(messages) != 1 || messages[0].(map[string]any)["role"] != "user" {
-				t.Fatal("Qwen instructions and document must share one user turn")
-			}
-			content := messages[0].(map[string]any)["content"].(string)
-			if !strings.Contains(content, propertySchema) || !strings.HasSuffix(content, "\nBEGIN OCR DOCUMENT\n"+strings.Repeat("ü", 100000)+"\nEND OCR DOCUMENT") {
-				t.Error("schema grounding or bounded OCR input missing")
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]string{"content": properties}})
-		default:
-			t.Error("unexpected path", req.URL.Path)
-			w.WriteHeader(404)
-		}
-	}))
-	defer server.Close()
-	r, err := NewDocumentPropertyRemoteDataSource(server.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	for range 2 {
-		v, err := r.Extract(t.Context(), "ollama", "qwen3.5:4b", "", "never-forward", strings.Repeat("ü", 100001), false, false)
-		if err != nil || v.Subject != "Invoice" {
-			t.Fatal(v, err)
-		}
-	}
-	if pulls != 1 || chats != 2 || shows != 3 {
-		t.Fatalf("pulls=%d chats=%d shows=%d", pulls, chats, shows)
-	}
 }
 
 func TestInferencePreservesSelectedInvoiceInput(t *testing.T) {
-	for _, provider := range []string{"ollama", "openai"} {
-		for _, scenario := range []struct {
-			name               string
-			characters, tokens int
-		}{
-			{"classification", 20000, 256},
-			{"wider classification", 50000, 256},
-			{"extraction", 100000, 50000},
-		} {
-			t.Run(provider+"/"+scenario.name, func(t *testing.T) {
-				text := strings.Repeat("ä", scenario.characters-4) + "TAIL"
-				content := `{}`
-				if scenario.name == "extraction" {
-					content = `{"invoice":{"notes":["` + strings.Repeat(strings.Repeat("ä", 3000)+`","`, 49) + strings.Repeat("ä", 3000) + `"]}}`
-				}
-				var received string
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					if req.URL.Path == "/api/show" {
-						_, _ = w.Write([]byte(`{"model_info":{"general.architecture":"qwen35","qwen35.context_length":131072}}`))
-						return
-					}
-					var body struct {
-						Messages []struct{ Content string }
-						Options  struct {
-							Temperature float64
-							Context     int `json:"num_ctx"`
-							Tokens      int `json:"num_predict"`
-						}
+	const provider = "openai"
+	for _, scenario := range []struct {
+		name               string
+		characters, tokens int
+	}{
+		{"classification", 20000, 256},
+		{"wider classification", 50000, 256},
+		{"extraction", 100000, 50000},
+	} {
+		t.Run(provider+"/"+scenario.name, func(t *testing.T) {
+			text := strings.Repeat("ä", scenario.characters-4) + "TAIL"
+			content := `{}`
+			if scenario.name == "extraction" {
+				content = `{"invoice":{"notes":["` + strings.Repeat(strings.Repeat("ä", 3000)+`","`, 49) + strings.Repeat("ä", 3000) + `"]}}`
+			}
+			var received string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				var body struct {
+					Messages []struct{ Content string }
+					Options  struct {
 						Temperature float64
-						MaxTokens   int `json:"max_tokens"`
+						Context     int `json:"num_ctx"`
+						Tokens      int `json:"num_predict"`
 					}
-					if err := json.NewDecoder(req.Body).Decode(&body); err != nil || len(body.Messages) == 0 {
-						t.Error("invalid inference request", err)
-						w.WriteHeader(http.StatusBadRequest)
-						return
-					}
-					received = body.Messages[len(body.Messages)-1].Content
-					temperature := body.Temperature
-					if provider == "ollama" {
-						temperature = body.Options.Temperature
-						if body.Options.Context != 32768 || body.Options.Tokens != scenario.tokens {
-							t.Errorf("incorrect context or generation capacity: %+v", body.Options)
-						}
-					} else if body.MaxTokens != scenario.tokens {
-						t.Errorf("incorrect external generation capacity: %d", body.MaxTokens)
-					}
-					if temperature != 0.2 {
-						t.Errorf("invoice temperature: %v", temperature)
-					}
-					message := map[string]string{"content": content}
-					if provider == "ollama" {
-						_ = json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": message})
-					} else {
-						_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": message}}})
-					}
-				}))
-				defer server.Close()
-				remote, err := NewDocumentPropertyRemoteDataSource(server.URL)
-				if err != nil {
-					t.Fatal(err)
+					Temperature float64
+					MaxTokens   int `json:"max_tokens"`
 				}
-				defer remote.Close()
-				if result, err := remote.Generate(t.Context(), provider, "model", server.URL, "", "Invoice task", `{}`, text, scenario.tokens, 0.2, false, false, 32768); err != nil || result != content {
-					t.Fatalf("model response was rejected or altered: %v", err)
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil || len(body.Messages) == 0 {
+					t.Error("invalid inference request", err)
+					w.WriteHeader(http.StatusBadRequest)
+					return
 				}
-				expected := text
-				if provider == "ollama" {
-					expected = "Invoice task\nRequired JSON schema:\n{}\nBEGIN OCR DOCUMENT\n" + text + "\nEND OCR DOCUMENT"
+				received = body.Messages[len(body.Messages)-1].Content
+				temperature := body.Temperature
+				if body.MaxTokens != scenario.tokens {
+					t.Errorf("incorrect external generation capacity: %d", body.MaxTokens)
 				}
-				if received != expected {
-					t.Fatalf("provider input was altered: received %d bytes, expected %d", len(received), len(expected))
+				if temperature != 0.2 {
+					t.Errorf("invoice temperature: %v", temperature)
 				}
-			})
-		}
+				message := map[string]string{"content": content}
+				_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": message}}})
+			}))
+			defer server.Close()
+			remote := NewDocumentPropertyRemoteDataSource()
+			defer remote.Close()
+			if result, err := remote.Generate(t.Context(), provider, "model", server.URL, "", "Invoice task", `{}`, text, scenario.tokens, 0.2, false, false, 32768); err != nil || result != content {
+				t.Fatalf("model response was rejected or altered: %v", err)
+			}
+			expected := text
+			if received != expected {
+				t.Fatalf("provider input was altered: received %d bytes, expected %d", len(received), len(expected))
+			}
+		})
 	}
 }
 
@@ -268,7 +167,7 @@ func TestExternalAuthenticationAndInvalidOutputs(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": tc.finish, "message": map[string]string{"content": tc.content}}}})
 			}))
 			defer server.Close()
-			r, _ := NewDocumentPropertyRemoteDataSource(server.URL)
+			r := NewDocumentPropertyRemoteDataSource()
 			defer r.Close()
 			_, err := r.Extract(t.Context(), "openai", "model", server.URL+"/custom/v1/", "secret", "OCR text", false, false)
 			if (err != nil) != tc.bad {
@@ -296,7 +195,7 @@ func TestRedirectNeverForwardsCredentialsOrDocumentText(t *testing.T) {
 	defer target.Close()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, target.URL, 307) }))
 	defer server.Close()
-	r, _ := NewDocumentPropertyRemoteDataSource(server.URL)
+	r := NewDocumentPropertyRemoteDataSource()
 	defer r.Close()
 	if _, err := r.Extract(t.Context(), "openai", "model", server.URL, "secret", "private OCR", false, false); err == nil || forwarded {
 		t.Fatal("redirect was followed")
@@ -304,13 +203,10 @@ func TestRedirectNeverForwardsCredentialsOrDocumentText(t *testing.T) {
 }
 
 func TestEmptyEffectivePrefixSkipsPropertyInference(t *testing.T) {
-	remote, err := NewDocumentPropertyRemoteDataSource("http://127.0.0.1:1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	remote := NewDocumentPropertyRemoteDataSource()
 	defer remote.Close()
 	for _, text := range []string{"", " \n\t", strings.Repeat(" ", 100000) + "later content"} {
-		result, err := remote.Extract(t.Context(), "ollama", "model", "", "", text, false, false)
+		result, err := remote.Extract(t.Context(), "openai", "model", "https://unused.test/v1", "", text, false, false)
 		if err != nil || result.Description != "" {
 			t.Fatalf("empty prefix: %+v %v", result, err)
 		}

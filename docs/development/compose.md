@@ -1,10 +1,6 @@
 # Compose deployment and development infrastructure
 
-For a small home installation with one admitted ingestion job, start with four
-CPU cores and 5 GiB available RAM, plus memory for Ollama models and host
-overhead. Search embeddings use Ollama even when optional AI is disabled. See
-[runtime resources and memory diagnosis](resources.md) for per-service
-ceilings, Go soft limits, overrides and OOM measurements.
+For sizing, see [runtime resources and memory diagnosis](resources.md). The private embedding service runs alongside OCR, including when chat and document AI are disabled.
 
 ## Start the complete application
 
@@ -12,20 +8,7 @@ Use Docker Engine 25+ and Compose 2.20.2+ for the root and quick-start files.
 These versions support the separate startup health-check interval. TrueNAS
 deployments use the [TrueNAS prerequisites](../../truenas/README.md).
 
-For a local trial, follow the [README quick start](../../readme.md#quick-start):
-download [compose.quickstart.yaml](../../compose.quickstart.yaml), save it as
-`compose.yaml` in a new folder, then run:
-
-```sh
-docker compose up -d
-```
-
-This standalone file pulls public v0.0.10 images pinned by digest and creates
-named volumes for persistent data. It needs no checkout or `.env` file. Published
-Domabas images target `linux/amd64`. Native ARM64 images are not available, and
-AMD64 emulation on ARM64 hosts is not guaranteed to run this release.
-The default ports bind to localhost, and the built-in database passwords are
-for local testing. Configure passwords and addresses before sharing the setup.
+The [README quick start](../../readme.md#quick-start) builds this checkout. `compose.quickstart.yaml` includes the sibling root Compose file and uses the same source tree. Release notes provide standalone configurations with first-party images pinned to that release. Keep a release configuration with its associated images. Published Domabas containers target Linux AMD64. Set passwords and network addresses before sharing the installation.
 
 ### Build from source
 
@@ -88,8 +71,8 @@ Published ports bind to `127.0.0.1` by default. Go is reached through the web pr
 | Private document processor | 8091 | `DOCUMENT_PROCESSOR_PORT` |
 
 ```sh
-# Start the downloaded quick-start file.
-docker compose up -d
+# Start the source checkout.
+docker compose up --build --wait
 
 # Inspect service health and logs.
 docker compose ps
@@ -100,70 +83,28 @@ docker compose down
 ```
 
 From a checkout, use `docker compose up --build --wait` to build and start the
-current source. `task compose:up` and `task compose:down` expose that full-stack lifecycle through Go Task and Bun. `task infra:up` starts PostgreSQL and its UI, the private document processor, Ollama and initialization jobs; `task infra:down` stops infrastructure. `task db:down` stops only PostgreSQL. Ordinary commands do not remove volumes. Infrastructure shutdown makes a running API unready; stop the application first when ending a session.
+current source. `task compose:up` and `task compose:down` manage the full stack. `task infra:up` starts PostgreSQL, the model initializer, the private embedding server and the document processor and initializes the database. `task infra:down` stops infrastructure and retains data. `task db:down` stops PostgreSQL. Stop the application before stopping its dependencies.
 
 Run `task dev` for native Air and Flutter hot reload against Compose infrastructure. Stop the packaged backend before starting a native worker on the same queue: otherwise both processes can poll it. `docker compose stop web backend` leaves infrastructure available for development. All workers on a queue must use the same application database/schema and compatible workflow code.
 
-## Select the development Ollama runtime
+## Select the embedding runtime
 
-Change this one line in `backend/.env`, then restart `task dev`:
+CPU embeddings are the default. To use Vulkan on Linux, select an accessible render node with a compatible Vulkan driver. Obtain its numeric group using `stat -c %g /dev/dri/renderD128`. Configure `VULKAN_RENDER_DEVICE` and `VULKAN_RENDER_GROUP` for the node and group you intend to expose. The defaults are `/dev/dri/renderD128` and `107`.
 
-```dotenv
-OLLAMA_RUNTIME=mlx
+```sh
+docker compose -f compose.yaml -f compose.vulkan.yaml up --build --wait
+docker compose logs embeddings
 ```
 
-| Value | Runtime | Host requirement |
-| --- | --- | --- |
-| `cpu` | Default pinned Ollama Docker image | Docker |
-| `cuda` | Same image with the CUDA override | NVIDIA GPU, driver and NVIDIA Container Toolkit |
-| `rocm` | Pinned ROCm image with AMD device mappings | Supported AMD GPU and Linux ROCm driver |
-| `mlx` | Pinned native Ollama with its MLX engine | Apple Silicon Mac and Docker with host gateway access |
+Look for the expected Vulkan device and offloaded model layers in the server logs. The CPU and Vulkan images are pinned to the same llama.cpp build, b12464. Each serves only the verified 274,290,560-byte Nomic v1.5 F16 GGUF. The embedding server has no published host port.
 
-The checked-in default is `cpu`. An exported `OLLAMA_RUNTIME` takes precedence;
-for example, `OLLAMA_RUNTIME=cuda task dev` selects CUDA for one run. Unknown
-values and unsupported MLX hosts fail before infrastructure starts. CUDA and
-ROCm still require their hardware and drivers; the selector does not install them.
+For hot reload or managed infrastructure use `EMBEDDING_RUNTIME=vulkan task dev` or `EMBEDDING_RUNTIME=vulkan task infra:up`. Set `EMBEDDING_RUNTIME=cpu` to return to CPU processing. Direct Compose deployments select the override file explicitly. For TrueNAS see [the deployment templates](../../truenas/README.md).
 
-MLX downloads and verifies the official Ollama 0.34.1 macOS archive on first use
-(about 159 MB), then reuses `.cache/tools/ollama/0.34.1`. No system Ollama install
-is needed. It serves the existing `http://127.0.0.1:11435` origin and keeps models
-in `.cache/ollama/models`. The launcher owns this process, stops it after Go and
-Flutter drain, and stops it on failed startup. It does not reuse another Ollama
-daemon. An unrelated listener on that port produces an error. To change the
-port, update both `LLM_OLLAMA_PORT` and the matching loopback `LLM_OLLAMA_URL`.
-The launcher manages `OLLAMA_HOST` and `OLLAMA_MODELS` itself.
+### Upgrade an installation with the previous inference service
 
-The processor remains in Docker. The MLX override omits container Ollama, mounts
-the native cache read-only, and connects through `host.docker.internal`. Docker
-must share the checkout and reach the host's loopback listener through that name;
-startup checks this before starting the rest of the infrastructure. Remote Docker
-daemons cannot use this local native mode. The launcher stops the project's
-previous processor and Ollama containers when entering MLX mode. Both the Docker
-model volume and native cache survive switching runtimes and ordinary shutdown;
-each cache may need its own initial model download. Docker memory limits do not
-apply to native Ollama.
+Use the old Compose configuration to stop the stack with `docker compose down`, preserving its volumes. Keep the same Compose project name, file-storage volumes, database and credential keys when starting the new configuration. Stopping the old stack also releases the previous model server's memory. Its former model-cache volume can remain in place.
 
-Select **Internal Ollama** and an MLX-compatible model, such as
-`gemma4:12b-mlx`, in **Admin → Document processing** to use MLX for property or
-invoice extraction. The first job downloads that model; size and memory needs
-depend on the selected model. Existing saved model choices are preserved.
-The pinned Nomic embedding model remains in its original format and uses
-Ollama's compatible engine, so changing the runtime does not change the embedding
-space or bypass manifest and blob verification. See
-[Ollama's MLX guide](https://ollama.com/blog/mlx-performance) and
-[available Gemma model tags](https://ollama.com/library/gemma4/tags).
-
-`task infra:up` uses the same selector. With MLX it stays in the foreground to
-own native Ollama; keep that terminal open and use
-`task dev -- --external-services` in another terminal. Ctrl+C stops native
-Ollama; `task infra:down` stops the retained Docker containers without deleting
-volumes. Stop the development session before switching runtimes.
-
-`OLLAMA_RUNTIME` applies to development launchers. `task compose:up`, direct
-`docker compose up --build --wait`, disposable test harnesses and `task test:all`
-keep their Docker baseline. Use the explicit CUDA/ROCm Compose overrides for
-packaged deployments. `compose.mlx.yaml` is a development override used by the
-native launcher, not a standalone deployment.
+On first startup the model initializer creates the verified GGUF cache. The backend adopts a new embedding-space identity and queues retained originals for reindexing. Lexical search continues to work while new semantic results become available. Existing external AI settings remain usable. For a previous internal AI configuration, enter an external destination and model in the corresponding administrator settings and explicitly enable the feature.
 
 ## Configuration and persistence
 
@@ -254,7 +195,7 @@ services:
 This requires Docker Compose 2.24.4 or newer. The
 [`!override` tag](https://docs.docker.com/reference/compose-file/merge/#replace-value)
 replaces the web port mapping instead of appending another one. PostgreSQL,
-Ollama and the processor keep their loopback bindings.
+The private processor retains its loopback binding and the embedding server stays on the Compose network.
 The backend remains reachable through the web proxy without its own host port.
 
 Use both files for every command, including shutdown:
@@ -280,7 +221,7 @@ tools use published localhost ports. If changing a native port, update its
 the [web-only override](#allow-web-access-from-another-machine) and configure TLS
 termination for credentials and sessions.
 
-Configure `OLLAMA_MAX_QUEUE=128` consistently on Ollama, backend replicas and the processor, then use Admin settings → Workload limits to adjust worker, Ollama and external-provider capacity. The shared Ollama background budget is at most 64 jobs and defaults to one. Worker capacity defaults to ten jobs, and external provider origins to two. Running requests are never cancelled merely because ingestion arrives. The former `DOCUMENT_INGESTION_CONCURRENCY` and `DOCUMENT_AI_CONCURRENCY` settings no longer control admission. An external Ollama queue cannot be discovered through its API; configure its matching budget explicitly. Actual computation still depends on model parallelism and the processor’s ten OCR slots.
+Set `EMBEDDING_QUEUE_SIZE` consistently on backend replicas and the processor. The default budget of 128 allows a maximum of 64 background embedding jobs. **Workload limits** controls actual admission. Worker capacity defaults to ten, background embeddings to one and external provider origins to two. External generation and local embedding capacity are independent.
 The processor image stages waiting originals in private disk-backed `/app/tmp`;
 allow enough Docker disk space for accepted originals and active OCR scratch.
 That location is separate from the 2 GiB `/tmp` tmpfs and from persistent original
@@ -351,29 +292,11 @@ still override automatic email key management. See the
 [email guide](email.md) for recovery and rotation.
 
 The processor builds Tesseract 5.5.3 and Leptonica 1.87.0 from verified sources.
-On first start it downloads checked English/German OCR weights and Nomic Embed
-Text v1.5, verifies their hashes and warms CPU inference. `tesseract_models` and
-`ollama_models` retain caches across ordinary shutdown. The official Ollama image
-is a large initial download; allow several GB of disk and sufficient Docker
-memory for the processor’s 4 GiB limit and Ollama’s 8 GiB limit in addition to
-the application stack. Each inference container defaults to a four-CPU quota.
-Override `DOCUMENT_PROCESSOR_CPUS`, `DOCUMENT_PROCESSOR_MEMORY_LIMIT`,
-`OLLAMA_CPUS` and `OLLAMA_MEMORY_LIMIT` when sizing the host. The processor has
-ten extraction slots and `max(1, floor(OLLAMA_MAX_QUEUE / 2))` embedding slots.
-Ollama permits two loaded models
-for optional property extraction alongside embeddings. Its queue defaults to 128
-requests, configurable with `OLLAMA_MAX_QUEUE`;
-its pinned embedding runtime processes inference in one slot regardless of
-`OLLAMA_NUM_PARALLEL`, which remains one. The shared resource scheduler admits background jobs across all backend replicas. Set limits in administrator Workload settings, keeping the Ollama total at or below half its configured queue. Leave headroom for semantic queries and unrelated clients. Email and Paperless share worker permits but do not reserve Ollama during retrieval. Actual throughput depends on CPU, memory and model
-capacity. Model calls release their permits when the operation ends.
+Startup verifies pinned English and German OCR weights in `tesseract_models`. The `model-init` service downloads the publisher's immutable Nomic GGUF into `embedding_models`, validates its size and SHA-256, then atomically installs it. Both embedding consumers mount that volume read-only. To provision it before starting the stack, run `docker compose run --build --rm model-init`. A populated and valid cache supports startup without fetching model bytes. A new embedding identity schedules a reindex for retained originals. Leave previous model volumes intact when upgrading.
 
-The processor startup budget is ten minutes; Task wrappers allow fifteen minutes
-for infrastructure readiness. Complete retained caches start without downloading
-again. Corrupt caches fail readiness rather than silently selecting another model.
+The embedding server's CPU and memory limits default to four CPUs and 2 GiB. Set `EMBEDDING_CPUS` and `EMBEDDING_MEMORY_LIMIT` to override them. The processor defaults to four CPUs and 4 GiB. The processor's startup budget is ten minutes and the development helper allows fifteen minutes for infrastructure.
 
-Ollama and the processor use `PRIVATE_BIND_ADDRESS`, independently of
-`BIND_ADDRESS`; its default is `127.0.0.1`. Keep it on loopback for these private
-endpoints. `LLM_OLLAMA_PORT` selects Ollama's host port (default 11435).
+The private processor port binds to `PRIVATE_BIND_ADDRESS` (default loopback). Only the processor contacts `http://embeddings:8080` for model inference.
 Native development uses
 `DOCUMENT_PROCESSOR_URL=http://127.0.0.1:8091`; adjust that URL when changing
 `DOCUMENT_PROCESSOR_PORT`. These private inference endpoints have no account
@@ -390,7 +313,7 @@ bitmap budget. Compose defaults to four CPUs, 4 GiB of memory and a 2 GiB `/tmp`
 Use `DOCUMENT_PROCESSOR_MEMORY_LIMIT` and `DOCUMENT_PROCESSOR_CPUS` to size the
 container for your host. The tmpfs shares the memory budget; original and OCR
 scratch files use the private disk-backed `/app/tmp`. Defaults target one
-active document; increase memory when raising the shared worker or Ollama job limit
+active document; increase memory when raising the worker or embedding limit
 for large images. OCR allows 120 seconds per Tesseract call and eight minutes per
 extraction. Rebuild both backend and processor to apply the matching HTTP and
 workflow allowances; retained workflows keep their recorded activity deadlines.

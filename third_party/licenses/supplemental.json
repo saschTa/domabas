@@ -226,24 +226,25 @@
   {
     "id": "extra:models/NOMIC-LICENSE",
     "name": "Nomic Embed Text",
-    "version": "v1.5",
+    "version": "v1.5 F16 GGUF",
     "component": "Models / inference",
-    "sourceUrl": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5",
+    "sourceUrl": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/tree/0188c9bf409793f810680a5a431e7b899c46104c",
     "urls": [],
     "files": [
       "third_party/models/NOMIC-LICENSE"
     ]
   },
   {
-    "id": "extra:models/OLLAMA-LICENSE",
-    "name": "Ollama",
-    "version": "0.34.1",
+    "id": "extra:models/LLAMA-CPP-LICENSE",
+    "name": "llama.cpp",
+    "version": "b12464",
     "component": "Models / inference",
-    "sourceUrl": "https://github.com/ollama/ollama/tree/v0.34.1",
+    "sourceUrl": "https://github.com/ggml-org/llama.cpp/tree/d3c3e242c16b8cbf51400fad410cd69b22d64f35",
     "urls": [],
     "files": [
-      "third_party/models/OLLAMA-LICENSE"
-    ]
+      "third_party/models/LLAMA-CPP-LICENSE"
+    ],
+    "note": "Compose references upstream CPU and Vulkan server images by digest. Their operating-system and runtime packages carry separate notices in the images."
   },
   {
     "id": "extra:models/TESSDATA-LICENSE",
@@ -505,19 +506,6 @@
       "https://raw.githubusercontent.com/OpenAPITools/openapi-generator/v7.25.0/LICENSE"
     ],
     "files": []
-  },
-  {
-    "id": "extra:Qwen3.5-4B",
-    "name": "Qwen3.5-4B",
-    "version": "qwen3.5:4b (model tag is mutable)",
-    "component": "Models / inference",
-    "sourceUrl": "https://huggingface.co/Qwen/Qwen3.5-4B/tree/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
-    "urls": [
-      "https://huggingface.co/Qwen/Qwen3.5-4B/resolve/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a/LICENSE"
-    ],
-    "files": [],
-    "license": "Apache-2.0",
-    "note": "The default model is downloaded on demand. This notice describes the upstream 4B model; the configured Ollama tag is mutable and administrators can select different models. Verify the actual model artifact and license before redistribution."
   },
   {
     "id": "extra:actions/checkout",
@@ -2092,26 +2080,6 @@
     "urls": [
       "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt"
     ]
-  },
-  {
-    "id": "extra:CUDA runtime components",
-    "name": "CUDA runtime components",
-    "version": "Optional Ollama GPU deployment",
-    "component": "Optional GPU runtime",
-    "sourceUrl": "https://docs.nvidia.com/cuda/eula/",
-    "license": "NVIDIA vendor terms",
-    "note": "Ollama MIT terms do not replace the terms for CUDA runtime components. Redistribution is limited to permitted redistributables and is subject to the actual CUDA version terms. The exact image-specific GPU bundle has not been cleared by this source inventory.",
-    "urls": []
-  },
-  {
-    "id": "extra:ROCm runtime components",
-    "name": "ROCm runtime components",
-    "version": "Ollama 0.34.1-rocm image pin",
-    "component": "Optional GPU runtime",
-    "sourceUrl": "https://rocm.docs.amd.com/en/latest/about/license.html",
-    "license": "Multiple component licenses",
-    "note": "ROCm images contain multiple projects and may include separately licensed runtime or firmware components. Audit the exact digest image before distribution; no complete binary inventory is claimed here.",
-    "urls": []
   },
   {
     "id": "extra:Chrome for Testing / ChromeDriver",

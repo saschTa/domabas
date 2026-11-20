@@ -82,10 +82,9 @@ void main() {
     (tester) async {
       await mount(tester);
       final toggle = find.byKey(const Key('llmLMStudioCompatibility'));
-      expect(toggle, findsNothing);
-      await reveal(tester, 'llmProviderOpenAI');
-      await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
       await tester.pumpAndSettle();
+      await reveal(tester, 'llmModel');
+      await tester.enterText(find.byKey(const Key('llmModel')), 'custom');
       await reveal(tester, 'llmBaseUrl');
       await tester.enterText(
         find.byKey(const Key('llmBaseUrl')),
@@ -97,10 +96,6 @@ void main() {
         tester.getTopLeft(find.byKey(const Key('llmBaseUrl'))).dy,
         lessThan(tester.getTopLeft(toggle).dy),
       );
-      expect(
-        tester.getTopLeft(find.byKey(const Key('llmModel'))).dy,
-        lessThan(tester.getTopLeft(find.byKey(const Key('llmBaseUrl'))).dy),
-      );
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       expect(repository.llmUpdates, isEmpty);
@@ -108,11 +103,7 @@ void main() {
       await cubit.load(poll: true);
       await tester.pumpAndSettle();
       expect(tester.widget<GlacierSwitchRow>(toggle).value, isTrue);
-      await reveal(tester, 'llmProviderOllama');
-      await tester.tap(find.byKey(const Key('llmProviderOllama')));
       await tester.pumpAndSettle();
-      expect(toggle, findsNothing);
-      await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
       await tester.pumpAndSettle();
       expect(tester.widget<GlacierSwitchRow>(toggle).value, isTrue);
       await reveal(tester, 'saveLLMSettings');
@@ -147,8 +138,11 @@ void main() {
       find.byKey(const Key('llmModel')),
       'replacement-model',
     );
-    await reveal(tester, 'llmContextLength');
-    await tester.enterText(find.byKey(const Key('llmContextLength')), '65536');
+    await reveal(tester, 'llmBaseUrl');
+    await tester.enterText(
+      find.byKey(const Key('llmBaseUrl')),
+      'https://models.example/v1',
+    );
     await reveal(tester, 'saveLLMSettings');
     expect(cubit.state.loading, isFalse);
     expect(cubit.canSave, isTrue);
@@ -160,10 +154,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.llmUpdates.single!.invoiceEnabled, isTrue);
     expect(repository.llmUpdates.single!.model, 'replacement-model');
-    expect(repository.llmUpdates.single!.contextLength, '65536');
     expect(cubit.state.configuration!.llm.invoiceEnabled, isTrue);
     expect(cubit.state.configuration!.llm.model, 'replacement-model');
-    expect(cubit.state.configuration!.llm.contextLength, 65536);
     expect(cubit.state.dirty, isFalse);
     await reveal(tester, 'invoiceLLMEnabled');
     await tester.tap(find.byKey(const Key('invoiceLLMEnabled')));
@@ -172,7 +164,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(cubit.state.configuration!.llm.invoiceEnabled, isFalse);
     expect(cubit.state.configuration!.llm.model, 'replacement-model');
-    expect(cubit.state.configuration!.llm.contextLength, 65536);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -231,8 +222,6 @@ void main() {
 
       await scrollTo('llmEnabled');
       await tester.tap(find.byKey(const Key('llmEnabled')));
-      await scrollTo('llmProviderOpenAI');
-      await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
       await tester.pumpAndSettle();
       await scrollTo('llmBaseUrl');
       await tester.enterText(
@@ -272,11 +261,10 @@ void main() {
             .widget<TextField>(find.byKey(const Key('llmModel')))
             .controller!
             .text,
-        'qwen3.5:4b',
+        '',
       );
       await tester.tap(find.byKey(const Key('llmEnabled')));
       expect(repository.llmUpdates, isEmpty);
-      await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('llmBaseUrl')),
@@ -408,6 +396,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(cubit.state.llm.invoiceThinkingEnabled, isTrue);
     expect(cubit.state.llm.propertyThinkingEnabled, isFalse);
+    cubit.editLLM(model: 'fixture', baseUrl: 'https://models.example/v1');
+    await tester.pumpAndSettle();
     final save = find.descendant(
       of: find.byType(AppDialog),
       matching: find.byKey(const Key('saveLLMSettings')),
@@ -469,8 +459,6 @@ void main() {
         'extraction fields and actions fit width $width, dark $dark, 200% text',
         (tester) async {
           await mount(tester, width: width, dark: dark, scale: 2);
-          await reveal(tester, 'llmProviderOpenAI');
-          await tester.tap(find.byKey(const Key('llmProviderOpenAI')));
           await tester.pumpAndSettle();
           await reveal(tester, 'llmLMStudioCompatibility');
           await tester.tap(find.byKey(const Key('llmLMStudioCompatibility')));

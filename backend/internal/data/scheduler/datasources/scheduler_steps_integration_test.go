@@ -11,12 +11,12 @@ import (
 	m "github.com/domabas/domabas/backend/internal/domain/scheduler/models"
 )
 
-func TestInferenceWaitsWithoutHoldingOCRorEmbedding(t *testing.T) {
+func TestExternalInferenceRunsWhileEmbeddingsAreAtCapacity(t *testing.T) {
 	f := newSchedulerAdmissionFixture(t)
 	actor := schedulerSettingsActor(t, f)
 	first, second := f.paperless(), f.paperless()
 	external := "https://model.example.test"
-	if !f.reserve(first, "ollama", external) || !f.reserve(second, "ollama") {
+	if !f.reserve(first, "embedding-runtime", external) || !f.reserve(second, "embedding-runtime", external) {
 		t.Fatal("provider capacity blocked admission")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -43,9 +43,12 @@ func TestInferenceWaitsWithoutHoldingOCRorEmbedding(t *testing.T) {
 	if err := f.source.RunStep(ctx, second, "stage:ocr", func(context.Context) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
+	if err := f.source.RunResources(ctx, second, "inference", []string{"stage:llm", f.source.ResourceID(external)}, func(context.Context) error { return nil }); err != nil {
+		t.Fatalf("external inference waited for embedding capacity: %v", err)
+	}
 	waitctx, stop := context.WithTimeout(ctx, 120*time.Millisecond)
 	defer stop()
-	if err := f.source.RunResources(waitctx, second, "inference", []string{"stage:llm", "ollama"}, func(context.Context) error { t.Error("provider overcommitted"); return nil }); err == nil {
+	if err := f.source.RunStep(waitctx, second, "stage:embedding", func(context.Context) error { t.Error("provider overcommitted"); return nil }); err == nil {
 		t.Fatal("waiter did not observe cancellation")
 	}
 	settings, err := f.service.Settings(ctx, actor)
@@ -53,13 +56,13 @@ func TestInferenceWaitsWithoutHoldingOCRorEmbedding(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, resource := range settings.Resources {
-		want := map[string]int{"ollama": 1, "stage:embedding": 1, "stage:llm": 0, "stage:ocr": 0, "pipeline:paperless": 2, "worker": 2, f.source.ResourceID(external): 0}
+		want := map[string]int{"embedding-runtime": 1, "stage:embedding": 1, "stage:llm": 0, "stage:ocr": 0, "pipeline:paperless": 2, "worker": 2, f.source.ResourceID(external): 0}
 		if n, ok := want[resource.ID]; ok && n != resource.ActiveJobs {
 			t.Fatalf("%s reports %d, want %d", resource.ID, resource.ActiveJobs, n)
 		}
 	}
 	for _, pipeline := range settings.Pipelines {
-		if pipeline.ID == "paperless" && (pipeline.ActiveSlots["stage:embedding"] != 1 || pipeline.ActiveSlots["ollama"] != 1 || pipeline.ActiveSlots["worker"] != 2) {
+		if pipeline.ID == "paperless" && (pipeline.ActiveSlots["stage:embedding"] != 1 || pipeline.ActiveSlots["embedding-runtime"] != 1 || pipeline.ActiveSlots["worker"] != 2) {
 			t.Fatalf("actual pipeline reservations missing: %+v", pipeline)
 		}
 		if pipeline.ID == "document_ingestion" && pipeline.ActiveSlots["stage:embedding"] != 0 {
@@ -78,7 +81,7 @@ func TestInferenceWaitsWithoutHoldingOCRorEmbedding(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	if err = f.source.RunResources(ctx, second, "inference", []string{"stage:llm", "ollama"}, func(context.Context) error { return nil }); err != nil {
+	if err = f.source.RunStep(ctx, second, "stage:embedding", func(context.Context) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -4,6 +4,7 @@ package e2e_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,9 +23,7 @@ import (
 )
 
 func TestAIChatLivePDFDiscoveryAndEvidence(t *testing.T) {
-	if os.Getenv("LLM_OLLAMA_URL") == "" {
-		t.Fatal("LLM_OLLAMA_URL is required for live PDF chat validation")
-	}
+	model, endpoint := liveChatProvider(t)
 	databaseURL := testdb.New(t)
 	env := newServerEnvironment(t, databaseURL)
 	binary := filepath.Join(t.TempDir(), "server")
@@ -45,7 +44,7 @@ func TestAIChatLivePDFDiscoveryAndEvidence(t *testing.T) {
 	api := &ingestionAPI{t: t, baseURL: base, client: &http.Client{Timeout: 15 * time.Second}, spec: spec}
 	token := api.request("", "POST", "/api/v1/auth/register", `{"accountName":"Live PDF chat","email":"live-chat@example.test","password":"Live PDF chat password 2026!"}`, 201, "AuthSession")["token"].(string)
 	settings := api.request(token, "GET", "/api/v1/system/chat/configuration", "", 200, "ChatConfiguration")
-	api.request(token, "PUT", "/api/v1/system/chat/configuration", fmt.Sprintf(`{"expectedRevision":%v,"enabled":true,"provider":"ollama","model":"qwen3.5:4b","baseUrl":"","clearApiKey":true}`, settings["revision"]), 200, "ChatConfiguration")
+	configureLiveChat(api, token, settings["revision"], endpoint, model)
 	first := api.upload(token, "northwind.pdf", fixtures.PDF(t, fixtures.Page{Text: "Northwind electricity bill. Amount due: 42 euros."}), `{"title":"Chat evidence Northwind electricity bill"}`, true, 202)["id"].(string)
 	second := api.upload(token, "contoso.pdf", fixtures.PDF(t, fixtures.Page{Text: "Contoso water bill. Amount due: 17 euros."}), `{"title":"Chat evidence Contoso water bill"}`, true, 202)["id"].(string)
 	api.waitProcessing(token, first, "ready")
@@ -98,4 +97,26 @@ func TestAIChatLivePDFDiscoveryAndEvidence(t *testing.T) {
 	if calls > 30 || catalogs == 0 || reads != 2 {
 		t.Fatalf("Live model did not discover and read both PDFs: calls=%d catalogs=%d documentsRead=%d", calls, catalogs, reads)
 	}
+}
+
+func liveChatProvider(t *testing.T) (string, string) {
+	t.Helper()
+	model, endpoint := os.Getenv("LM_STUDIO_MODEL"), os.Getenv("LM_STUDIO_BASE_URL")
+	if model == "" || endpoint == "" {
+		t.Fatal("LM_STUDIO_MODEL and LM_STUDIO_BASE_URL are required for live chat tests")
+	}
+	return model, endpoint
+}
+
+func configureLiveChat(api *ingestionAPI, token string, revision any, endpoint, model string) {
+	api.t.Helper()
+	settings := map[string]any{"expectedRevision": revision, "enabled": true, "provider": "openai", "model": model, "baseUrl": endpoint}
+	if key := os.Getenv("LM_STUDIO_API_KEY"); key != "" {
+		settings["apiKey"] = key
+	}
+	body, err := json.Marshal(settings)
+	if err != nil {
+		api.t.Fatal(err)
+	}
+	api.request(token, "PUT", "/api/v1/system/chat/configuration", string(body), 200, "ChatConfiguration")
 }

@@ -1527,7 +1527,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
                   'stage:paperless' =>
                     'Simultaneous downloads before ingestion.',
                   'embedding-runtime' =>
-                    'Used by document indexing and semantic search.',
+                    'Limits concurrent embedding requests from background jobs. The bundled llama.cpp server has one inference slot.',
                   'external' => 'Shared by background jobs using the same provider address.',
                   _ => null,
                 },
@@ -1545,7 +1545,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
                   validator: (value) => workload.validate(id, value ?? ''),
                 ),
                 notice: id == 'embedding-runtime'
-                    ? 'Embedding runtime queue size 8. The maximum is half the configured queue.'
+                    ? 'Configured queue size 8 · Up to ${workload.maximum(id)} scheduler slots'
                     : null,
               ),
           ],

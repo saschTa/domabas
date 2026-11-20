@@ -39,7 +39,7 @@ func aiIndependentEnableProperties(t *testing.T, f *ingestionFixture) m.Document
 	invoiceEnabled := false
 	configuration, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{
 		Language: current.Language, Segmentation: current.Segmentation, ExpectedRevision: &current.Revision,
-		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: &invoiceEnabled, Provider: "ollama", Model: "qwen3.5:4b"},
+		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, InvoiceEnabled: &invoiceEnabled, Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -243,7 +243,7 @@ func TestAISettingsDuringIngestionApplyWhenFollowupIsAccepted(t *testing.T) {
 			invoiceEnabled := false
 			next, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{
 				Language: current.Language, Segmentation: current.Segmentation, ExpectedRevision: &current.Revision,
-				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: enable, InvoiceEnabled: &invoiceEnabled, Provider: "ollama", Model: "qwen3.5:4b"},
+				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: enable, InvoiceEnabled: &invoiceEnabled, Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"},
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -423,7 +423,7 @@ func TestAIConfigurationChangesPreservePublishedSearchIndex(t *testing.T) {
 			invoiceEnabled := false
 			configuration, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{
 				Language: current.Language, Segmentation: current.Segmentation, ExpectedRevision: &current.Revision,
-				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: scenario.enabled, InvoiceEnabled: &invoiceEnabled, Provider: "ollama", Model: scenario.model},
+				LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: scenario.enabled, InvoiceEnabled: &invoiceEnabled, Provider: "openai", BaseURL: "https://provider.test/v1", Model: scenario.model},
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -519,7 +519,7 @@ func TestAIMandatorySettingsChangeDoesNotDeliverObsoleteEnabledAI(t *testing.T) 
 	invoiceEnabled := false
 	_, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{
 		Language: "eng", Segmentation: enabled.Segmentation, ExpectedRevision: &enabled.Revision,
-		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: &invoiceEnabled, Provider: "ollama", Model: "qwen3.5:4b"},
+		LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: &invoiceEnabled, Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -22,11 +22,6 @@ type DocumentLLMConfigurationUpdate struct {
 	ClearAPIKey              bool
 }
 
-type DocumentModelContext struct {
-	Model            string
-	MaxContextLength int
-}
-
 type DocumentPropertyWork struct {
 	Eligible                   bool
 	Job                        DocumentJob

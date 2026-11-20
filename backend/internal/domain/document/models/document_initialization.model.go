@@ -30,7 +30,7 @@ func PlanDocumentInitialization(facts DocumentInitializationFacts) (DocumentInit
 	if facts.ManifestRevision != nil && (*facts.ManifestRevision > target.ManifestRevision || (*facts.ManifestRevision == target.ManifestRevision && (facts.ManifestFingerprint == nil || *facts.ManifestFingerprint != installedFP))) {
 		return command, ErrUnavailable
 	}
-	if facts.SnapshotPresent {
+	if facts.SnapshotPresent && facts.Previous.LLM.Provider == "openai" {
 		target.LLM = facts.Previous.LLM
 	}
 	mandatory, err := target.CanonicalFingerprint()

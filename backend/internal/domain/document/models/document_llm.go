@@ -19,7 +19,7 @@ func (c DocumentLLMConfiguration) Defaults() DocumentLLMConfiguration {
 	if c.Provider == "" {
 		c.Provider = "ollama"
 	}
-	if c.Model == "" {
+	if c.Model == "" && c.Provider == "ollama" {
 		c.Model = "gemma3:4b"
 	}
 	return c
@@ -45,6 +45,9 @@ func (c DocumentLLMConfiguration) Validate() error {
 	}
 	if c.Provider != "ollama" && c.Provider != "openai" {
 		return DocumentValidationError{"invalid property extraction provider"}
+	}
+	if c.Provider == "openai" && !c.Enabled && !c.InvoiceExtractionEnabled() && c.Model == "" && c.BaseURL == "" && c.CredentialID == "" {
+		return nil
 	}
 	if !validText(c.Model, 128, 128, false) || strings.TrimSpace(c.Model) == "" || strings.ContainsAny(c.Model, " \t\r\n") {
 		return DocumentValidationError{"invalid property extraction model"}
@@ -73,10 +76,10 @@ func (u DocumentLLMConfigurationUpdate) Normalize() (DocumentLLMConfigurationUpd
 		return u, DocumentValidationError{"context length must be between 1024 and 1048576 tokens"}
 	}
 	u.Model, u.BaseURL = strings.TrimSpace(u.Model), strings.TrimRight(strings.TrimSpace(u.BaseURL), "/")
-	if u.Model == "" || u.Provider == "" {
-		return u, DocumentValidationError{"property extraction provider and model are required"}
+	if u.Provider != "openai" || (u.Model == "" && u.APIKey != nil) {
+		return u, DocumentValidationError{"an external property extraction provider is required"}
 	}
-	if err := (DocumentLLMConfiguration{Enabled: u.Enabled, Provider: u.Provider, Model: u.Model, BaseURL: u.BaseURL}).Validate(); err != nil {
+	if err := (DocumentLLMConfiguration{Enabled: u.Enabled, InvoiceEnabled: u.InvoiceEnabled, Provider: u.Provider, Model: u.Model, BaseURL: u.BaseURL}).Validate(); err != nil {
 		return u, err
 	}
 	if u.APIKey != nil && (u.ClearAPIKey || *u.APIKey == "" || !validText(*u.APIKey, 4096, 4096, false) || strings.TrimSpace(*u.APIKey) != *u.APIKey || u.Provider != "openai") {

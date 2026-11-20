@@ -46,7 +46,7 @@ func TestPaperlessConcurrentAdmissionRetainsTenAndRotatesPolling(t *testing.T) {
 		exec("COMMIT")
 		exec(`INSERT INTO paperless_runs(id,account_id,owner_id,credential_revision,server_url,request_hash,task_queue) VALUES($1,$2,$3,1,'https://paperless.example.test','test-only','concurrent-paperless')`, uuid.NewString(), account, owner)
 	}
-	scheduler := schedulersources.NewSchedulerDataSource(source.Database(), 512, "http://ollama.test:11434")
+	scheduler := schedulersources.NewSchedulerDataSource(source.Database(), 512)
 	if err := scheduler.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}

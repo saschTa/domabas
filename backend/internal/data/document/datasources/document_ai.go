@@ -185,9 +185,7 @@ func (s *DocumentDataSource) AIClaim(ctx context.Context, limit int, lease time.
 		requests := make([]schedulermodels.SchedulerAdmissionCandidate, 0, len(candidates))
 		for _, c := range candidates {
 			var providers []string
-			if c.provider == "ollama" {
-				providers = append(providers, "ollama")
-			} else if c.provider == "openai" {
+			if c.provider == "openai" {
 				providers = append(providers, c.endpoint)
 			}
 			requests = append(requests, schedulermodels.SchedulerAdmissionCandidate{WorkflowID: aiWorkflowID(c.job), Providers: providers})

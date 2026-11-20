@@ -15,7 +15,7 @@ func TestConfiguredDocumentAndAIAdmissionAcrossDispatchers(t *testing.T) {
 	for _, ai := range []bool{false, true} {
 		t.Run(fmt.Sprint("ai=", ai), func(t *testing.T) {
 			f := newIngestionFixture(t)
-			limits := r.DocumentIngestionLimits{Concurrency: 12, AIConcurrency: 12, OllamaQueueSize: 24, ConcurrencyMode: "ollama_half_queue", AIConcurrencyMode: "ollama_half_queue", UnlimitedInference: true}
+			limits := r.DocumentIngestionLimits{Concurrency: 12, AIConcurrency: 12, EmbeddingQueueSize: 24, ConcurrencyMode: "embedding_half_queue", AIConcurrencyMode: "embedding_half_queue", UnlimitedInference: true}
 			first := llmSource(t, f, limits)
 			second := llmSource(t, f, limits)
 			if ai {
@@ -78,7 +78,7 @@ func TestConfiguredDocumentAndAIAdmissionAcrossDispatchers(t *testing.T) {
 			if err != nil || configuration.Scheduling != nil {
 				t.Fatalf("obsolete per-pipeline scheduling remains: %+v %v", configuration.Scheduling, err)
 			}
-			if count := issue12Count(t, f, `SELECT count(*) FROM scheduler_resources WHERE id IN ('worker','ollama') AND concurrency_limit=12`); count != 2 {
+			if count := issue12Count(t, f, `SELECT count(*) FROM scheduler_resources WHERE id IN ('worker','embedding-runtime') AND concurrency_limit=12`); count != 2 {
 				t.Fatalf("shared resource capacity was not configured: %d", count)
 			}
 			limits.Concurrency, limits.AIConcurrency = 1, 1

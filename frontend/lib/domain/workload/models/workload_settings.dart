@@ -1,13 +1,13 @@
 final class WorkloadSettings {
   WorkloadSettings({
     required this.revision,
-    required this.ollamaQueueSize,
+    required this.embeddingQueueSize,
     required Iterable<WorkloadResource> resources,
     required Iterable<WorkloadPipeline> pipelines,
   }) : resources = List.unmodifiable(resources),
        pipelines = List.unmodifiable(pipelines);
 
-  final int revision, ollamaQueueSize;
+  final int revision, embeddingQueueSize;
   final List<WorkloadResource> resources;
   final List<WorkloadPipeline> pipelines;
 }

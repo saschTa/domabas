@@ -5,7 +5,7 @@ tasks:
     cmds: [task --list]
 
   dev:
-    desc: Start development with the selected Ollama runtime, Go hot reload, and Flutter (press r/R/q)
+    desc: Start development with the selected embedding runtime, Go hot reload, and Flutter (press r/R/q)
     interactive: true
     deps: [setup:tooling]
     cmds: ['bun --no-env-file scripts/development/dev.ts {{.CLI_ARGS}}']
@@ -141,7 +141,7 @@ tasks:
     cmds: ['go run ./cmd/bootstrap-admin {{.CLI_ARGS}}']
 
   infra:up:
-    desc: Start infrastructure with the selected Ollama runtime (MLX stays in the foreground)
+    desc: Start infrastructure with the selected embedding runtime
     deps: [setup:tooling]
     cmds: [bun --no-env-file scripts/development/compose.ts infra-up]
 
@@ -299,7 +299,7 @@ tasks:
     cmds: [bun --no-env-file scripts/testing/backend-database-tests.ts jobs]
 
   test:llm:
-    desc: Test live Qwen extraction and embeddings (requires LLM_OLLAMA_URL; may download Qwen)
+    desc: Test generation against an explicitly configured external LM Studio endpoint
     dir: backend
     cmds: [go test -race -count=1 -p=1 -tags=llm_live -timeout=10m ./internal/data/document/datasources/llm ./internal/data/invoice/datasources ./internal/data/chat/datasources/provider]
 

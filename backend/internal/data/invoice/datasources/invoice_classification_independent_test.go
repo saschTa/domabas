@@ -52,7 +52,7 @@ func TestIndependentInvoiceExtractionRequiresSourceValues(t *testing.T) {
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			inference := &independentInvoiceInference{response: independentInvoiceResponse(t, scenario.number, scenario.total)}
-			value, err := datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "ollama", Model: "fixture"}, "", scenario.text)
+			value, err := datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}, "", scenario.text)
 			switch scenario.outcome {
 			case "invalid":
 				var processing document.DocumentProcessingError
@@ -71,7 +71,7 @@ func TestIndependentInvoiceExtractionRequiresSourceValues(t *testing.T) {
 func TestIndependentInvoiceClassificationUsesOnlyModelInputPrefix(t *testing.T) {
 	prefix := strings.Repeat("ä", 100000)
 	inference := &independentInvoiceInference{response: independentInvoiceResponse(t, "EVID-1", "19.00")}
-	value, err := datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "ollama", Model: "fixture"}, "", prefix+"\nInvoice No. EVID-1\nSeller: Example Office Ltd\nGrand Total: EUR 19.00")
+	value, err := datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}, "", prefix+"\nInvoice No. EVID-1\nSeller: Example Office Ltd\nGrand Total: EUR 19.00")
 	var processing document.DocumentProcessingError
 	if !errors.As(err, &processing) || processing.Code != "invalid_invoice" || value != nil {
 		t.Fatalf("source beyond the model input justified a fabricated positive: %+v %v", value, err)
@@ -81,7 +81,7 @@ func TestIndependentInvoiceClassificationUsesOnlyModelInputPrefix(t *testing.T) 
 	}
 	grounded := "Invoice No. EVID-1\nSeller: Example Office Ltd\nGrand Total: EUR 19.00\n"
 	text := strings.Repeat("ä", 100000-utf8.RuneCountInString(grounded)-1) + "\n" + grounded + "omitted tail"
-	value, err = datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "ollama", Model: "fixture"}, "", text)
+	value, err = datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}, "", text)
 	if err != nil || value == nil || utf8.RuneCountInString(inference.input) != 100000 {
 		t.Fatalf("grounded evidence inside the bounded input was lost: %+v %v", value, err)
 	}
@@ -91,7 +91,7 @@ func TestIndependentInvoiceExtractionDoesNotGateOnCurrencyWording(t *testing.T) 
 	for _, currency := range []string{"₹", "eur"} {
 		t.Run(currency, func(t *testing.T) {
 			inference := &independentInvoiceInference{response: independentInvoiceResponse(t, "EVID-1", "19.00")}
-			value, err := datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "ollama", Model: "fixture"}, "", "Invoice No. EVID-1\nSeller: Example Office Ltd\nGrand Total: "+currency+" 19.00")
+			value, err := datasources.NewInvoiceExtractorDataSource(inference).Infer(t.Context(), document.DocumentLLMConfiguration{Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}, "", "Invoice No. EVID-1\nSeller: Example Office Ltd\nGrand Total: "+currency+" 19.00")
 			if err != nil || value == nil {
 				t.Fatalf("currency wording blocked printed values: %+v %v", value, err)
 			}

@@ -33,10 +33,7 @@ func (transport chatDeadlineTransport) RoundTrip(request *http.Request) (*http.R
 func TestProviderQueueWaitDeadlinePreservesEarlierCancellation(t *testing.T) {
 	for _, timeout := range []time.Duration{time.Hour, time.Minute} {
 		t.Run(timeout.String(), func(t *testing.T) {
-			provider, err := NewChatProviderRemoteDataSource("http://ollama.test")
-			if err != nil {
-				t.Fatal(err)
-			}
+			provider := NewChatProviderRemoteDataSource()
 			defer provider.Close()
 			provider.client.Transport = chatDeadlineTransport{t: t, expected: min(timeout, 30*time.Minute)}
 			ctx, cancel := context.WithTimeout(t.Context(), timeout)
@@ -52,58 +49,13 @@ func chatProviderFixture(t *testing.T, handler http.HandlerFunc) (*ChatProviderR
 	t.Helper()
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
-	provider, err := NewChatProviderRemoteDataSource(server.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	provider := NewChatProviderRemoteDataSource()
 	t.Cleanup(provider.Close)
 	return provider, server.URL
 }
 
 func chatInferenceFixture(provider, url string) m.ChatInferenceInput {
 	return m.ChatInferenceInput{Configuration: m.ChatConfiguration{Provider: provider, Model: "qwen3.5:4b", BaseURL: url + "/v1"}, APIKey: "test-only-secret", Messages: []m.ChatProviderMessage{{Role: "user", Content: "Find my bill"}}}
-}
-
-func TestOllamaQwenStructuredActionsAndPull(t *testing.T) {
-	var pulled atomic.Bool
-	provider, _ := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "" {
-			t.Error("internal request included credential")
-		}
-		switch r.URL.Path {
-		case "/api/show":
-			if !pulled.Load() {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			fmt.Fprint(w, chatModelContextFixture)
-		case "/api/pull":
-			pulled.Store(true)
-			fmt.Fprint(w, `{"status":"success"}`)
-		case "/api/chat":
-			var body map[string]json.RawMessage
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-				t.Fatal(err)
-			}
-			if !pulled.Load() || body["format"] == nil || body["tools"] != nil {
-				t.Error("missing structured fallback or unexpected native tools")
-			}
-			var messages []ChatProviderMessage
-			if err := json.Unmarshal(body["messages"], &messages); err != nil {
-				t.Fatal(err)
-			}
-			if len(messages) != 1 || messages[0].Role != "user" || !strings.Contains(messages[0].Content, "Find my bill") {
-				t.Error("invalid Qwen prompt")
-			}
-			json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]string{"content": `{"action":"search_documents","content":"","query":"electricity bill","documentId":"","offset":10}`}})
-		default:
-			t.Errorf("unexpected request %s", r.URL.Path)
-		}
-	})
-	action, err := provider.Generate(t.Context(), chatInferenceFixture("ollama", ""))
-	if err != nil || action.Kind != "search_documents" || action.Offset != 10 || action.Query != "electricity bill" {
-		t.Fatalf("action=%+v err=%v", action, err)
-	}
 }
 
 func TestExternalNativeToolRoundTrip(t *testing.T) {
@@ -144,34 +96,6 @@ func TestExternalNativeToolRoundTrip(t *testing.T) {
 	answer, err := provider.Generate(t.Context(), input)
 	if err != nil || answer.Kind != "answer" || !strings.Contains(answer.Content, "€42") {
 		t.Fatalf("answer=%+v err=%v", answer, err)
-	}
-}
-
-func TestProviderRejectsInvalidStructuredActions(t *testing.T) {
-	for _, response := range []string{
-		`{"action":"answer","content":"done"}`,
-		`{"action":"answer","content":"done","query":null,"documentId":"","offset":0}`,
-		`{"action":"search_documents","content":"","query":"bill","documentId":"","offset":0,"accountId":"other"}`,
-		`{"action":"read_document","content":"","query":"","documentId":"not-a-uuid","offset":0}`,
-		`{"action":"shell","content":"","query":"rm","documentId":"","offset":0}`,
-		`{"action":"search_documents","content":"","query":"bill","documentId":"","offset":-1}`,
-		`{"action":"answer","content":"done","query":"","documentId":"","offset":0} {}`,
-		`{"action":"answer","content":"done","content":"replaced","query":"","documentId":"","offset":0}`,
-	} {
-		t.Run(response, func(t *testing.T) {
-			provider, _ := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == "/api/show" {
-					fmt.Fprint(w, chatModelContextFixture)
-					return
-				}
-				json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]string{"content": response}})
-			})
-			_, err := provider.Generate(t.Context(), chatInferenceFixture("ollama", ""))
-			var failure m.ChatProcessingError
-			if !errors.As(err, &failure) || failure.Code != "invalid_response" || failure.Retryable {
-				t.Fatalf("unexpected error %v", err)
-			}
-		})
 	}
 }
 
@@ -231,46 +155,6 @@ func TestProviderOverloadIsSanitizedAndCancellationPropagates(t *testing.T) {
 	}
 }
 
-func TestProviderCatalogPaginationAndInternalOrigin(t *testing.T) {
-	provider, _ := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" || r.URL.Path != "/api/tags" {
-			t.Errorf("unexpected catalog request %s %s", r.Method, r.URL.Path)
-		}
-		fmt.Fprint(w, `{"models":[{"name":"z"},{"name":"a"},{"name":"b"},{"name":"a"}]}`)
-	})
-	first, err := provider.Models(t.Context(), 2, 0)
-	if err != nil || len(first.Items) != 2 || first.Items[0].Name != "a" || first.NextOffset == nil || *first.NextOffset != 2 {
-		t.Fatalf("first=%+v err=%v", first, err)
-	}
-	last, err := provider.Models(t.Context(), 2, *first.NextOffset)
-	if err != nil || len(last.Items) != 1 || last.Items[0].Name != "z" || last.NextOffset != nil {
-		t.Fatalf("last=%+v err=%v", last, err)
-	}
-	empty, err := provider.Models(t.Context(), 2, 100)
-	if err != nil || empty.Items == nil || len(empty.Items) != 0 {
-		t.Fatalf("empty=%+v err=%v", empty, err)
-	}
-	origin, err := NewChatProviderRemoteDataSource("http://OLLAMA:80")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer origin.Close()
-	for _, tc := range []struct {
-		configuration m.ChatConfiguration
-		want          bool
-	}{
-		{m.ChatConfiguration{Provider: "ollama"}, true},
-		{m.ChatConfiguration{Provider: "openai", BaseURL: "http://ollama/v1"}, true},
-		{m.ChatConfiguration{Provider: "openai", BaseURL: "http://ollama:81/v1"}, false},
-		{m.ChatConfiguration{Provider: "openai", BaseURL: "https://ollama/v1"}, false},
-		{m.ChatConfiguration{Provider: "openai", BaseURL: "http://external/v1"}, false},
-	} {
-		if got := origin.UsesInternalRuntime(tc.configuration); got != tc.want {
-			t.Errorf("origin=%+v got=%t", tc.configuration, got)
-		}
-	}
-}
-
 func TestProviderContextBoundRejectsBeforeNetwork(t *testing.T) {
 	var reached atomic.Bool
 	provider, url := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) { reached.Store(true) })
@@ -281,35 +165,22 @@ func TestProviderContextBoundRejectsBeforeNetwork(t *testing.T) {
 	}
 }
 
-func TestChatCatalogDiscoveryBothProviders(t *testing.T) {
-	for _, kind := range []string{"ollama", "openai"} {
-		for _, arguments := range []string{`{"offset":2}`, `{"offset":-1}`, `{"offset":10001}`, `{"offset":null}`, `{"offset":0,"offset":2}`, `{"offset":0,"query":"x"}`, `{}`} {
-			t.Run(kind+arguments, func(t *testing.T) {
-				provider, url := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
-					if r.URL.Path == "/api/show" {
-						fmt.Fprint(w, chatModelContextFixture)
-						return
-					}
-					if kind == "openai" {
-						json.NewEncoder(w).Encode(ChatCompletionResponse{Choices: []ChatCompletionChoice{{FinishReason: "tool_calls", Message: ChatProviderMessage{ToolCalls: []ChatProviderToolCall{{ID: "catalog-2", Type: "function", Function: ChatProviderToolFunction{Name: "list_tools", Arguments: arguments}}}}}}})
-						return
-					}
-					content := strings.TrimSuffix(arguments, "}") + `,"action":"list_tools","content":"","query":"","documentId":""}`
-					if arguments == `{}` {
-						content = `{"action":"list_tools","content":"","query":"","documentId":""}`
-					}
-					json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]string{"content": content}})
-				})
-				action, err := provider.Generate(t.Context(), chatInferenceFixture(kind, url))
-				if arguments == `{"offset":2}` {
-					if err != nil || action.Kind != "list_tools" || action.Offset != 2 {
-						t.Fatal(action, err)
-					}
-				} else if err == nil {
-					t.Fatal("invalid catalog request accepted", action)
-				}
+func TestChatToolCatalogDiscovery(t *testing.T) {
+	const kind = "openai"
+	for _, arguments := range []string{`{"offset":2}`, `{"offset":-1}`, `{"offset":10001}`, `{"offset":null}`, `{"offset":0,"offset":2}`, `{"offset":0,"query":"x"}`, `{}`} {
+		t.Run(kind+arguments, func(t *testing.T) {
+			provider, url := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
+				json.NewEncoder(w).Encode(ChatCompletionResponse{Choices: []ChatCompletionChoice{{FinishReason: "tool_calls", Message: ChatProviderMessage{ToolCalls: []ChatProviderToolCall{{ID: "catalog-2", Type: "function", Function: ChatProviderToolFunction{Name: "list_tools", Arguments: arguments}}}}}}})
 			})
-		}
+			action, err := provider.Generate(t.Context(), chatInferenceFixture(kind, url))
+			if arguments == `{"offset":2}` {
+				if err != nil || action.Kind != "list_tools" || action.Offset != 2 {
+					t.Fatal(action, err)
+				}
+			} else if err == nil {
+				t.Fatal("invalid catalog request accepted", action)
+			}
+		})
 	}
 }
 
@@ -323,39 +194,27 @@ func TestChatProvidersConstrainEarlyNoProgressAnswer(t *testing.T) {
 
 func testChatProvidersConstrainAnswer(t *testing.T, used int, answerOnly bool) {
 	t.Helper()
-	for _, kind := range []string{"ollama", "openai"} {
-		t.Run(kind, func(t *testing.T) {
-			provider, url := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path == "/api/show" {
-					fmt.Fprint(w, chatModelContextFixture)
-					return
-				}
-				var body map[string]json.RawMessage
-				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-					t.Fatal(err)
-				}
-				if !strings.Contains(string(body["messages"]), fmt.Sprintf("Remaining tool calls: %d", 30-used)) {
-					t.Fatal("missing exhausted budget")
-				}
-				if kind == "openai" {
-					if string(body["tool_choice"]) != `"none"` {
-						t.Fatal("tools still enabled")
-					}
-					json.NewEncoder(w).Encode(ChatCompletionResponse{Choices: []ChatCompletionChoice{{FinishReason: "stop", Message: ChatProviderMessage{Content: "Evidence answer"}}}})
-					return
-				}
-				if strings.Contains(string(body["format"]), "search_documents") || strings.Contains(string(body["format"]), "list_tools") || !strings.Contains(string(body["format"]), "answer") {
-					t.Fatal("not answer-only schema", string(body["format"]))
-				}
-				json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]string{"content": `{"action":"answer","content":"Evidence answer","query":"","documentId":"","offset":0}`}})
-			})
-			input := chatInferenceFixture(kind, url)
-			input.ToolsUsed = used
-			input.AnswerOnly = answerOnly
-			action, err := provider.Generate(t.Context(), input)
-			if err != nil || action.Kind != "answer" {
-				t.Fatal(action, err)
+	const kind = "openai"
+	t.Run(kind, func(t *testing.T) {
+		provider, url := chatProviderFixture(t, func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]json.RawMessage
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
 			}
+			if !strings.Contains(string(body["messages"]), fmt.Sprintf("Remaining tool calls: %d", 30-used)) {
+				t.Fatal("missing exhausted budget")
+			}
+			if string(body["tool_choice"]) != `"none"` {
+				t.Fatal("tools still enabled")
+			}
+			json.NewEncoder(w).Encode(ChatCompletionResponse{Choices: []ChatCompletionChoice{{FinishReason: "stop", Message: ChatProviderMessage{Content: "Evidence answer"}}}})
 		})
-	}
+		input := chatInferenceFixture(kind, url)
+		input.ToolsUsed = used
+		input.AnswerOnly = answerOnly
+		action, err := provider.Generate(t.Context(), input)
+		if err != nil || action.Kind != "answer" {
+			t.Fatal(action, err)
+		}
+	})
 }

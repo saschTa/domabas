@@ -102,7 +102,7 @@ if (import.meta.main) await runCLI(async scope => {
   if (!values.inspect) await requireFreePort("127.0.0.1", driverPort);
   const external = values["external-db"] || values["external-services"];
   if (values.inspect && !external) throw new Error("Inspection requires --external-services pointing to the prepared disposable stack.");
-  if (!external) await infraUp(scope, env);
+  if (!external) await infraUp(scope, { ...env, EMBEDDING_DOWNLOAD_ALLOWED: "false" });
   const databaseURL = env.TEST_DATABASE_URL || required(env, "DATABASE_URL");
   const psql = await psqlCommand(scope);
   if (!psql && external) throw new Error("Install the PostgreSQL client (psql) for tests against an external database.");

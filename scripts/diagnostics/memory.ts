@@ -59,8 +59,8 @@ export interface MemorySample {
   timestamp: string;
   project: string;
   containers: (ContainerState & { memory: ContainerMemory | null; error?: string })[];
-  nonOllamaCurrentBytes: number;
-  nonOllamaWorkingSetBytes: number;
+  currentBytes: number;
+  workingSetBytes: number;
   complete: boolean;
 }
 
@@ -86,11 +86,10 @@ export async function sampleMemory(scope: ProcessScope, project: string): Promis
     return { ...states[index]!, memory: null, error: result.reason instanceof Error ? result.reason.message : String(result.reason) };
   });
   scope.signal.throwIfAborted();
-  const nonOllama = containers.filter(container => container.service !== "ollama");
   return {
     timestamp: new Date().toISOString(), project, containers,
-    nonOllamaCurrentBytes: nonOllama.reduce((total, container) => total + (container.memory?.currentBytes ?? 0), 0),
-    nonOllamaWorkingSetBytes: nonOllama.reduce((total, container) => total + (container.memory?.workingSetBytes ?? 0), 0),
+    currentBytes: containers.reduce((total, container) => total + (container.memory?.currentBytes ?? 0), 0),
+    workingSetBytes: containers.reduce((total, container) => total + (container.memory?.workingSetBytes ?? 0), 0),
     complete: containers.every(container => !container.running || container.memory !== null),
   };
 }
@@ -105,7 +104,7 @@ if (import.meta.main) await runCLI(async scope => {
     project: { type: "string", default: "domabas" }, duration: { type: "string", default: "900" },
     interval: { type: "string", default: "10" }, output: { type: "string" }, help: { type: "boolean", short: "h" },
   } });
-  if (values.help) { console.log("Usage: task diagnose:memory -- --project=domabas --duration=900 --interval=10 [--output=PATH]\nRead-only Docker cgroup v2 sampling; excludes Ollama from totals, records every container. Requires a running stack; never starts or stops it."); return; }
+  if (values.help) { console.log("Usage: task diagnose:memory -- --project=domabas --duration=900 --interval=10 [--output=PATH]\nRead-only Docker cgroup v2 sampling; totals include all running services. Requires a running stack; never starts or stops it."); return; }
   const duration = positiveSeconds(values.duration!, 86400) * 1000;
   const interval = positiveSeconds(values.interval!, 3600) * 1000;
   const destination = resolve(values.output ?? `${ROOT}/.logs/memory-${Date.now()}.jsonl`);
@@ -118,7 +117,7 @@ if (import.meta.main) await runCLI(async scope => {
       scope.signal.throwIfAborted();
       const sample = await sampleMemory(scope, values.project!);
       await file.write(`${JSON.stringify(sample)}\n`);
-      console.log(`${sample.timestamp} non-Ollama: ${(sample.nonOllamaCurrentBytes / 2 ** 20).toFixed(1)} MiB cgroup, ${(sample.nonOllamaWorkingSetBytes / 2 ** 20).toFixed(1)} MiB working set${sample.complete ? "" : " (INCOMPLETE; see errors)"}`);
+      console.log(`${sample.timestamp} total: ${(sample.currentBytes / 2 ** 20).toFixed(1)} MiB cgroup, ${(sample.workingSetBytes / 2 ** 20).toFixed(1)} MiB working set${sample.complete ? "" : " (INCOMPLETE; see errors)"}`);
       for (const container of sample.containers) {
         if (container.oomKilled || container.memory?.oomKills || container.restarts || (!container.running && container.exitCode !== 0) || container.error) console.log(`${container.service}: running=${container.running} exit=${container.exitCode} restarts=${container.restarts} OOMKilled=${container.oomKilled} oomKills=${container.memory?.oomKills ?? "unknown"} ${container.error ?? ""}`);
       }

@@ -1,7 +1,7 @@
 # Data and privacy when hosting Domabas
 
 Domabas stores your library on the infrastructure you configure. Default Compose
-services process documents with the private document processor and Ollama.
+services process documents with the private document processor and its private llama.cpp service.
 Administrators can connect other AI services. Review these data flows before
 importing sensitive documents or selecting a provider.
 
@@ -19,7 +19,7 @@ maps them into your chosen dataset.
 | Conversations | PostgreSQL holds messages, titles, accepted model settings and tool snapshots, including document metadata/excerpts/text used by chat. Application permissions scope conversations to their user and library. |
 | Encryption keys | `credential_keys` at `/var/lib/domabas/secrets` holds `email.key`, `paperless.key` and `llm.key`. Chat uses `/data/documents/.secrets/chat.key`. Retain configured environment key overrides and historical email keyring entries too. |
 | Workflow history | The application database stores execution identities, checkpoints and outcomes. Workers load private content from application storage. |
-| Scratch and models | The processor temporarily stores original bytes and OCR work, normally removed on completion/shutdown. A hard crash can leave scratch until container recreation. Tesseract and Ollama model caches persist in separate volumes. |
+| Scratch and models | The processor temporarily stores original bytes and OCR work, normally removed on completion/shutdown. A hard crash can leave scratch until container recreation. Tesseract and embedding model caches persist in separate volumes. |
 
 Clients also hold data. Browsers use an HttpOnly session cookie; native clients
 use platform-protected credential storage. Server addresses and preferences
@@ -50,7 +50,7 @@ data flow, not all operating-system diagnostics.
 The backend sends original bytes to the configured **document processor** for
 extraction, OCR and thumbnails, and the supplied PDF password when unlocking.
 Extracted text passages and semantic-search queries go through that processor
-to its configured **Ollama embedding service**. These are local Compose services
+to its configured **llama.cpp embedding service**. These are local Compose services
 by default; configuring another host moves those requests there.
 
 **Document AI** sends bounded extracted or corrected text, instructions and an
@@ -63,11 +63,7 @@ Review the provider's handling, retention and training terms; Domabas does not
 control or erase its copies. See [document AI](property-extraction.md) and
 [chat](../arch/backend/ai-chat.md).
 
-Document AI and chat have separate settings. Disabling them does not disable OCR,
-structured invoice extraction or Ollama embeddings. Already accepted work keeps
-its saved configuration. Startup can download missing OCR/embedding models;
-local chat/document AI can download a missing selected model. Choosing local
-models alone is not an offline-network guarantee.
+Chat and document AI start disabled. Local OCR, structured invoices and search embeddings run independently. Initial setup retrieves OCR weights and the embedding model from their pinned sources. Generative model deployment belongs to the provider operator. Existing external work uses its recorded destination.
 
 Email and Paperless imports contact their configured source with supplied
 credentials and retrieve content. Accepted imports can continue after sign-out.
@@ -103,11 +99,7 @@ backup encryption where needed, restrict host/database access and protect device
 Use HTTPS for clients and protect internal traffic; bundled private connections
 use HTTP or unencrypted database connections.
 
-**Current logging limitation:** native Ollama document-AI requests write the full
-sent prompt, including document text, and model response JSON to backend INFO
-logs. This applies to property/invoice inference, not the separate chat or
-external-provider diagnostic paths. Treat backend/container logs and forwarded
-copies as sensitive document data; manage their access and retention.
+External AI diagnostics report the model, task, timing and outcome. Treat logs retained from an older deployment as sensitive because earlier internal inference logging could contain document text and responses.
 
 Arrange consistent backups of the application database,
 staged uploads, documents and every credential key/override, with private

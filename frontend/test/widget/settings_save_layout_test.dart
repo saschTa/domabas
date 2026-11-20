@@ -109,8 +109,6 @@ void main() {
       'property',
       'model',
       'long-model',
-      'context',
-      'provider',
       'credentials',
       'remove',
       'url',
@@ -121,6 +119,13 @@ void main() {
         tester,
       ) async {
         final repository = FakeProcessingRepository();
+        repository.systemConfiguration = DocumentProcessingConfiguration(
+          pipeline: repository.pipeline,
+          llm: const DocumentLLMConfiguration(
+            model: 'fixture',
+            baseUrl: 'https://models.example/v1',
+          ),
+        );
         if (kind == 'long-model') {
           repository.pipeline = testPipeline(
             propertyExtractionEnabled: true,
@@ -134,6 +139,7 @@ void main() {
               enabled: true,
               invoiceEnabled: true,
               model: 'short-model',
+              baseUrl: 'https://models.example/v1',
             ),
           );
         }
@@ -142,6 +148,7 @@ void main() {
             pipeline: repository.pipeline,
             llm: DocumentLLMConfiguration(
               provider: 'openai',
+              model: 'fixture',
               baseUrl: 'https://example.test/v1',
               credentialConfigured: kind == 'remove' || kind == 'url',
             ),
@@ -192,13 +199,6 @@ void main() {
                     .focusNode
                     .hasFocus,
                 isTrue,
-              );
-            case 'context':
-              cubit.editLLM(contextLength: attempt == 0 ? '65536' : '32768');
-            case 'provider':
-              cubit.editLLM(
-                provider: attempt == 0 ? 'openai' : 'ollama',
-                baseUrl: 'https://example.test/v1',
               );
             case 'credentials':
               cubit.editLLM(apiKey: 'test-key-$attempt');
@@ -254,13 +254,15 @@ void main() {
       'workload draining and repeated saves stay in place at $width',
       (tester) async {
         final repository = FakeWorkloadSettingsRepository()
-          ..current = testWorkloadSettings(activeOllama: 10);
+          ..current = testWorkloadSettings(activeEmbeddings: 10);
         final cubit = WorkloadSettingsCubit(repository, allowed: true)
           ..setActive(true);
         addTearDown(cubit.close);
         await mount(tester, width, WorkloadSettingsScreen(cubit: cubit));
         for (final limit in [12, 2]) {
-          final input = find.byKey(const Key('workloadLimit-ollama-input'));
+          final input = find.byKey(
+            const Key('workloadLimit-embedding-runtime-input'),
+          );
           await reveal(tester, input);
           await tester.enterText(input, '$limit');
           await tester.pumpAndSettle();
@@ -272,8 +274,8 @@ void main() {
             () => pending.complete(
               testWorkloadSettings(
                 revision: cubit.state.settings!.revision + 1,
-                ollamaLimit: limit,
-                activeOllama: 10,
+                embeddingLimit: limit,
+                activeEmbeddings: 10,
               ),
             ),
           );
@@ -290,6 +292,13 @@ void main() {
       'extraction dialog saves keep one fixed success notice at $width',
       (tester) async {
         final repository = FakeProcessingRepository();
+        repository.systemConfiguration = DocumentProcessingConfiguration(
+          pipeline: repository.pipeline,
+          llm: const DocumentLLMConfiguration(
+            model: 'fixture',
+            baseUrl: 'https://models.example/v1',
+          ),
+        );
         final cubit = DocumentProcessingSettingsCubit(
           repository,
           FakeExternalLinkLauncher(),
@@ -361,14 +370,7 @@ void main() {
       },
     );
 
-    for (final kind in [
-      'model',
-      'context',
-      'provider',
-      'credentials',
-      'remove',
-      'url',
-    ]) {
+    for (final kind in ['model', 'credentials', 'remove', 'url']) {
       testWidgets('chat repeated $kind saves stay in place at $width', (
         tester,
       ) async {
@@ -393,13 +395,6 @@ void main() {
               final input = find.byKey(const Key('chatModel'));
               await reveal(tester, input);
               await tester.enterText(input, 'model-$attempt');
-            case 'context':
-              cubit.edit(contextLength: attempt == 0 ? '65536' : '32768');
-            case 'provider':
-              cubit.edit(
-                provider: attempt == 0 ? 'openai' : 'ollama',
-                baseUrl: 'https://example.test/v1',
-              );
             case 'credentials':
               cubit.edit(apiKey: 'key-$attempt');
             case 'remove':
@@ -422,8 +417,7 @@ void main() {
                 enabled: draft.enabled,
                 provider: draft.provider,
                 model: draft.model,
-                baseUrl: draft.provider == 'ollama' ? '' : draft.baseUrl,
-                contextLength: draft.contextLengthValue ?? 32768,
+                baseUrl: draft.baseUrl,
                 hasApiKey:
                     !draft.clearApiKey &&
                     (draft.apiKey.isNotEmpty ||
@@ -447,6 +441,13 @@ void main() {
     tester,
   ) async {
     final repository = FakeProcessingRepository();
+    repository.systemConfiguration = DocumentProcessingConfiguration(
+      pipeline: repository.pipeline,
+      llm: const DocumentLLMConfiguration(
+        model: 'fixture',
+        baseUrl: 'https://models.example/v1',
+      ),
+    );
     final cubit = DocumentProcessingSettingsCubit(
       repository,
       FakeExternalLinkLauncher(),
@@ -466,7 +467,10 @@ void main() {
           language: language,
           segmentation: segmentation,
         ),
-        llm: const DocumentLLMConfiguration(model: 'confirmed-model'),
+        llm: const DocumentLLMConfiguration(
+          model: 'confirmed-model',
+          baseUrl: 'https://models.example/v1',
+        ),
       );
       throw const DocumentProcessingFailure(
         DocumentProcessingFailureKind.unavailable,
@@ -485,24 +489,22 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets(
-    'chat does not replay a retained success notice on model discovery',
-    (tester) async {
-      final repository = FakeChatRepository();
-      final cubit = ChatSettingsCubit(repository, allowed: true)
-        ..setActive(true);
-      addTearDown(cubit.close);
-      await mount(tester, 1280, ChatSettingsScreen(cubit: cubit));
-      cubit.edit(model: 'saved-model');
-      await cubit.save();
-      await tester.pumpAndSettle();
-      expect(find.byType(SnackBar), findsOneWidget);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await mount(tester, 1280, ChatSettingsScreen(cubit: cubit));
-      await cubit.checkModelContext();
-      await tester.pumpAndSettle();
-      expect(find.byType(SnackBar), findsNothing);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
+  testWidgets('chat does not replay a retained success notice on refresh', (
+    tester,
+  ) async {
+    final repository = FakeChatRepository();
+    final cubit = ChatSettingsCubit(repository, allowed: true)..setActive(true);
+    addTearDown(cubit.close);
+    await mount(tester, 1280, ChatSettingsScreen(cubit: cubit));
+    cubit.edit(model: 'saved-model');
+    await cubit.save();
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await mount(tester, 1280, ChatSettingsScreen(cubit: cubit));
+    await cubit.load();
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

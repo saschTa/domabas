@@ -51,7 +51,7 @@ func TestPaperlessRetrievalClaimsAreGlobalFencedAndRecoverable(t *testing.T) {
 	}
 	a, b := newActor(), newActor()
 	newJobs := func(database *postgres.PostgresDatabase) *PaperlessJobsDataSource {
-		scheduler := schedulersources.NewSchedulerDataSource(database, 512, "http://ollama.test:11434")
+		scheduler := schedulersources.NewSchedulerDataSource(database, 512)
 		if err := scheduler.Initialize(t.Context()); err != nil {
 			t.Fatal(err)
 		}

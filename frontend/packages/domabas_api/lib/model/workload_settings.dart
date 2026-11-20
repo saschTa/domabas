@@ -11,14 +11,14 @@ part of openapi.api;
 class WorkloadSettings {
   WorkloadSettings({
     required this.revision,
-    required this.ollamaQueueSize,
+    required this.embeddingQueueSize,
     this.resources = const [],
     this.pipelines = const [],
   });
 
   int revision;
 
-  int ollamaQueueSize;
+  int embeddingQueueSize;
 
   List<WorkloadResource> resources;
 
@@ -27,7 +27,7 @@ class WorkloadSettings {
   @override
   bool operator ==(Object other) => identical(this, other) || other is WorkloadSettings &&
     other.revision == revision &&
-    other.ollamaQueueSize == ollamaQueueSize &&
+    other.embeddingQueueSize == embeddingQueueSize &&
     _deepEquality.equals(other.resources, resources) &&
     _deepEquality.equals(other.pipelines, pipelines);
 
@@ -35,17 +35,17 @@ class WorkloadSettings {
   int get hashCode =>
     // ignore: unnecessary_parenthesis
     (revision.hashCode) +
-    (ollamaQueueSize.hashCode) +
+    (embeddingQueueSize.hashCode) +
     (resources.hashCode) +
     (pipelines.hashCode);
 
   @override
-  String toString() => 'WorkloadSettings[revision=$revision, ollamaQueueSize=$ollamaQueueSize, resources=$resources, pipelines=$pipelines]';
+  String toString() => 'WorkloadSettings[revision=$revision, embeddingQueueSize=$embeddingQueueSize, resources=$resources, pipelines=$pipelines]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
       json[r'revision'] = this.revision;
-      json[r'ollamaQueueSize'] = this.ollamaQueueSize;
+      json[r'embeddingQueueSize'] = this.embeddingQueueSize;
       json[r'resources'] = this.resources;
       json[r'pipelines'] = this.pipelines;
     return json;
@@ -59,8 +59,8 @@ class WorkloadSettings {
       assert(() {
         assert(json.containsKey(r'revision'), 'Required key "WorkloadSettings[revision]" is missing from JSON.');
         assert(json[r'revision'] != null, 'Required key "WorkloadSettings[revision]" has a null value in JSON.');
-        assert(json.containsKey(r'ollamaQueueSize'), 'Required key "WorkloadSettings[ollamaQueueSize]" is missing from JSON.');
-        assert(json[r'ollamaQueueSize'] != null, 'Required key "WorkloadSettings[ollamaQueueSize]" has a null value in JSON.');
+        assert(json.containsKey(r'embeddingQueueSize'), 'Required key "WorkloadSettings[embeddingQueueSize]" is missing from JSON.');
+        assert(json[r'embeddingQueueSize'] != null, 'Required key "WorkloadSettings[embeddingQueueSize]" has a null value in JSON.');
         assert(json.containsKey(r'resources'), 'Required key "WorkloadSettings[resources]" is missing from JSON.');
         assert(json[r'resources'] != null, 'Required key "WorkloadSettings[resources]" has a null value in JSON.');
         assert(json.containsKey(r'pipelines'), 'Required key "WorkloadSettings[pipelines]" is missing from JSON.');
@@ -70,7 +70,7 @@ class WorkloadSettings {
 
       return WorkloadSettings(
         revision: mapValueOfType<int>(json, r'revision')!,
-        ollamaQueueSize: mapValueOfType<int>(json, r'ollamaQueueSize')!,
+        embeddingQueueSize: mapValueOfType<int>(json, r'embeddingQueueSize')!,
         resources: WorkloadResource.listFromJson(json[r'resources']),
         pipelines: WorkloadPipeline.listFromJson(json[r'pipelines']),
       );
@@ -119,7 +119,7 @@ class WorkloadSettings {
 
   static const requiredKeys = <String>{
     'revision',
-    'ollamaQueueSize',
+    'embeddingQueueSize',
     'resources',
     'pipelines',
   };

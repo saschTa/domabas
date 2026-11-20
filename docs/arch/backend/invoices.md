@@ -24,8 +24,7 @@ Schematron or legal compliance certification: supported invoice XML embedded in
 ordinary PDFs is also accepted.
 
 Without structured XML, ordinary PDF and email text can use the
-administrator-configured LLM when AI invoice extraction is enabled. Its switch
-is independent of AI property extraction; the two steps share a model connection.
+administrator-configured external provider when AI invoice extraction is enabled. Invoice and property extraction share a model connection and have independent switches.
 Each job uses its snapshotted switches, provider, model and credential reference.
 Disabling either AI step still allows structured extraction.
 The prompt treats text as untrusted data and distinguishes invoices from quotes
@@ -146,11 +145,7 @@ malformed payload, missing invoice, invalid accounting tax, invalid fields and
 unsupported source evidence. Classifier categories
 distinguish invalid JSON, invalid fields and unknown labels. These validation
 logs contain no source text, extracted values or provider response bodies.
-The shared Ollama adapter's INFO-level `ai_inference` log includes the complete
-sent `prompt` (instructions, JSON schema and OCR text) and the original model
-content in `response_json`, including content rejected by finish or invoice
-validation. Credentials and thinking content are excluded. Public failure codes
-remain `invalid_invoice` and `invalid_classification`.
+Public failure codes include `invalid_invoice` and `invalid_classification`.
 
 Invoice extraction input is bounded to the first 100,000 Unicode characters.
 The shared provider adapter preserves the selected invoice input. The
@@ -163,18 +158,14 @@ formatting equivalents described above. Date examples show conversion to
 zero-padded `YYYY-MM-DD` without a time; unsupported, invalid or ambiguous dates
 remain empty. Missing values must not be invented or calculated.
 Invoice classification, invoice extraction, property extraction and chat use
-temperature 0.2 for both Ollama and external providers. The extraction
-generation allowance is 50,000 tokens for both providers with thinking off.
+temperature 0.2. Invoice extraction allows 50,000 output tokens with thinking off.
 Classification uses 256 tokens for its reason-only JSON response. Thinking defaults
 off; enabling it adds 4,096 tokens to either shared reasoning/final-output budget.
-Ollama receives `think: true/false`; external providers receive
-`reasoning_effort: medium/none`. Native diagnostics record the accepted preference.
+External providers receive `reasoning_effort: medium/none`.
 Provider/model support limits follow [property extraction](property-extraction.md).
-Invoice extraction uses the configured context length from settings, capped at
-the model's advertised maximum.
+The provider manages its own context window.
 Its JSON generation responses have no separate application byte-size cap.
-Model/provider limits and invoice field validation still apply. Classification,
-property extraction and model metadata responses retain their 256 KiB cap.
+Model and provider limits and invoice field validation still apply. Classification and property extraction responses have a 256 KiB cap.
 Calls remain cancellable without a fixed HTTP deadline. Required invoice
 identification and currency must be established. Large or unusual invoices may
 need a later extraction implementation; original content remains in Documents.

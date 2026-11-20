@@ -6,30 +6,22 @@ final class ChatConfiguration {
     required this.revision,
     this.baseUrl = '',
     this.hasApiKey = false,
-    this.contextLength = 32768,
     this.thinkingEnabled = false,
   });
   final bool enabled, hasApiKey, thinkingEnabled;
   final String provider, model, baseUrl;
-  final int revision, contextLength;
-}
-
-final class ChatModelContext {
-  const ChatModelContext({required this.model, required this.maxContextLength});
-  final String model;
-  final int maxContextLength;
+  final int revision;
 }
 
 final class ChatConfigurationDraft {
   const ChatConfigurationDraft({
-    this.enabled = true,
+    this.enabled = false,
     this.thinkingEnabled = false,
-    this.provider = 'ollama',
-    this.model = 'qwen3.5:4b',
+    this.provider = 'openai',
+    this.model = '',
     this.baseUrl = '',
     this.apiKey = '',
     this.clearApiKey = false,
-    this.contextLength = '32768',
   });
   factory ChatConfigurationDraft.saved(ChatConfiguration configuration) =>
       ChatConfigurationDraft(
@@ -38,10 +30,9 @@ final class ChatConfigurationDraft {
         provider: configuration.provider,
         model: configuration.model,
         baseUrl: configuration.baseUrl,
-        contextLength: configuration.contextLength.toString(),
       );
   final bool enabled, thinkingEnabled, clearApiKey;
-  final String provider, model, baseUrl, apiKey, contextLength;
+  final String provider, model, baseUrl, apiKey;
   ChatConfigurationDraft copyWith({
     bool? enabled,
     bool? thinkingEnabled,
@@ -50,7 +41,6 @@ final class ChatConfigurationDraft {
     String? baseUrl,
     String? apiKey,
     bool? clearApiKey,
-    String? contextLength,
   }) => ChatConfigurationDraft(
     enabled: enabled ?? this.enabled,
     thinkingEnabled: thinkingEnabled ?? this.thinkingEnabled,
@@ -59,50 +49,39 @@ final class ChatConfigurationDraft {
     baseUrl: baseUrl ?? this.baseUrl,
     apiKey: apiKey ?? this.apiKey,
     clearApiKey: clearApiKey ?? this.clearApiKey,
-    contextLength: contextLength ?? this.contextLength,
   );
   bool changed(ChatConfiguration saved) =>
       enabled != saved.enabled ||
       thinkingEnabled != saved.thinkingEnabled ||
       provider != saved.provider ||
       model.trim() != saved.model ||
-      (contextLengthValue != null
-          ? contextLengthValue != saved.contextLength
-          : provider == 'ollama') ||
-      (provider == 'openai' ? baseUrl.trim() : '') != saved.baseUrl ||
+      baseUrl.trim() != saved.baseUrl ||
       apiKey.isNotEmpty ||
       clearApiKey;
   String? get error {
-    if (provider == 'ollama' && contextLengthError != null) {
-      return contextLengthError;
+    if (provider != 'openai') return 'Choose an OpenAI-compatible provider.';
+    if (!enabled &&
+        model.trim().isEmpty &&
+        baseUrl.trim().isEmpty &&
+        apiKey.isEmpty) {
+      return null;
     }
     if (model.trim().isEmpty || model.length > 200) {
       return 'Enter a model name of 1–200 characters.';
     }
-    if (provider == 'openai') {
-      final uri = Uri.tryParse(baseUrl.trim());
-      if (uri == null ||
-          !['http', 'https'].contains(uri.scheme) ||
-          uri.host.isEmpty ||
-          uri.userInfo.isNotEmpty ||
-          uri.hasQuery ||
-          uri.hasFragment) {
-        return 'Enter an HTTP or HTTPS API base URL without credentials, query or fragment.';
-      }
+    final uri = Uri.tryParse(baseUrl.trim());
+    if (uri == null ||
+        !['http', 'https'].contains(uri.scheme) ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment) {
+      return 'Enter an HTTP or HTTPS API base URL without credentials, query or fragment.';
     }
     if (baseUrl.length > 2048) return 'The API base URL is too long.';
     if (apiKey.length > 4096) return 'The API key is too long.';
     return null;
   }
-
-  int? get contextLengthValue {
-    final value = int.tryParse(contextLength.trim());
-    return value != null && value >= 1024 && value <= 1048576 ? value : null;
-  }
-
-  String? get contextLengthError => contextLengthValue == null
-      ? 'Enter a whole number from 1,024 to 1,048,576 tokens.'
-      : null;
 }
 
 final class ChatConversation {
@@ -201,13 +180,6 @@ final class ChatPage<T> {
     : items = List.unmodifiable(items);
   final List<T> items;
   final String? nextCursor;
-}
-
-final class ChatModelPage {
-  ChatModelPage({required Iterable<String> items, this.nextOffset})
-    : items = List.unmodifiable(items);
-  final List<String> items;
-  final int? nextOffset;
 }
 
 final class ChatAcceptedMessage {

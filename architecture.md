@@ -17,9 +17,9 @@ connects those guides to the implementation. For installation and commands, use
 | **nginx web server** | Serves the built web app and forwards its API and live-update requests to Go. Browser requests use the same public address. Native apps connect to their saved server address. |
 | **Go backend** | Handles the HTTP API, checks access, coordinates changes and runs background workers in the same process. |
 | **PostgreSQL** | Stores users, libraries, metadata, extracted text, search vectors, settings, conversations and job progress. |
-| **Private document processor** | Reads PDFs, images and email files. It extracts text, performs OCR, renders thumbnails and asks Ollama for embeddings. It is a separate Go process with resource limits. |
-| **Ollama** | Runs the local embedding model and, when used, the models for chat and document AI. Model files are cached persistently. |
-| **Optional external AI provider** | An administrator can select an OpenAI-compatible endpoint for chat or document AI. Those requests send their selected content to that provider. Local embeddings still use Ollama. |
+| **Private document processor** | Extracts text, performs OCR, renders thumbnails and requests embeddings. |
+| **llama.cpp** | Serves the pinned Nomic embedding model privately. Both the processor and server mount the verified model read-only. |
+| **Optional external AI provider** | Serves chat or document AI when configured by an administrator. The backend sends selected content to its OpenAI-compatible API. |
 | **Persistent volumes** | Keep originals, staged uploads, database files, encryption keys and model caches across ordinary container shutdowns. |
 | **Initialization containers** | Prepare the database role and pgvector before the backend starts. They are setup steps, not extra application servers. |
 
@@ -31,8 +31,7 @@ flowchart TD
   API --> DB[(PostgreSQL: application data)]
   API --> Files[(Originals and encryption keys)]
   API --> Processor[Private Go document processor]
-  Processor --> Ollama[Ollama]
-  API --> Ollama
+Processor --> Embeddings[llama.cpp embeddings]
   API -. optional chat and document AI .-> Provider[External AI provider]
   API -. import .-> Sources[IMAP and Paperless-ngx]
 ```
@@ -58,7 +57,7 @@ from widgets. **OpenAPI generators** produce the shared HTTP boundary, while
 4. The processor keeps text already present in a PDF and uses OCR for image
    content. Email files are parsed as email. The backend saves the extracted text
    and divides it into small overlapping passages.
-5. Ollama turns the passages into embeddings. The backend stores them, moves the
+5. The local embedding server turns the passages into embeddings. The backend stores them, moves the
    original into its final location and publishes the completed search index.
 6. A separate follow-up pipeline handles invoice extraction and any enabled
    document AI. A failure there leaves the document searchable. A backfill supplies missing previews for older documents.
@@ -72,7 +71,7 @@ prepared. See [document ingestion](docs/arch/backend/document-ingestion.md),
 
 ## Scheduling and background work
 
-PostgreSQL stores accepted jobs and step checkpoints. One elected Go worker runs the pipelines. Workload limits govern concurrent runs and shared resources separately. For example, OCR can use its own slots while embeddings wait for Ollama. Invoice and tag extraction each have a capacity limit and acquire the provider only during inference. Paperless download capacity applies before files enter ingestion.
+PostgreSQL stores accepted jobs and step checkpoints. One elected Go worker runs the pipelines. Workload limits govern concurrent runs and shared resources separately. For example, OCR can use its own slots while embeddings wait for the embedding service. Invoice and tag extraction each have a capacity limit and acquire the provider only during inference. Paperless download capacity applies before files enter ingestion.
 
 See [resource scheduling](docs/arch/backend/resource-scheduler.md) and [worker lifecycle](docs/arch/backend/native-jobs.md).
 
@@ -93,24 +92,14 @@ similarity score is not a probability that a result is correct.
 
 OCR defaults support English and German. The embedding baseline is English, so
 German OCR support does not promise equal semantic quality. The standard Compose
-setup uses CPU inference; development can select supported CUDA, ROCm or native
-macOS acceleration. See [OCR and embeddings](docs/arch/backend/document-ingestion.md#ocr-and-embeddings),
+setup uses CPU inference. Linux hosts can enable Vulkan for embeddings. See
+[OCR and embeddings](docs/arch/backend/document-ingestion.md#ocr-and-embeddings),
 [search rules](docs/arch/backend/document-ingestion.md#search-and-metadata-edits)
-and [runtime selection](docs/development/compose.md#select-the-development-ollama-runtime).
+and [Vulkan setup](docs/development/compose.md#select-the-embedding-runtime).
 
 ## Document AI, invoices and chat
 
-New installations use `qwen3.5:4b` for chat, document properties and invoice AI;
-upgrades preserve saved model choices and context settings. OCR and embedding
-models remain separate. Administrators set separate native Ollama context
-requests for chat and document AI, each defaulting to 32,768 tokens and capped
-to the model's API-reported limit.
-
-Document AI and chat have separate administrator settings. Each can use local
-Ollama or an external compatible provider. Accepted work keeps the settings it
-started with, so a later settings change does not silently change a running job.
-Provider credentials are encrypted; their persistent encryption keys must stay
-with the installation.
+Chat and document AI each require an administrator-configured external endpoint and model. Both start disabled. Property and invoice extraction can be enabled independently on the document AI connection. Existing external settings and encrypted credentials survive upgrades. Generation previously configured to use the bundled model becomes disabled. Historical records retain the provider with which they were accepted. Keep the provider credential encryption key with the database backup.
 
 **Document AI** can suggest missing properties such as tags, sender or date.
 Property extraction and AI invoice extraction have independent switches and
@@ -119,7 +108,7 @@ concurrent user edit makes them stale. Structured CII/UBL invoice XML can be rea
 without a language model. Optional invoice AI handles ordinary document text;
 amounts and invoice lines then live in typed relational tables.
 
-**Chat** starts with local Ollama and a separately configured model. Conversations
+**Chat** uses its configured external model. Conversations
 are private to their user and library. The model can request read-only document
 search and text-reading tools; the backend checks current permissions for every
 operation. Chat tools use lexical search, rather than making another embedding

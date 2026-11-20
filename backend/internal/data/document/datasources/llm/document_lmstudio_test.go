@@ -23,7 +23,7 @@ func TestRejectedProviderCannotHoldDiagnosticsOpen(t *testing.T) {
 		<-request.Context().Done()
 	}))
 	defer server.Close()
-	remote, _ := NewDocumentPropertyRemoteDataSource(server.URL)
+	remote := NewDocumentPropertyRemoteDataSource()
 	defer remote.Close()
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
@@ -72,7 +72,7 @@ func TestExternalCompatibilityUsesAcceptedSchemaForEveryDocumentTask(t *testing.
 					_, _ = io.WriteString(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"answer\":\"ok\"}"}}]}`)
 				}))
 				defer server.Close()
-				remote, _ := NewDocumentPropertyRemoteDataSource(server.URL)
+				remote := NewDocumentPropertyRemoteDataSource()
 				defer remote.Close()
 				output, err := remote.Generate(t.Context(), "openai", "accepted-model", server.URL+"/v1", "", "Return JSON", schema, "Synthetic text", tokens, 0.2, compatible, false)
 				if err != nil || output != `{"answer":"ok"}` || calls != 1 {
@@ -104,7 +104,7 @@ func TestExternalInferenceDiagnosticsExplainRejectionWithoutProviderContent(t *t
 				_, _ = io.WriteString(w, scenario.body)
 			}))
 			defer server.Close()
-			remote, _ := NewDocumentPropertyRemoteDataSource(server.URL, slog.New(slog.NewJSONHandler(&logs, nil)))
+			remote := NewDocumentPropertyRemoteDataSource(slog.New(slog.NewJSONHandler(&logs, nil)))
 			defer remote.Close()
 			_, err := remote.Generate(t.Context(), "openai", "fixture", server.URL, "SECRET_KEY", "SECRET_PROMPT", "{}", "SECRET_DOCUMENT", 256, 0.2, false, false)
 			if err == nil || calls != 1 {
@@ -124,7 +124,7 @@ func TestExternalInferenceDiagnosticsExplainRejectionWithoutProviderContent(t *t
 func TestExternalInferenceDiagnosticsRetainCancellationAndUsage(t *testing.T) {
 	for _, cancelled := range []bool{false, true} {
 		var logs bytes.Buffer
-		remote, _ := NewDocumentPropertyRemoteDataSource("http://model.test", slog.New(slog.NewJSONHandler(&logs, nil)))
+		remote := NewDocumentPropertyRemoteDataSource(slog.New(slog.NewJSONHandler(&logs, nil)))
 		ctx, cancel := context.WithCancel(t.Context())
 		remote.client.Transport = documentInferenceTransport(func(request *http.Request) (*http.Response, error) {
 			if cancelled {

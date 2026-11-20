@@ -1,29 +1,12 @@
 # Private AI chat
 
-AI chat is independent of document enrichment. It starts enabled with internal
-Ollama and `qwen3.5:4b`. Admin settings → AI chat selects a model from the installed
-catalog or an explicit name, or configures an external OpenAI-compatible API base
-URL, model and optional bearer secret. Saving settings never runs inference or
-changes document processing. The independent **Enable thinking for chat** switch
-defaults off and is stored
-in typed configuration and accepted-turn columns. Omitted updates retain the
-saved choice. Only future accepted turns use the new revision;
-disabling chat prevents new turns while preserving history and accepted work.
+AI chat starts disabled. Admin settings → AI chat accepts an OpenAI-compatible
+API base URL, a model identifier and an optional bearer secret. Saving settings
+does not run inference. The independent **Enable thinking for chat** switch
+defaults off and is stored in configuration and accepted-turn columns. Omitted
+updates retain the saved choice. Only future accepted turns use the new revision. Disabling chat preserves history and previously accepted external work.
 
-Administrators choose a requested native Ollama context from 1,024 through
-1,048,576 tokens, independently of the document AI pipeline. Current settings
-default to 32,768. The typed setting is copied into every accepted turn; retained
-turns from before the setting keep 16,384. Omitted update fields preserve the
-saved value. An optional administrator model lookup calls `/api/show` without
-downloading or running the model. Saving settings does not contact Ollama.
-
-Before native inference, the adapter reads the selected architecture's context
-maximum from `model_info`, including after downloading a missing model. It sends
-the smaller of the accepted request and that maximum as `options.num_ctx`.
-Missing or invalid metadata fails with `configuration_unavailable`. External
-OpenAI-compatible services retain their existing wire format and manage their
-own context. The setting does not expand the bounded history or document text
-described below.
+The external provider manages its context window. Domabas caps the history and document text attached to each request. Upgrades preserve existing external configurations and turn history. Migration 044 disables legacy internal connections and marks their queued or running turns as failed with `configuration_unavailable`. It releases their worker reservations and leases. Earlier messages retain their original provider and model. An administrator can enable new turns by saving an external URL and model.
 
 ## Authority and storage
 
@@ -79,13 +62,10 @@ references. Minimal identity and execution tombstones remain for reconciliation;
 unused credentials are removed. Cancellation confirms the database fence immediately; the owned request
 then drains. “Send again” creates another visible prompt with a fresh request ID.
 
-The [shared scheduler](resource-scheduler.md) admits chat turns and grants model and provider slots around each provider call. Internal Ollama aliases share the ingestion embedding pool; external origins use independent pools. Running requests do not poll or cancel when ingestion arrives. Chat document tools use lexical search and create no embedding requests. Missing optional chat models do not make the application unready, but failed workers and dispatchers do.
+The [shared scheduler](resource-scheduler.md) admits chat turns and grants model and provider slots around each provider call. External origins use separate limits from local embeddings. Running requests do not poll or cancel when ingestion arrives. Chat document tools use lexical search and create no embedding requests. Missing optional chat models do not make the application unready, but failed workers and dispatchers do.
 
 ## Model callbacks and context
 
-Internal Ollama uses a required JSON action schema in a single user
-message. It supports `list_tools`, `search_documents`, `read_document`
-and `answer`.
 External providers use native OpenAI-compatible function calls, one at a time,
 with matching call IDs and tool replies. Unsupported, malformed, truncated and
 oversized responses become safe error codes. Redirects are never followed.
@@ -103,7 +83,7 @@ Limits are explicit: 8,000 user-message characters, twenty recent history messag
 ten search results per page,
 8,000 characters per document read, 500-character excerpts and a 2,048-token
 final-output allowance with thinking off. Enabling thinking adds 4,096 tokens
-to the shared reasoning/final-output generation cap on both providers.
+to the shared reasoning/final-output generation cap on the provider.
 Older conversation history remains available through API/UI pagination. Tool
 continuation uses an offset. Document text is untrusted evidence, separated from
 instructions. The exact immutable tool reply is retained as a protocol snapshot
@@ -146,40 +126,21 @@ documents lexical search syntax, result fields, continuation and empty results.
 It uses `chat:use`, has no document sources and retains the same fenced immutable
 reply snapshot as retrieval calls. Retrieval still enforces the document claims.
 External providers retain three compact callable schemas; detailed help loads
-only when requested. Both provider protocols retain strict local validation.
+only when requested. Domabas validates tool arguments locally.
 
-Both native Ollama and external provider calls use temperature 0.2.
-New installations seed `qwen3.5:4b`; upgrades retain existing chat settings and
-accepted turn snapshots. The model-column default applies to future rows. The
-seed is changed only when chat's creation migration ran in the same transaction,
-as identified by its migration-ledger timestamp.
-
-Native inference sends the accepted thinking preference as `think: true/false`.
+External calls use temperature 0.2.
 External requests send `reasoning_effort: medium/none` for enabled/disabled
 thinking, including tool rounds and the final answer-only request. LM Studio
 0.4.8+ supports this field without an extra compatibility mode; see its
 [changelog](https://lmstudio.ai/changelog/lmstudio). Support depends on the selected
 model and provider; mandatory reasoning models may not accept disabling it.
 Unsupported requests are not retried without the preference. Keep LM Studio
-reasoning separated from final content. Structured ai_inference logs contain
-task/model, context, input/output
-sizes, token counts, timings and safe outcome codes. They never contain prompts,
-document text, replies, credentials or reasoning. Separate output_limit and
-empty_response errors make reasoning exhaustion visible. Native responses are
-bounded to 256 KiB. Chat retrieval and transcript packing are unchanged.
+reasoning separated from final content. Chat returns `output_limit` when the provider reports a length stop and `empty_response` for a completed reply without final content.
 
 ## Verification
 
-Provider and workflow tests cover Qwen actions, native tools, malformed transport,
+Provider and workflow tests cover tool calls, malformed transport,
 safe errors, cancellation and reconciliation. PostgreSQL tests cover encryption,
 private ownership, fresh authority, idempotency, paging, admission and fencing.
 Compiled API and browser E2E use deterministic local providers with real
-PostgreSQL. `task test:llm` additionally checks the installed Qwen model
-when explicitly configured. Test schemas, task queues, storage and workflow
-cleanup belong only to each test. See the
-[testing guide](../../development/testing.md) for prerequisites and suite commands.
-
-Authority, disclosure and business decisions follow the
-[service policy and atomic persistence guide](service-policy-and-persistence.md).
-Keep scoped SQL, command preconditions, outboxes and execution fences in the
-adapters while services select the use case and its policy.
+PostgreSQL. Live model checks use an explicitly configured LM Studio endpoint.

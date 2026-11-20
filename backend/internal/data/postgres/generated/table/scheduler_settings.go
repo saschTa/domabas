@@ -11,11 +11,11 @@ var SchedulerSettings = newSchedulerSettingsTable("", "scheduler_settings", "")
 type schedulerSettingsTable struct {
 	postgres.Table
 
-	Singleton       postgres.ColumnBool
-	Revision        postgres.ColumnInteger
-	OllamaQueueSize postgres.ColumnInteger
-	Initialized     postgres.ColumnBool
-	ExecutorEpoch   postgres.ColumnInteger
+	Singleton          postgres.ColumnBool
+	Revision           postgres.ColumnInteger
+	EmbeddingQueueSize postgres.ColumnInteger
+	Initialized        postgres.ColumnBool
+	ExecutorEpoch      postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -53,24 +53,24 @@ func newSchedulerSettingsTable(schemaName, tableName, alias string) *SchedulerSe
 
 func newSchedulerSettingsTableImpl(schemaName, tableName, alias string) schedulerSettingsTable {
 	var (
-		SingletonColumn       = postgres.BoolColumn("singleton")
-		RevisionColumn        = postgres.IntegerColumn("revision")
-		OllamaQueueSizeColumn = postgres.IntegerColumn("ollama_queue_size")
-		InitializedColumn     = postgres.BoolColumn("initialized")
-		ExecutorEpochColumn   = postgres.IntegerColumn("executor_epoch")
-		allColumns            = postgres.ColumnList{SingletonColumn, RevisionColumn, OllamaQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
-		mutableColumns        = postgres.ColumnList{RevisionColumn, OllamaQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
-		defaultColumns        = postgres.ColumnList{SingletonColumn, RevisionColumn, OllamaQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
+		SingletonColumn          = postgres.BoolColumn("singleton")
+		RevisionColumn           = postgres.IntegerColumn("revision")
+		EmbeddingQueueSizeColumn = postgres.IntegerColumn("embedding_queue_size")
+		InitializedColumn        = postgres.BoolColumn("initialized")
+		ExecutorEpochColumn      = postgres.IntegerColumn("executor_epoch")
+		allColumns               = postgres.ColumnList{SingletonColumn, RevisionColumn, EmbeddingQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
+		mutableColumns           = postgres.ColumnList{RevisionColumn, EmbeddingQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
+		defaultColumns           = postgres.ColumnList{SingletonColumn, RevisionColumn, EmbeddingQueueSizeColumn, InitializedColumn, ExecutorEpochColumn}
 	)
 
 	return schedulerSettingsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
-		Singleton:       SingletonColumn,
-		Revision:        RevisionColumn,
-		OllamaQueueSize: OllamaQueueSizeColumn,
-		Initialized:     InitializedColumn,
-		ExecutorEpoch:   ExecutorEpochColumn,
+		Singleton:          SingletonColumn,
+		Revision:           RevisionColumn,
+		EmbeddingQueueSize: EmbeddingQueueSizeColumn,
+		Initialized:        InitializedColumn,
+		ExecutorEpoch:      ExecutorEpochColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

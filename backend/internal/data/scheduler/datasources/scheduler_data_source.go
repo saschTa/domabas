@@ -19,13 +19,12 @@ import (
 )
 
 type SchedulerDataSource struct {
-	db           *postgres.PostgresDatabase
-	queueSize    int
-	ollamaOrigin string
+	db        *postgres.PostgresDatabase
+	queueSize int
 }
 
-func NewSchedulerDataSource(db *postgres.PostgresDatabase, ollamaQueueSize int, ollamaOrigin string) *SchedulerDataSource {
-	return &SchedulerDataSource{db: db, queueSize: ollamaQueueSize, ollamaOrigin: schedulerOrigin(ollamaOrigin)}
+func NewSchedulerDataSource(db *postgres.PostgresDatabase, embeddingQueueSize int) *SchedulerDataSource {
+	return &SchedulerDataSource{db: db, queueSize: embeddingQueueSize}
 }
 
 func schedulerOrigin(raw string) string {
@@ -58,15 +57,12 @@ func schedulerOrigin(raw string) string {
 }
 
 func (s *SchedulerDataSource) ResourceID(provider string) string {
-	if provider == "ollama" {
-		return "ollama"
+	if provider == "embedding-runtime" {
+		return "embedding-runtime"
 	}
 	origin := schedulerOrigin(provider)
 	if origin == "" {
 		return ""
-	}
-	if origin == s.ollamaOrigin {
-		return "ollama"
 	}
 	digest := sha256.Sum256([]byte(origin))
 	return "external:" + hex.EncodeToString(digest[:])

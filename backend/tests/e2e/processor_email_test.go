@@ -36,6 +36,7 @@ func TestCompiledProcessorRetainsLegacyDocumentsAndExtractsEmail(t *testing.T) {
 		configuration.ExtractionRevision = revision
 		if revision == m.LegacyExtractionRevision {
 			configuration.ManifestRevision = 1
+			configuration.EmbeddingDigest = m.LegacyEmbeddingDigest
 		}
 		result, err := repository.Extract(t.Context(), bytes.NewReader(pdf), "application/pdf", configuration)
 		if err != nil || result.ExtractionRevision != revision || result.Engine != "tesseract" || !strings.Contains(result.Text, "Retained invoice 731") {

@@ -2411,7 +2411,7 @@ final class _InvoiceStory extends StatelessWidget {
                         .title,
                     'Format': state == 'ai' ? 'AI extracted' : 'CII',
                     'Profile': 'EN 16931',
-                    'Extraction model': state == 'ai' ? 'qwen3.5:4b' : '',
+                    'Extraction model': state == 'ai' ? 'example-model' : '',
                   },
                 ),
               ],

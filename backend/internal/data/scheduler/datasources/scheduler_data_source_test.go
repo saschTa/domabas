@@ -8,11 +8,9 @@ import (
 )
 
 func TestSchedulerResourceOriginsShareCapacity(t *testing.T) {
-	source := NewSchedulerDataSource(nil, 128, "http://OLLAMA.example.test:11434")
-	for _, origin := range []string{"ollama", "http://ollama.example.test:11434/v1", "http://ollama.example.test.:11434/api"} {
-		if got := source.ResourceID(origin); got != "ollama" {
-			t.Fatalf("internal alias %q = %q", origin, got)
-		}
+	source := NewSchedulerDataSource(nil, 128)
+	if source.ResourceID("embedding-runtime") != "embedding-runtime" {
+		t.Fatal("missing embedding runtime")
 	}
 	first := source.ResourceID("HTTPS://Provider.Example.test:443/v1")
 	if !strings.HasPrefix(first, "external:") || first != source.ResourceID("https://provider.example.test/another/path") {
@@ -37,10 +35,10 @@ func TestSchedulerRetainedRequirementsIncludeLegacyProviders(t *testing.T) {
 		combined                 bool
 		providers                []string
 	}{
-		{"split ingestion", "document_ingestion", "", false, []string{"ollama"}},
-		{"legacy external", "document_ingestion", `{"LLM":{"Enabled":true,"Provider":"openai","BaseURL":"https://provider.test/v1"}}`, true, []string{"ollama", "https://provider.test/v1"}},
-		{"invoice only", "document_ai", `{"LLM":{"Enabled":false,"InvoiceEnabled":true,"Provider":"ollama"}}`, false, []string{"ollama"}},
-		{"xml only", "document_ai", `{"LLM":{"Enabled":false,"InvoiceEnabled":false,"Provider":"ollama"}}`, false, []string{}},
+		{"split ingestion", "document_ingestion", "", false, []string{"embedding-runtime"}},
+		{"legacy external", "document_ingestion", `{"LLM":{"Enabled":true,"Provider":"openai","BaseURL":"https://provider.test/v1"}}`, true, []string{"embedding-runtime", "https://provider.test/v1"}},
+		{"invoice only", "document_ai", `{"LLM":{"Enabled":false,"InvoiceEnabled":true,"Provider":"openai","BaseURL":"https://provider.test/v1"}}`, false, []string{"https://provider.test/v1"}},
+		{"xml only", "document_ai", `{"LLM":{"Enabled":false,"InvoiceEnabled":false,"Provider":"openai"}}`, false, []string{}},
 		{"retrieval", "paperless", "", false, []string{}},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {

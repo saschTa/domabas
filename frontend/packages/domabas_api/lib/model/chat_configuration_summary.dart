@@ -126,7 +126,6 @@ class ChatConfigurationSummary {
 }
 
 enum ChatConfigurationSummaryProviderEnum {
-  ollama._(r'ollama'),
   openai._(r'openai'),
   ;
 
@@ -168,7 +167,6 @@ class ChatConfigurationSummaryProviderEnumTypeTransformer {
     }
     if (data != null) {
       switch (data) {
-        case r'ollama': return ChatConfigurationSummaryProviderEnum.ollama;
         case r'openai': return ChatConfigurationSummaryProviderEnum.openai;
         default:
           if (!allowNull) {

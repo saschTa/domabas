@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { developmentComposeOverrides } from "./development-infrastructure.ts";
 import { existsSync } from "node:fs";
 import { ROOT, type Environment, ProcessScope, command, environment, runCLI } from "../shared/runtime.ts";
 
@@ -26,7 +27,7 @@ export async function infraUp(scope: ProcessScope, env: Environment = environmen
   await compose(scope, ["run", "--build", "--rm", "--no-deps", "database-init"], env, undefined, overrides);
 }
 export async function infraDown(scope: ProcessScope, env: Environment = environment()): Promise<void> {
-  await compose(scope, ["stop", "document-processor", "ollama", "database-init", "postgres"], env);
+  await compose(scope, ["stop", "document-processor", "embeddings", "model-init", "database-init", "postgres"], env);
 }
 
 if (import.meta.main) await runCLI(async scope => {
@@ -36,15 +37,9 @@ if (import.meta.main) await runCLI(async scope => {
   if (values["docker-only"] && positionals[0] !== "infra-up") throw new Error("--docker-only is only supported with infra-up.");
   switch (positionals[0]) {
     case "infra-up": {
-      if (values["docker-only"]) { await infraUp(scope); break; }
-      const { withDevelopmentInfrastructure } = await import("./development-infrastructure.ts");
-      await withDevelopmentInfrastructure(scope, environment(), async native => {
-        if (native) {
-          console.log("MLX infrastructure ready. Keep this terminal open; Ctrl+C stops native Ollama. Docker infrastructure and all caches are retained.");
-          scope.signal.throwIfAborted();
-          await new Promise<void>((resolve) => scope.signal.addEventListener("abort", () => resolve(), { once: true }));
-        }
-      });
+      const env = environment();
+      if (values["docker-only"]) env.EMBEDDING_DOWNLOAD_ALLOWED = "false";
+      await infraUp(scope, env, values["docker-only"] ? [] : developmentComposeOverrides(env));
       break;
     }
     case "infra-down": await infraDown(scope); break;

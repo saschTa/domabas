@@ -271,8 +271,8 @@ func (s *DocumentDataSource) IngestionThumbnailJob(ctx context.Context, job m.Do
 	j.AccountID, j.DocumentID, j.RendererRevision = job.AccountID, job.DocumentID, m.ThumbnailRendererRevision
 	err := pgx.BeginFunc(ctx, s.database, func(tx pgx.Tx) error {
 		id := uuid.NewString()
-		err := tx.QueryRow(ctx, `INSERT INTO document_thumbnail_jobs(id,account_id,document_id,source_sha256,renderer_revision,workflow_id,task_queue,status,admitted_at)
- SELECT $3,f.account_id,f.document_id,f.sha256,$4,$5,'ingestion-preview','running',clock_timestamp() FROM document_files f JOIN document_processing p USING(account_id,document_id)
+		err := tx.QueryRow(ctx, `INSERT INTO document_thumbnail_jobs(id,account_id,document_id,source_sha256,renderer_revision,workflow_id,task_queue,status,admitted_at,started_at)
+ SELECT $3,f.account_id,f.document_id,f.sha256,$4,$5,'ingestion-preview','running',clock_timestamp(),clock_timestamp() FROM document_files f JOIN document_processing p USING(account_id,document_id)
  WHERE f.account_id=$1 AND f.document_id=$2 AND p.generation=$6 AND f.media_type IN ('application/pdf','image/jpeg','image/png')
  AND NOT EXISTS(SELECT 1 FROM document_thumbnails t WHERE t.account_id=f.account_id AND t.document_id=f.document_id AND t.source_sha256=f.sha256 AND t.renderer_revision=$4)
  ON CONFLICT(account_id,document_id,source_sha256,renderer_revision,attempt) DO UPDATE SET id=document_thumbnail_jobs.id WHERE document_thumbnail_jobs.task_queue='ingestion-preview' AND document_thumbnail_jobs.closed_at IS NULL RETURNING id,source_sha256`, job.AccountID, job.DocumentID, id, m.ThumbnailRendererRevision, "document-thumbnail-v1/"+id, job.Generation).Scan(&j.ID, &j.SourceSHA256)

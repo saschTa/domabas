@@ -86,6 +86,7 @@ func (h *DocumentProcessorHandler) extract(w http.ResponseWriter, r *http.Reques
 	configuration.ExtractionRevision = r.Header.Get("X-Domabas-Extraction-Revision")
 	if configuration.ExtractionRevision == "" || configuration.ExtractionRevision == models.LegacyExtractionRevision {
 		configuration.ManifestRevision = 1
+		configuration.EmbeddingDigest = models.LegacyEmbeddingDigest
 	}
 	configuration.Language = r.Header.Get("X-Domabas-OCR-Language")
 	configuration.Segmentation = r.Header.Get("X-Domabas-OCR-Segmentation")

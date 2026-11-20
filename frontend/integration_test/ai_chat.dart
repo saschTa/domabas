@@ -34,12 +34,12 @@ Future<void> exerciseAIChat(
   final documents = api.DocumentsApi(generated), chat = api.ChatApi(generated);
   addTearDown(transport.close);
   final original = (await chat.getChatAdminConfiguration())!;
-  expect(original.contextLength, 32768);
   expect(original.thinkingEnabled, isFalse);
   expect(
     original.hasApiKey,
     isFalse,
-    reason: 'The disposable chat fixture starts with the internal default.',
+    reason:
+        'The disposable chat fixture starts without an external connection.',
   );
   final processingBefore = (await documents
       .getDocumentProcessingConfiguration())!;
@@ -104,15 +104,13 @@ Future<void> exerciseAIChat(
     await navigate('manageChat');
     await _wait(
       tester,
-      () => find.byKey(const Key('chatProviderOpenAI')).evaluate().isNotEmpty,
+      () => find.byKey(const Key('chatEnabled')).evaluate().isNotEmpty,
       'Chat settings loaded',
     );
+    await _revealSetting(tester, 'chatEnabled');
+    await tester.tap(find.byKey(const Key('chatEnabled')));
     await _revealSetting(tester, 'chatThinkingEnabled');
     await tester.tap(find.byKey(const Key('chatThinkingEnabled')));
-    await _revealSetting(tester, 'chatContextLength');
-    await tester.enterText(find.byKey(const Key('chatContextLength')), '65536');
-    await _revealSetting(tester, 'chatProviderOpenAI');
-    await tester.tap(find.byKey(const Key('chatProviderOpenAI')));
     await tester.pumpAndSettle();
     for (final field in [
       ('chatBaseUrl', fixtureUrl),
@@ -134,7 +132,6 @@ Future<void> exerciseAIChat(
     expect(settings.state.saved!.thinkingEnabled, isTrue);
     expect(settings.state.draft.apiKey, isEmpty);
     final saved = (await chat.getChatAdminConfiguration())!;
-    expect(saved.contextLength, 65536);
     expect(saved.thinkingEnabled, isTrue);
     final processingAfter = (await documents
         .getDocumentProcessingConfiguration())!;
@@ -148,10 +145,6 @@ Future<void> exerciseAIChat(
     expect(
       processingAfter.llm!.invoiceThinkingEnabled,
       processingBefore.llm!.invoiceThinkingEnabled,
-    );
-    expect(
-      processingAfter.llm!.contextLength,
-      processingBefore.llm!.contextLength,
     );
     await navigate('chatNavigation');
     await _wait(
@@ -362,12 +355,9 @@ Future<void> exerciseAIChat(
             expectedRevision: current.revision,
             enabled: original.enabled,
             thinkingEnabled: original.thinkingEnabled,
-            provider: original.provider.toString() == 'openai'
-                ? api.UpdateChatConfigurationRequestProviderEnum.openai
-                : api.UpdateChatConfigurationRequestProviderEnum.ollama,
+            provider: api.UpdateChatConfigurationRequestProviderEnum.openai,
             model: original.model,
             baseUrl: original.baseUrl,
-            contextLength: original.contextLength,
             clearApiKey: true,
           ),
         ))!;

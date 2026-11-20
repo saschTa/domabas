@@ -81,7 +81,7 @@ if (import.meta.main) await runCLI(async scope => {
   command("java");
   const dockerHost = await dockerTestHost(scope);
   const project = `domabas-ci-${crypto.randomUUID().replaceAll("-", "")}`;
-  Object.assign(env, { COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", WEB_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", LLM_OLLAMA_PORT: "0" });
+  Object.assign(env, { COMPOSE_PROJECT_NAME: project, COMPOSE_PROFILES: "", BIND_ADDRESS: dockerHost, PRIVATE_BIND_ADDRESS: dockerHost, POSTGRES_PORT: "0", WEB_PORT: "0", DOCUMENT_PROCESSOR_PORT: "0", EMBEDDING_DOWNLOAD_ALLOWED: "false", EMBEDDING_MODEL_EXTERNAL_VOLUME: "true", EMBEDDING_MODEL_VOLUME: process.env.TEST_EMBEDDING_MODEL_VOLUME ?? "domabas_embedding_models" });
   await withCleanup(async () => {
     await infraUp(scope, env);
     const database = new URL(`postgres://${dockerHost}/domabas?sslmode=disable`);
@@ -91,7 +91,6 @@ if (import.meta.main) await runCLI(async scope => {
     database.port = String(await publishedPort(scope, "postgres", 5432, env));
     env.DATABASE_URL = env.TEST_DATABASE_URL = database.toString();
     env.DOCUMENT_PROCESSOR_URL = `http://${dockerHost}:${await publishedPort(scope, "document-processor", 8091, env)}`;
-    env.LLM_OLLAMA_URL = `http://${dockerHost}:${await publishedPort(scope, "ollama", 11434, env)}`;
     const ports = new Set<string>();
     for (const setting of ["E2E_API_PORT", "E2E_WEB_PORT", "E2E_DRIVER_PORT"]) {
       let port: string;

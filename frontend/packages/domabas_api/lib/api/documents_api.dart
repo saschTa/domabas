@@ -361,45 +361,6 @@ class DocumentsApi {
     return null;
   }
 
-  Future<Response> getDocumentModelContextWithHttpInfo(String model, { Future<void>? abortTrigger, }) async {
-    // ignore: prefer_const_declarations
-    final path = r'/api/v1/system/document-processing/model-context';
-
-    // ignore: prefer_final_locals
-    Object? postBody;
-
-    final queryParams = <QueryParam>[];
-    final headerParams = <String, String>{};
-    final formParams = <String, String>{};
-
-      queryParams.addAll(_queryParams('', 'model', model));
-
-    const contentTypes = <String>[];
-
-    return apiClient.invokeAPI(
-      path,
-      'GET',
-      queryParams,
-      postBody,
-      headerParams,
-      formParams,
-      contentTypes.isEmpty ? null : contentTypes.first,
-      abortTrigger: abortTrigger,
-    );
-  }
-
-  Future<OllamaModelContext?> getDocumentModelContext(String model, { Future<void>? abortTrigger, }) async {
-    final response = await getDocumentModelContextWithHttpInfo(model, abortTrigger: abortTrigger,);
-    if (response.statusCode >= HttpStatus.badRequest) {
-      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
-    }
-    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
-      return await apiClient.deserializeAsync(await _decodeBodyBytes(response), 'OllamaModelContext',) as OllamaModelContext;
-
-    }
-    return null;
-  }
-
   Future<Response> getDocumentOCRWithHttpInfo(String id, { Future<void>? abortTrigger, }) async {
     // ignore: prefer_const_declarations
     final path = r'/api/v1/documents/{id}/ocr'

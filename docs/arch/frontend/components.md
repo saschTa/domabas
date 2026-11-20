@@ -93,8 +93,7 @@ caller’s read to complete, and ignores nested scroll notifications. Its stable
 scroll physics preserve scroll positions when refresh availability changes.
 Empty states inside a list let the containing list own the gesture.
 Keyboard users can use F5 or Ctrl/Cmd+R while focus is within the pane; assistive
-technology receives a Refresh action. Explicit retry, conflict recovery and
-installed-model discovery actions remain separate. Callers preserve drafts,
+technology receives a Refresh action. Explicit retries and conflict recovery remain separate. Callers preserve drafts,
 filters and the loaded pagination window when reloading data.
 
 AppPage supplies a distinct PageStorage identity per title and body key. Inner
@@ -157,7 +156,7 @@ remains chronological. The interface never infers a specific job's blocked
 resource or a global pause from the current user's visible jobs.
 
 The expandable explanation distinguishes worker-only email/Paperless retrievals
-from document ingestion and full reindexing, which also require Ollama, and AI
+from document ingestion and full reindexing, which also use the embedding service, and AI
 pipelines, which share their configured provider. Administrators edit capacity in
 [Workload limits](workload-settings.md), where the server supplies shared limits,
 active reservations and current pipeline requirements. Deprecated independent

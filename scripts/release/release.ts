@@ -9,7 +9,7 @@ export const RELEASE_IMAGES = [
   { name: "backend", dockerfile: "backend/Dockerfile", services: ["backend"] },
   { name: "web", dockerfile: "frontend/Dockerfile", services: ["web"] },
   { name: "document-processor", dockerfile: "infra/document-processor/Dockerfile", services: ["document-processor"] },
-  { name: "init", dockerfile: "infra/init/Dockerfile", services: ["database-init"] },
+  { name: "init", dockerfile: "infra/init/Dockerfile", services: ["database-init", "model-init"] },
 ] as const;
 
 export interface ReleaseConfiguration { repository: string; sha: string; bump: ReleaseBump }
@@ -152,7 +152,7 @@ export function releaseCompose(source: string, images: readonly ReleaseImage[]):
 }
 
 export async function trueNASReleaseAssets(images: readonly ReleaseImage[]): Promise<ReleaseAsset[]> {
-  return Promise.all(["cpu", "cuda", "rocm"].map(async variant => {
+  return Promise.all(["cpu", "vulkan"].map(async variant => {
     const name = `compose.${variant}.yaml`;
     let yaml = await Bun.file(join(ROOT, "truenas", name)).text();
     for (const definition of RELEASE_IMAGES) {

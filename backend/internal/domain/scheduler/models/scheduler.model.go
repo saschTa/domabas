@@ -29,10 +29,10 @@ type SchedulerPipeline struct {
 }
 
 type SchedulerSettings struct {
-	Revision        int64
-	OllamaQueueSize int
-	Resources       []SchedulerResource
-	Pipelines       []SchedulerPipeline
+	Revision           int64
+	EmbeddingQueueSize int
+	Resources          []SchedulerResource
+	Pipelines          []SchedulerPipeline
 }
 
 type SchedulerResourceUpdate struct {

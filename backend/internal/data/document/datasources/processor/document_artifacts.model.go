@@ -12,32 +12,19 @@ type documentProcessorEmbedRequest struct {
 	Purpose string                               `json:"purpose"`
 	Inputs  []string                             `json:"inputs"`
 }
-type documentProcessorOllamaEmbedRequest struct {
-	Model     string   `json:"model"`
-	Input     []string `json:"input"`
-	Truncate  bool     `json:"truncate"`
-	KeepAlive string   `json:"keep_alive"`
+type documentProcessorLlamaEmbedRequest struct {
+	Model          string   `json:"model"`
+	Input          []string `json:"input"`
+	EncodingFormat string   `json:"encoding_format"`
 }
-type documentProcessorOllamaEmbedResponse struct {
-	Model      string      `json:"model"`
-	Embeddings [][]float64 `json:"embeddings"`
-	Error      string      `json:"error"`
-}
-type documentProcessorOllamaTags struct {
-	Models []documentProcessorOllamaModel `json:"models"`
-}
-type documentProcessorOllamaModel struct {
-	Name   string `json:"name"`
-	Model  string `json:"model"`
-	Digest string `json:"digest"`
-}
-type documentProcessorCacheManifest struct {
-	SchemaVersion int                           `json:"schemaVersion"`
-	Config        documentProcessorCacheLayer   `json:"config"`
-	Layers        []documentProcessorCacheLayer `json:"layers"`
-}
-type documentProcessorCacheLayer struct {
-	MediaType string `json:"mediaType"`
-	Digest    string `json:"digest"`
-	Size      int64  `json:"size"`
+type documentProcessorLlamaEmbedResponse struct {
+	Model string `json:"model"`
+	Data  []struct {
+		Index     *int      `json:"index"`
+		Embedding []float64 `json:"embedding"`
+	} `json:"data"`
+	Error struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error"`
 }

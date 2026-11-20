@@ -52,7 +52,7 @@ void main() {
       (tester) async {
         viewport(tester, size);
         final repository = FakeWorkloadSettingsRepository()
-          ..current = testWorkloadSettings(activeOllama: 10);
+          ..current = testWorkloadSettings(activeEmbeddings: 10);
         final cubit = WorkloadSettingsCubit(repository, allowed: true)
           ..setActive(true);
         await tester.pumpWidget(
@@ -88,14 +88,14 @@ void main() {
         );
         await revealWorkspaceContent(
           tester,
-          field('ollama'),
+          field('embedding-runtime'),
           scrollable: scrollable,
         );
-        await tester.enterText(field('ollama'), '65');
+        await tester.enterText(field('embedding-runtime'), '65');
         await tester.pumpAndSettle();
         expect(find.text('Enter a whole number from 1 to 64.'), findsOneWidget);
         expect(cubit.state.canSave, isFalse);
-        await tester.enterText(field('ollama'), '12');
+        await tester.enterText(field('embedding-runtime'), '12');
         await tester.pumpAndSettle();
         await revealWorkspaceContent(
           tester,
@@ -120,7 +120,7 @@ void main() {
         );
         await tester.tap(find.byKey(const Key('saveWorkloadSettings')));
         await tester.pumpAndSettle();
-        expect(repository.writes.single.limits['ollama'], 12);
+        expect(repository.writes.single.limits['embedding-runtime'], 12);
         expect(repository.writes.single.revision, 1);
         expect(find.text('High priority'), findsNothing);
         expect(tester.takeException(), isNull);

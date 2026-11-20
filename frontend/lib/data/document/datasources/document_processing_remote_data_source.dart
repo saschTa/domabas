@@ -24,13 +24,6 @@ final class DocumentProcessingRemoteDataSource {
         (abort) => _api.getNamespaceDocumentProcessing(abortTrigger: abort),
         cancel,
       );
-  Future<api.OllamaModelContext> modelContext(
-    String model, {
-    Future<void>? cancel,
-  }) => _request(
-    (abort) => _api.getDocumentModelContext(model, abortTrigger: abort),
-    cancel,
-  );
   Future<api.DocumentJobPage> jobs({
     bool activeOnly = false,
     required int limit,
@@ -196,7 +189,6 @@ final class _DocumentProcessingSettingsUpdate
           'lmStudioCompatibility': llm!.lmStudioCompatibility,
         'provider': llm!.provider.toString(),
         'model': llm!.model,
-        if (llm!.contextLength != null) 'contextLength': llm!.contextLength,
         'baseUrl': llm!.baseUrl,
         if (llm!.apiKey != null) 'apiKey': llm!.apiKey,
         'clearApiKey': llm!.clearApiKey,

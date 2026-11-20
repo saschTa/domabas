@@ -437,26 +437,19 @@ class _SettingsExampleState extends State<_SettingsExample> {
           'Load more $noun',
           () => preview('The next bounded page is requested in this example.'),
         );
-  Widget provider({bool extraction = false, bool external = false}) =>
-      GlacierMobileProviderFields(
-        provider:
-            selections['provider'] ??
-            (external ? 'External service' : 'Internal Ollama'),
-        model: controller('Model', external ? 'local-model' : 'qwen3:8b').text,
-        baseUrl: controller('API base URL', 'https://ai.example.com/v1').text,
-        onProviderChanged: (value) =>
-            setState(() => selections['provider'] = value),
-        onModelChanged: (value) => controller('Model').text = value,
-        onBaseUrlChanged: (value) => controller('API base URL').text = value,
-        onKeyChanged: (value) => controller('Replacement API key').text = value,
-        removeKey: choices['removeKey'] ?? false,
-        onRemoveKeyChanged: (value) =>
-            setState(() => choices['removeKey'] = value),
-        extraction: extraction,
-        compatibility: choices['compatibility'] ?? false,
-        onCompatibilityChanged: (value) =>
-            setState(() => choices['compatibility'] = value),
-      );
+  Widget provider({bool extraction = false}) => GlacierMobileProviderFields(
+    model: controller('Model', 'my-model').text,
+    baseUrl: controller('API base URL', 'https://ai.example.com/v1').text,
+    onModelChanged: (value) => controller('Model').text = value,
+    onBaseUrlChanged: (value) => controller('API base URL').text = value,
+    onKeyChanged: (value) => controller('Replacement API key').text = value,
+    removeKey: choices['removeKey'] ?? false,
+    onRemoveKeyChanged: (value) => setState(() => choices['removeKey'] = value),
+    extraction: extraction,
+    compatibility: choices['compatibility'] ?? false,
+    onCompatibilityChanged: (value) =>
+        setState(() => choices['compatibility'] = value),
+  );
 
   Widget content() {
     switch (widget.screen) {
@@ -1210,7 +1203,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
                 false,
                 'The model may take longer to reason before replying.',
               ),
-              provider(external: state == 'external'),
+              provider(),
             ], 'Save chat settings'),
           ),
           section(
@@ -1283,7 +1276,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
                   choice('Enable thinking for invoices'),
                   choice('Enable AI property extraction', true),
                   choice('Enable thinking for properties'),
-                  provider(extraction: true, external: true),
+                  provider(extraction: true),
                 ]),
               ),
             ], 'Save processing settings'),
@@ -1506,7 +1499,9 @@ class _SettingsExampleState extends State<_SettingsExample> {
           builder: (context) => mobileCatalogShell(
             context,
             title: title,
-            subtitle: widget.screen == 'workload' ? 'All libraries' : 'Personal library',
+            subtitle: widget.screen == 'workload'
+                ? 'All libraries'
+                : 'Personal library',
             selectedId: 'more',
             showNavigation: widget.screen != 'signin',
             showLibrary: widget.screen == 'more',

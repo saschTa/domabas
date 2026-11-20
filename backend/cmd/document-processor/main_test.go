@@ -20,18 +20,18 @@ func TestListenAddress(t *testing.T) {
 	}
 }
 
-func TestOllamaQueueCapacity(t *testing.T) {
+func TestEmbeddingQueueCapacity(t *testing.T) {
 	for _, scenario := range []struct {
 		value string
 		want  int
 	}{{"", 128}, {"1", 1}, {"3", 3}, {"128", 128}, {"512", 512}} {
-		actual, err := ollamaQueueCapacity(scenario.value)
+		actual, err := embeddingQueueCapacity(scenario.value)
 		if err != nil || actual != scenario.want {
 			t.Errorf("capacity %q: got %d, %v; want %d", scenario.value, actual, err, scenario.want)
 		}
 	}
 	for _, value := range []string{"0", "-1", "auto", "1.5", "128 ", "99999999999999999999999999"} {
-		if _, err := ollamaQueueCapacity(value); err == nil {
+		if _, err := embeddingQueueCapacity(value); err == nil {
 			t.Errorf("accepted invalid queue capacity %q", value)
 		}
 	}

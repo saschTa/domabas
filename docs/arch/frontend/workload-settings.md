@@ -5,7 +5,7 @@ The screen reads the shared scheduler API through a domain repository and Cubit.
 It shows each resource's editable active-job limit, supported maximum and current
 reserved usage. The active view fetches a baseline, then refreshes on authorized workload WebSocket hints. Ready and resync repair gaps after reconnect. During a disconnect, manual refresh remains available. Select a pipeline to see the slots it holds on each resource alongside the total in use across the installation. A wide view connects the selected pipeline on the left to the resources on the right. Phone widths and large text use a vertical layout.
 
-Worker capacity is measured in admitted background jobs. Ollama explains the
+Worker capacity is measured in admitted background jobs. The embedding resource shows the
 half-queue ceiling and external providers use safe origin labels. Starting and
 draining jobs remain counted. Saving a smaller limit lets running jobs finish;
 new work waits. Unsaved edits are preserved through validation or save failures,

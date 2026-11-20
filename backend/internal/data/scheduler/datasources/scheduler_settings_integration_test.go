@@ -44,7 +44,7 @@ func TestSchedulerSettingsAuthorityRevisionAndLimits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	source := NewSchedulerDataSource(database.Database(), 16, "http://ollama.test:11434")
+	source := NewSchedulerDataSource(database.Database(), 16)
 	if err = source.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -60,10 +60,10 @@ func TestSchedulerSettingsAuthorityRevisionAndLimits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if settings.OllamaQueueSize != 16 || len(settings.Pipelines) != 8 || len(settings.Resources) != 15 {
+	if settings.EmbeddingQueueSize != 16 || len(settings.Pipelines) != 8 || len(settings.Resources) != 15 {
 		t.Fatalf("settings %+v", settings)
 	}
-	update := m.SchedulerSettingsUpdate{ExpectedRevision: settings.Revision, Resources: []m.SchedulerResourceUpdate{{ID: "worker", Limit: 12}, {ID: "ollama", Limit: 8}}}
+	update := m.SchedulerSettingsUpdate{ExpectedRevision: settings.Revision, Resources: []m.SchedulerResourceUpdate{{ID: "worker", Limit: 12}, {ID: "embedding-runtime", Limit: 8}}}
 	saved, err := service.UpdateSettings(t.Context(), actor, update)
 	if err != nil || saved.Revision != settings.Revision+1 {
 		t.Fatal(saved, err)
@@ -72,7 +72,7 @@ func TestSchedulerSettingsAuthorityRevisionAndLimits(t *testing.T) {
 		t.Fatalf("stale revision: %v", err)
 	}
 	update.ExpectedRevision = saved.Revision
-	update.Resources = []m.SchedulerResourceUpdate{{ID: "worker", Limit: 1}, {ID: "ollama", Limit: 9}}
+	update.Resources = []m.SchedulerResourceUpdate{{ID: "worker", Limit: 1}, {ID: "embedding-runtime", Limit: 9}}
 	var invalid m.SchedulerValidationError
 	if _, err = service.UpdateSettings(t.Context(), actor, update); !errors.As(err, &invalid) {
 		t.Fatalf("queue overflow: %v", err)

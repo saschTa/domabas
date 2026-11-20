@@ -52,14 +52,14 @@ Future<void> revealWorkspacePageContent(
         bounds != null &&
         bounds == previousTarget &&
         viewport == previousViewport;
-    final clearOfFeedback =
+    final fullyVisible =
         bounds != null &&
         bounds.left >= viewport.left &&
         bounds.right <= viewport.right &&
         bounds.top >= viewport.top &&
-        bounds.bottom <= viewport.bottom - 80;
+        bounds.bottom <= viewport.bottom;
     if (target.hitTestable().evaluate().isNotEmpty &&
-        (!center || delta.abs() <= 24 || (settled && clearOfFeedback))) {
+        (!center || delta.abs() <= 24 || (settled && fullyVisible))) {
       return;
     }
     previousTarget = bounds;

@@ -51,21 +51,20 @@ describe("release deployment", () => {
   test("pins the TrueNAS variants while retaining editable settings and device selection", async () => {
     const published = images("v0.0.1");
     const manifests = await trueNASReleaseAssets(published);
-    expect(manifests.map(asset => asset.name)).toEqual(["compose.cpu.yaml", "compose.cuda.yaml", "compose.rocm.yaml"]);
+    expect(manifests.map(asset => asset.name)).toEqual(["compose.cpu.yaml", "compose.vulkan.yaml"]);
     for (const asset of manifests) {
       const yaml = await asset.content.text();
       expect(yaml).toContain("&dataset-path");
       expect(yaml).not.toMatch(/native-local|temporal/i);
       const { services } = Bun.YAML.parse(yaml) as { services: Record<string, { image: string; gpus?: string; devices?: string[]; ports?: unknown[] }> };
-      expect(Object.keys(services).sort()).toEqual(["backend", "database-init", "document-processor", "ollama", "postgres", "storage-init", "web"]);
+      expect(Object.keys(services).sort()).toEqual(["backend", "database-init", "document-processor", "embeddings", "model-init", "postgres", "storage-init", "web"]);
       for (const image of published) {
-        for (const name of image.name === "init" ? ["storage-init", "database-init"] : [image.name]) {
+        for (const name of image.name === "init" ? ["storage-init", "database-init", "model-init"] : [image.name]) {
           expect(services[name]!.image).toBe(image.reference);
         }
       }
       expect(Object.keys(services).filter(name => services[name]!.ports)).toEqual(["web"]);
-      expect(services.ollama!.gpus).toBe(asset.name === "compose.cuda.yaml" ? "all" : undefined);
-      expect(services.ollama!.devices).toEqual(asset.name === "compose.rocm.yaml" ? ["/dev/kfd:/dev/kfd", "/dev/dri:/dev/dri"] : undefined);
+      expect(services.embeddings!.devices).toEqual(asset.name === "compose.vulkan.yaml" ? ["/dev/dri/renderD128:/dev/dri/renderD128"] : undefined);
     }
   });
   test("fails for incomplete images and unrecognized builds", () => {
@@ -225,7 +224,7 @@ describe("GitHub publication and recovery", () => {
     expect(body.body).toContain("android-preview.apk");
     expect(body.body).toContain("macos-universal-unsigned.dmg");
     expect(body.body).toContain("uninstalling");
-    for (const variant of ["cpu", "cuda", "rocm"]) {
+    for (const variant of ["cpu", "vulkan"]) {
       const name = `compose.${variant}.yaml`;
       expect(fake.assets.some(asset => asset.name === name)).toBe(true);
       expect(body.body).toContain(`/releases/download/v0.0.1/${name}`);

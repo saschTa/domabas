@@ -16,7 +16,7 @@ as compiler/browser headroom on runners that start the complete stack.
 | Backend unit + structure | `task test:backend` | Domain/application behavior, HTTP/config behavior, and import boundaries; race detector enabled |
 | Backend integration | `task test:integration` | Real PostgreSQL migrations and repository persistence in isolated schemas |
 | Native worker integration | `task test:jobs` | Real queue delivery, repository activity and completion after worker restart |
-| Live language model | `LLM_OLLAMA_URL=http://127.0.0.1:11435 task test:llm` | Concurrent real Qwen property extraction and embeddings, plus invoice tax-currency extraction |
+| Live language model | `task test:llm` with `LM_STUDIO_BASE_URL` and `LM_STUDIO_MODEL` | External LM Studio generation using synthetic documents and conversations |
 | Backend E2E | `task test:api-e2e` | Compiled server subprocess with its worker, public HTTP responses and PostgreSQL persistence |
 | Frontend unit + structure + integration | `task test:frontend` | View model/domain behavior, widget interaction, import boundaries, and generated HTTP client/repository against a real local HTTP server |
 | Focused browser tests | `task test:browser` | All realtime, scanner, document and upload browser files in one Chrome invocation |
@@ -444,79 +444,23 @@ an installed browser instead of the pinned artifact; report that distinction.
 
 ## AI chat checks
 
-AI chat is covered by the same unit, PostgreSQL, native worker, compiled API and browser
-commands. The browser model fixture accepts `chat-fixture-model` and exercises
-native search/read callbacks against actual document storage. Its tests need no
-paid provider account or model download. Chat tests own disposable schemas. Full API integration requires PostgreSQL and a running document processor. `task test:llm` also includes the optional
-synthetic Qwen chat protocol check; it requires `LLM_OLLAMA_URL`.
+Unit, PostgreSQL, worker, compiled API and browser tests cover chat state and document tools. The browser fixture implements OpenAI-compatible tool calls for a synthetic model. Application integration uses disposable databases and the document processor.
 
 ## Property extraction checks
 
-Invoice adapter tests verify that classification and extraction send the accepted
-invoice thinking preference, use temperature 0.2, preserve configured context and log the original
-prompt and final content. Extraction coverage includes the 50,000-token request
-and JSON responses above the former 256 KiB transport cap. Schema and source
-evidence validation remain in place.
-Provider fixtures verify explicit `think` booleans for native Ollama and
-`reasoning_effort` none/medium for external APIs, including LM Studio JSON mode.
-Thinking defaults off with existing generation budgets; enabled requests add a
-bounded 4,096-token allowance. SQL/Go fingerprints, independent settings, omitted
-updates, restart persistence and accepted-turn snapshots are covered by unit and
-isolated database tests. UI tests cover save/reset, provider changes and narrow
-layouts with enlarged text. API/browser scenarios exercise saved flags through
-real adapters; these fixtures do not establish live model compatibility. The comparison command defaults
-to Qwen 4B with thinking off; `--compare-thinking` explicitly exercises both modes
-through its test proxy using the same generation budgets.
+Deterministic provider fixtures exercise property and invoice extraction with ordinary JSON object output and LM Studio schema output. External requests carry the selected reasoning effort. Both switches default off. PostgreSQL tests cover saved settings, credentials and retained snapshots. The browser harness supplies `LLM_FIXTURE_URL` and `LLM_FIXTURE_KEY` for test-only inference.
 
-Default-model tests verify fresh Qwen document/chat settings, preservation of
-historical document snapshots and unchanged chat choices during upgrades.
-The database migration test also runs the migration twice and checks that
-configured context and update timestamps survive. API and Flutter tests cover
-the same new-install defaults. Live property, invoice and chat tests use
-`qwen3.5:4b`, including the legacy combined invoice path. These synthetic cases
-exercise the default model without promising accuracy for every real document.
+Real-processor suites require a verified cached Nomic GGUF. Prepare it explicitly once with `docker compose run --build --rm model-init`. Disposable Compose and full CI projects use the existing external `domabas_embedding_models` volume. Set `TEST_EMBEDDING_MODEL_VOLUME` for a different prepared volume. Tests refuse to download missing GGUF weights. A normal installation downloads them during initial provisioning.
 
-Issue 27 is covered by the normal unit, PostgreSQL integration, API E2E and
-browser E2E tasks. The browser harness starts an authenticated local
-OpenAI-compatible fixture and supplies `LLM_FIXTURE_URL` / `LLM_FIXTURE_KEY`
-to Flutter. Provider fixtures are test-only; production uses configured services.
-No external API account, paid inference or Qwen download is required for these
-suites. Real OCR, PostgreSQL and generated API transport are used.
-The optional `task test:llm` requires an explicit `LLM_OLLAMA_URL`, a ready Ollama
-runtime and the normal embedding model initialized by `task infra:up`. It pulls
-Qwen if absent and processes four synthetic invoices while requesting embeddings
-from the same runtime. It verifies populated properties and usable embeddings,
-without reading or modifying library documents. Missing configuration fails
-clearly. The invoice adapter's live tests also verify a synthetic invoice with
-multiple VAT rates in one currency and an invoice with an explicit separate VAT
-accounting currency. Test packages run sequentially so these additional model
-requests do not compete with the concurrent property-extraction test's deadline.
-This additional live-model suite is separate from `task test:all` because
-it needs the Qwen download and additional inference resources.
+For optional live generation, set `LM_STUDIO_BASE_URL` to the supplied OpenAI-compatible API base (including `/v1`), `LM_STUDIO_MODEL` to its loaded model and `LM_STUDIO_API_KEY` if authentication is enabled. Run `task test:llm`. Configure the model and context on the provider. The synthetic comparison harness accepts `task evaluate:ai -- --endpoint=BASE_URL --model=MODEL`, with optional `--compare-thinking`.
 
-The default Ollama container permits up to 8 GiB and two resident models. Allow
-that memory alongside PostgreSQL and the 4 GiB processor. CUDA/ROCm
-builds need matching hardware and drivers and are separate from the CPU baseline.
-
-AI chat tool-budget regressions include two uploaded PDFs (text and scanned
-pages), paginated tool discovery, thirty persisted calls followed by a final
-answer, private conversation paging and deletion during inference. The browser
-scenario uploads a two-page PDF, follows older conversation history, refreshes
-loaded pages and confirms deletion through the UI.
-
-For a separate live Qwen check with actual uploaded PDFs, export
-`TEST_DATABASE_URL`, `DOCUMENT_PROCESSOR_URL` and
-`LLM_OLLAMA_URL`, then run from `backend`:
+For a live chat check with ingested PDF examples, provide the same LM Studio configuration, the test database and real ingestion services. From `backend`, run:
 
 ```sh
 go test -race -count=1 -tags=e2e,llm_live -run '^TestAIChatLivePDFDiscoveryAndEvidence$' -timeout=15m -v ./tests/e2e
 ```
 
-This optional test creates a disposable schema and storage,
-uploads two synthetic bills, and checks discovery, both document reads, trusted
-source IDs and the expected amounts. It logs only synthetic answers and tool
-names, offsets and search terms. It requires the installed `qwen3.5:4b` model and real ingestion
-services; it is distinct from the deterministic provider fixtures in the baseline.
+The test uses disposable storage and a disposable schema.
 
 `TestAIChatLiveExampleDocuments` additionally uploads two dated example employment
 contracts and tests a greeting, a German question about the latest salary, and a

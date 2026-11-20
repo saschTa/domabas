@@ -325,8 +325,7 @@ void main() {
         ..setActive(true);
       addTearDown(cubit.close);
       await mount(tester, ChatSettingsScreen(cubit: cubit));
-      expect(find.byKey(const Key('chatBaseUrl')), findsNothing);
-      await tester.tap(find.byKey(const Key('chatProviderOpenAI')));
+      expect(find.byKey(const Key('chatBaseUrl')), findsOneWidget);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('chatBaseUrl')),
@@ -379,10 +378,9 @@ void main() {
     expect(tester.takeException(), isNull);
     await revealWorkspaceContent(
       tester,
-      find.byKey(const Key('chatProviderOpenAI')),
+      find.byKey(const Key('chatBaseUrl')),
       scrollable: find.byKey(const Key('chatSettingsScroll')),
     );
-    await tester.tap(find.byKey(const Key('chatProviderOpenAI')));
     await tester.pumpAndSettle();
     await revealWorkspaceContent(
       tester,

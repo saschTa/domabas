@@ -4,6 +4,7 @@ import 'package:domabas/app/http_client.dart';
 import 'package:domabas/app/session_client.dart';
 import 'package:domabas/domain/invoice/models/invoice_search.dart';
 import 'package:domabas/presentation/invoice/views/invoices_screen.dart';
+import 'package:domabas/presentation/invoice/widgets/invoice_details_dialog.dart';
 import 'package:domabas_api/api.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -301,7 +302,15 @@ Future<void> exerciseInvoiceWorkflow(
     await tester.pumpAndSettle();
     await tester.tap(details);
     await tester.pumpAndSettle();
-    expect(find.textContaining('E-invoice · CII.'), findsOneWidget);
+    final source = find.descendant(
+      of: find.byType(InvoiceDetailsDialog),
+      matching: find.textContaining('E-invoice · CII'),
+    );
+    await _wait(
+      tester,
+      () => source.evaluate().length == 1,
+      'CII details loaded',
+    );
     expect(find.text('Invoice INV-2026-001'), findsWidgets);
     expect(find.text('119.00 EUR'), findsWidgets);
     final line = find.text('Printer paper');

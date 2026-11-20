@@ -64,11 +64,10 @@ the original replies unchanged. Runtime loop decisions read `outcome_code`,
 Fresh authorization checks source records before reusing a reply. Chat provider
 settings are copied as typed turn fields, not serialized configuration payloads.
 
-Model context requests use typed `context_length` columns in chat settings and
+Historical model context requests use typed `context_length` columns in chat settings and
 accepted turns, and `llm_context_length` in active document processing settings.
 Document jobs copy the requested value into their existing immutable
 configuration snapshot. Historical snapshots are preserved; missing context
-continues to identify the original 16,384-token request. Current configuration
-adoption creates a new revision instead of rewriting accepted history.
+continues to identify the original 16,384-token request. External providers manage their context windows. The historical values remain available for snapshot verification.
 
 Scheduler settings, waiters, grants and requirements use typed columns and child tables. Document provider requirements are projected from immutable job/configuration snapshots when they are written and during the one-time retained-ownership migration; scheduler reads do not query JSON. See [resource scheduling](resource-scheduler.md).

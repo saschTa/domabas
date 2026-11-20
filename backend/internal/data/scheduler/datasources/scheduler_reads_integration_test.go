@@ -98,7 +98,7 @@ func TestSchedulerSettingsProjectsNewProviderWithoutWrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.exec(`UPDATE chat_configuration SET provider='openai',base_url='https://PROVIDER.example.test:443/v1'`)
+	f.exec(`UPDATE chat_configuration SET enabled=true,provider='openai',base_url='https://PROVIDER.example.test:443/v1'`)
 	f.exec(`UPDATE document_processing_configuration SET scheduler_provider='openai',scheduler_base_url='https://provider.example.test/other'`)
 	id := f.source.ResourceID("https://provider.example.test")
 	projected, err := f.service.Settings(t.Context(), actor)
@@ -135,13 +135,13 @@ func TestSchedulerSettingsProjectsNewProviderWithoutWrites(t *testing.T) {
 func TestSchedulerSettingsRejectsVanishedProjectionAndCapacityOverflow(t *testing.T) {
 	f := newSchedulerAdmissionFixture(t)
 	actor := schedulerSettingsActor(t, f)
-	f.exec(`UPDATE chat_configuration SET provider='openai',base_url='https://temporary.example.test/v1'`)
+	f.exec(`UPDATE chat_configuration SET enabled=true,provider='openai',base_url='https://temporary.example.test/v1'`)
 	projected, err := f.service.Settings(t.Context(), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
 	id := f.source.ResourceID("https://temporary.example.test")
-	f.exec(`UPDATE chat_configuration SET provider='ollama',base_url=''`)
+	f.exec(`UPDATE chat_configuration SET enabled=false,provider='openai',base_url=''`)
 	update := m.SchedulerSettingsUpdate{ExpectedRevision: projected.Revision, Resources: []m.SchedulerResourceUpdate{{ID: id, Limit: 7}}}
 	var invalid m.SchedulerValidationError
 	if _, err := f.service.UpdateSettings(t.Context(), actor, update); !errors.As(err, &invalid) {
@@ -151,7 +151,7 @@ func TestSchedulerSettingsRejectsVanishedProjectionAndCapacityOverflow(t *testin
 		origin := fmt.Sprintf("https://provider-%d.example.test", i)
 		f.exec(`INSERT INTO scheduler_resources(id,label,origin,concurrency_limit) VALUES($1,$2,$2,2)`, f.source.ResourceID(origin), origin)
 	}
-	f.exec(`UPDATE chat_configuration SET provider='openai',base_url='https://temporary.example.test/v1'`)
+	f.exec(`UPDATE chat_configuration SET enabled=true,provider='openai',base_url='https://temporary.example.test/v1'`)
 	if _, err := f.service.UpdateSettings(t.Context(), actor, update); !errors.As(err, &invalid) {
 		t.Fatalf("resource capacity exceeded: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestSchedulerSettingsExcludesOnlyKnownClosedExecutionsWithoutReconciling(t 
 					f.exec(`INSERT INTO paperless_runs(id,account_id,owner_id,credential_revision,server_url,request_hash,task_queue,state,execution_closed) VALUES($1,$2,$3,1,'https://paperless.example.test','test','test','succeeded',$4)`, id, actor.AccountID, actor.UserID, closed)
 				case "chat":
 					f.exec(`INSERT INTO chat_conversations(id,account_id,owner_id,request_id) VALUES($1,$2,$3,$1)`, id, actor.AccountID, actor.UserID)
-					f.exec(`INSERT INTO chat_turns(id,conversation_id,account_id,owner_id,request_id,credential_revision,content_hash,configuration_revision,provider,model,base_url,internal_runtime,workflow_id,task_queue,status,execution_closed) VALUES($1,$1,$2,$3,$1,1,'test',1,'ollama','test','',true,$4,'test','completed',$5)`, id, actor.AccountID, actor.UserID, workflow, closed)
+					f.exec(`INSERT INTO chat_turns(id,conversation_id,account_id,owner_id,request_id,credential_revision,content_hash,configuration_revision,provider,model,base_url,internal_runtime,workflow_id,task_queue,status,execution_closed) VALUES($1,$1,$2,$3,$1,1,'test',1,'openai','test','https://provider.test/v1',false,$4,'test','completed',$5)`, id, actor.AccountID, actor.UserID, workflow, closed)
 				}
 			}
 			f.exec(`INSERT INTO scheduler_requests(workflow_id,pipeline,state) VALUES($1,$2,'active')`, workflow, pipeline)

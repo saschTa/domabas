@@ -13,8 +13,8 @@ import '../support/fake_processing_repository.dart';
 const _scheduling = DocumentProcessingScheduling(
   ingestionConcurrency: 5,
   aiConcurrency: 2,
-  ollamaQueueSize: 11,
-  ingestionConcurrencyMode: 'ollama_half_queue',
+  embeddingQueueSize: 11,
+  ingestionConcurrencyMode: 'embedding_half_queue',
   aiConcurrencyMode: 'fixed',
   providerStepRetries: 4,
   priorityPolicy: 'ingestion_first',
@@ -51,7 +51,7 @@ void main() {
         );
         expect(find.text('Shared resource limits'), findsOneWidget);
         expect(find.textContaining('Parallel jobs:'), findsNothing);
-        expect(find.text('Ollama queue: 11 requests'), findsNothing);
+        expect(find.text('embedding runtime queue: 11 requests'), findsNothing);
         final details = find.text('Resource requirements');
         final detailSemantics = tester.getSemantics(details);
         expect(detailSemantics.label, 'Resource requirements');
@@ -62,7 +62,7 @@ void main() {
         await tester.ensureVisible(details);
         await tester.tap(details);
         await tester.pumpAndSettle();
-        expect(find.text('Ollama queue: 11 requests'), findsNothing);
+        expect(find.text('embedding runtime queue: 11 requests'), findsNothing);
         expect(
           find.textContaining('up to 4 times after the first request'),
           findsOneWidget,

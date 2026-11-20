@@ -23,8 +23,8 @@ void main() {
           final chatRepository = FakeChatRepository()
             ..saved = const ChatConfiguration(
               enabled: false,
-              provider: 'ollama',
-              model: 'qwen3.5:4b',
+              provider: 'openai',
+              model: '',
               revision: 1,
             );
           final documentRepository = FakeProcessingRepository();
@@ -99,7 +99,6 @@ void main() {
             expect(documentCubit.state.llm.invoiceThinkingEnabled, isTrue);
             expect(documentCubit.state.llm.propertyThinkingEnabled, isFalse);
           }
-          await tap(chat ? 'chatProviderOpenAI' : 'llmProviderOpenAI');
           for (final key in keys) {
             await reveal(key);
             expect(
@@ -107,7 +106,6 @@ void main() {
               key == keys.first,
             );
           }
-          await tap(chat ? 'chatProviderOllama' : 'llmProviderOllama');
           await tap(chat ? 'saveChatSettings' : 'saveLLMSettings');
           expect(
             chat

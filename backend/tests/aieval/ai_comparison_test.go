@@ -3,17 +3,12 @@
 package aieval_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,70 +24,14 @@ import (
 
 func TestAIComparison(t *testing.T) {
 	endpoint, model, mode := os.Getenv("AI_EVAL_ENDPOINT"), os.Getenv("AI_EVAL_MODEL"), os.Getenv("AI_EVAL_THINKING")
-	contextLength, err := strconv.Atoi(os.Getenv("AI_EVAL_CONTEXT"))
-	if err != nil || endpoint == "" || model == "" || (mode != "on" && mode != "off") {
-		t.Fatal("Use task evaluate:ai with explicit endpoints and model")
+	if endpoint == "" || model == "" || (mode != "on" && mode != "off") {
+		t.Fatal("Use task evaluate:ai with an explicit endpoint and model")
 	}
-	client := &http.Client{Timeout: 3 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	defer client.CloseIdleConnections()
-	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/show" && r.URL.Path != "/api/chat" {
-			http.Error(w, "Evaluation never pulls models", 400)
-			return
-		}
-		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
-		if err != nil {
-			w.WriteHeader(502)
-			return
-		}
-		if r.URL.Path == "/api/chat" {
-			var value map[string]any
-			if json.Unmarshal(body, &value) != nil {
-				w.WriteHeader(400)
-				return
-			}
-			value["think"] = mode == "on"
-			body, _ = json.Marshal(value)
-		}
-		request, err := http.NewRequestWithContext(r.Context(), http.MethodPost, endpoint+r.URL.Path, bytes.NewReader(body))
-		if err != nil {
-			w.WriteHeader(502)
-			return
-		}
-		request.Header.Set("Content-Type", "application/json")
-		response, err := client.Do(request)
-		if err != nil {
-			w.WriteHeader(502)
-			return
-		}
-		defer response.Body.Close()
-		body, err = io.ReadAll(io.LimitReader(response.Body, 2<<20))
-		if err != nil {
-			w.WriteHeader(502)
-			return
-		}
-		if mode == "off" && r.URL.Path == "/api/show" && response.StatusCode == 200 {
-			var value map[string]any
-			if json.Unmarshal(body, &value) != nil {
-				w.WriteHeader(502)
-				return
-			}
-			value["thinking"] = map[string]any{"values": []bool{false}, "default": false}
-			body, _ = json.Marshal(value)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(response.StatusCode)
-		_, _ = w.Write(body)
-	}))
-	defer proxy.Close()
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	remote, err := llm.NewDocumentPropertyRemoteDataSource(proxy.URL, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	key := os.Getenv("LM_STUDIO_API_KEY")
+	remote := llm.NewDocumentPropertyRemoteDataSource(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	defer remote.Close()
 	classifier := datasources.NewInvoiceClassifierDataSource(remote)
-	config := document.DocumentLLMConfiguration{Provider: "ollama", Model: model, ContextLength: contextLength}
+	config := document.DocumentLLMConfiguration{Provider: "openai", BaseURL: endpoint, Model: model, LMStudioCompatibility: true, InvoiceThinkingEnabled: mode == "on"}
 	invoiceText := "Invoice No. EVAL-2026-001\nSeller: Example Supplies Ltd.\nBuyer: Sample Buyer Ltd.\nCurrency: EUR\nNet Total: 100.00 EUR\nTax Total: 19.00 EUR\nGrand Total: 119.00 EUR\nAmount due: 119.00 EUR"
 	for _, tc := range []struct{ name, text, decision string }{
 		{"invoice", invoiceText, "invoice"},
@@ -104,7 +43,7 @@ func TestAIComparison(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 			defer cancel()
 			start := time.Now()
-			value, err := classifier.Classify(ctx, config, "", invoice.SelectInvoiceClassificationInput(tc.text, 1))
+			value, err := classifier.Classify(ctx, config, key, invoice.SelectInvoiceClassificationInput(tc.text, 1))
 			recordComparison(t, tc.name, "classification", start, err, value.Decision == tc.decision)
 		})
 	}
@@ -112,7 +51,7 @@ func TestAIComparison(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
 		defer cancel()
 		start := time.Now()
-		value, err := datasources.NewInvoiceExtractorDataSource(remote).InferClassified(ctx, config, "", invoiceText)
+		value, err := datasources.NewInvoiceExtractorDataSource(remote).InferClassified(ctx, config, key, invoiceText)
 		pass := value != nil && value.Number == "EVAL-2026-001" && value.Currency == "EUR" && value.TotalGross == "119.00"
 		recordComparison(t, "basic invoice", "extraction", start, err, pass)
 	})
@@ -120,12 +59,9 @@ func TestAIComparison(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 6*time.Minute)
 		defer cancel()
 		start := time.Now()
-		provider, err := chatprovider.NewChatProviderRemoteDataSource(proxy.URL, logger)
-		if err != nil {
-			t.Fatal(err)
-		}
+		provider := chatprovider.NewChatProviderRemoteDataSource()
 		defer provider.Close()
-		pass, err := compareChat(ctx, provider, model, contextLength)
+		pass, err := compareChat(ctx, provider, model, endpoint, key, mode == "on")
 		recordComparison(t, "search read answer", "chat", start, err, pass)
 	})
 }
@@ -151,8 +87,8 @@ func recordComparison(t *testing.T, name, task string, start time.Time, err erro
 	}
 }
 
-func compareChat(ctx context.Context, provider *chatprovider.ChatProviderRemoteDataSource, model string, contextLength int) (bool, error) {
-	input := chat.ChatInferenceInput{Configuration: chat.ChatConfiguration{Provider: "ollama", Model: model, ContextLength: contextLength}, Messages: []chat.ChatProviderMessage{{Role: "user", Content: "Search my Northwind electricity bill and read the document. What amount in EUR is due? Do not guess."}}}
+func compareChat(ctx context.Context, provider *chatprovider.ChatProviderRemoteDataSource, model, endpoint, key string, thinking bool) (bool, error) {
+	input := chat.ChatInferenceInput{APIKey: key, Configuration: chat.ChatConfiguration{Provider: "openai", Model: model, BaseURL: endpoint, ThinkingEnabled: thinking}, Messages: []chat.ChatProviderMessage{{Role: "user", Content: "Search my Northwind electricity bill and read the document. What amount in EUR is due? Do not guess."}}}
 	searched, read := false, false
 	for round := 0; round <= chat.ChatMaxToolCalls; round++ {
 		action, err := provider.Generate(ctx, input)
@@ -187,7 +123,7 @@ func compareChat(ctx context.Context, provider *chatprovider.ChatProviderRemoteD
 			args["documentId"] = action.DocumentID
 		}
 		encoded, _ := json.Marshal(args)
-		input.Messages = append(input.Messages, chat.ChatProviderMessage{Role: "assistant", ToolCall: &chat.ChatToolCall{ID: "evaluation-tool", Name: action.Kind, Arguments: string(encoded)}}, chat.ChatProviderMessage{Role: "tool", Content: result, ToolCallID: "evaluation-tool"})
+		input.Messages = append(input.Messages, chat.ChatProviderMessage{Role: "assistant", ToolCall: &chat.ChatToolCall{ID: action.ToolCallID, Name: action.Kind, Arguments: string(encoded)}}, chat.ChatProviderMessage{Role: "tool", Content: result, ToolCallID: action.ToolCallID})
 		input.ToolsUsed++
 	}
 	return false, nil

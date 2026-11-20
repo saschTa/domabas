@@ -41,7 +41,6 @@ func TestDocumentAISettingsCanChangeDuringActiveInference(t *testing.T) {
 	}
 	type inference struct {
 		model   string
-		context int
 		invoice bool
 	}
 	entered := make(chan inference, 32)
@@ -50,10 +49,7 @@ func TestDocumentAISettingsCanChangeDuringActiveInference(t *testing.T) {
 	release := func() { releaseOnce.Do(func() { close(resume) }) }
 	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
-			Model   string `json:"model"`
-			Options struct {
-				Context int `json:"num_ctx"`
-			} `json:"options"`
+			Model    string `json:"model"`
 			Messages []struct {
 				Content string `json:"content"`
 			} `json:"messages"`
@@ -63,10 +59,8 @@ func TestDocumentAISettingsCanChangeDuringActiveInference(t *testing.T) {
 			return
 		}
 		switch r.URL.Path {
-		case "/api/show":
-			_, _ = w.Write([]byte(`{"model_info":{"general.architecture":"qwen35","qwen35.context_length":65536}}`))
-		case "/api/chat":
-			call := inference{model: request.Model, context: request.Options.Context}
+		case "/v1/chat/completions":
+			call := inference{model: request.Model}
 			for _, message := range request.Messages {
 				call.invoice = call.invoice || strings.Contains(message.Content, `"required":["reason"]`)
 			}
@@ -84,23 +78,22 @@ func TestDocumentAISettingsCanChangeDuringActiveInference(t *testing.T) {
 			if call.invoice {
 				content = `{"reason":"other_document"}`
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]string{"role": "assistant", "content": content}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": "stop", "message": map[string]string{"role": "assistant", "content": content}}}})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
 	defer func() { release(); provider.Close() }()
-	env = append(env, "LLM_OLLAMA_URL="+provider.URL)
 	base, stop := startServer(t, binary, databaseURL, env)
 	defer func() { release(); stop() }()
 	api := &ingestionAPI{t: t, baseURL: base, client: &http.Client{Timeout: 10 * time.Second}, spec: spec}
 	admin := api.request("", "POST", "/api/v1/auth/register", `{"accountName":"Active settings","email":"active-settings@example.test","password":"Active settings password 2026!"}`, 201, "AuthSession")["token"].(string)
 	const path = "/api/v1/system/document-processing"
 	configuration := api.request(admin, "GET", path, "", 200, "DocumentProcessingConfiguration")
-	body := func(revision any, model string, context int, invoice bool) string {
-		return fmt.Sprintf(`{"expectedRevision":%.0f,"language":%q,"segmentation":%q,"llm":{"enabled":true,"invoiceEnabled":%t,"provider":"ollama","model":%q,"baseUrl":"","contextLength":%d}}`, revision, configuration["language"], configuration["segmentation"], invoice, model, context)
+	body := func(revision any, model string, invoice bool) string {
+		return fmt.Sprintf(`{"expectedRevision":%.0f,"language":%q,"segmentation":%q,"llm":{"enabled":true,"invoiceEnabled":%t,"provider":"openai","model":%q,"baseUrl":%q}}`, revision, configuration["language"], configuration["segmentation"], invoice, model, provider.URL+"/v1")
 	}
-	configuration = api.request(admin, "PUT", path, body(configuration["revision"], "settings-original", 16384, true), 200, "DocumentProcessingConfiguration")
+	configuration = api.request(admin, "PUT", path, body(configuration["revision"], "settings-original", true), 200, "DocumentProcessingConfiguration")
 	document := api.upload(admin, "active-settings.pdf", fixtures.PDF(t, fixtures.Page{Text: "An ordinary document for testing active AI settings"}), `{"title":"Active settings document"}`, true, 202)
 	id := document["id"].(string)
 	ingestion := api.waitProcessing(admin, id, "ready")
@@ -119,24 +112,23 @@ func TestDocumentAISettingsCanChangeDuringActiveInference(t *testing.T) {
 			}
 		}
 	}
-	waitInference(inference{"settings-original", 16384, true})
+	waitInference(inference{"settings-original", true})
 	for _, next := range []inference{
-		{"settings-updated", 16384, true},
-		{"settings-updated", 32768, true},
-		{"settings-updated", 32768, false},
-		{"settings-updated", 32768, true},
+		{"settings-updated", true},
+		{"settings-updated", false},
+		{"settings-updated", true},
 	} {
 		previousRevision := configuration["revision"]
-		configuration = api.request(admin, "PUT", path, body(previousRevision, next.model, next.context, next.invoice), 200, "DocumentProcessingConfiguration")
+		configuration = api.request(admin, "PUT", path, body(previousRevision, next.model, next.invoice), 200, "DocumentProcessingConfiguration")
 		if configuration["revision"].(float64) <= previousRevision.(float64) || configuration["automaticBatchId"] != nil {
 			t.Fatal("AI settings did not advance independently of ingestion", configuration)
 		}
 		retained := api.request(admin, "GET", path, "", 200, "DocumentProcessingConfiguration")
 		llm := retained["llm"].(map[string]any)
-		if retained["revision"] != configuration["revision"] || llm["model"] != next.model || llm["contextLength"] != float64(next.context) || llm["invoiceEnabled"] != next.invoice || llm["enabled"] != true {
+		if retained["revision"] != configuration["revision"] || llm["model"] != next.model || llm["invoiceEnabled"] != next.invoice || llm["enabled"] != true {
 			t.Fatal("active AI configuration was not persisted", retained)
 		}
-		api.request(admin, "PUT", path, body(previousRevision, "stale-model", 16384, false), 409, "Error")
+		api.request(admin, "PUT", path, body(previousRevision, "stale-model", false), 409, "Error")
 		processing := api.request(admin, "GET", "/api/v1/documents/"+id+"/processing", "", 200, "DocumentProcessing")
 		if processing["state"] != "ready" || processing["generation"] != ingestion["generation"] {
 			t.Fatal("AI settings reran or blocked searchable ingestion", processing)
@@ -203,11 +195,11 @@ func verifyAISettingsDuringSchedulerTransaction(api *ingestionAPI, admin, databa
 	bounded.client = &http.Client{Timeout: 2 * time.Second}
 	const path = "/api/v1/system/document-processing"
 	for _, enabled := range []bool{true, false} {
-		body := fmt.Sprintf(`{"expectedRevision":%.0f,"language":%q,"segmentation":%q,"llm":{"enabled":%t,"invoiceEnabled":%t,"provider":"ollama","model":"scheduler-settings","baseUrl":"","contextLength":65536}}`, configuration["revision"], configuration["language"], configuration["segmentation"], enabled, enabled)
+		body := fmt.Sprintf(`{"expectedRevision":%.0f,"language":%q,"segmentation":%q,"llm":{"enabled":%t,"invoiceEnabled":%t,"provider":"openai","model":"scheduler-settings","baseUrl":%q}}`, configuration["revision"], configuration["language"], configuration["segmentation"], enabled, enabled, configuration["llm"].(map[string]any)["baseUrl"])
 		configuration = bounded.request(admin, "PUT", path, body, 200, "DocumentProcessingConfiguration")
 		stored := bounded.request(admin, "GET", path, "", 200, "DocumentProcessingConfiguration")
 		llm := stored["llm"].(map[string]any)
-		if stored["revision"] != configuration["revision"] || llm["enabled"] != enabled || llm["invoiceEnabled"] != enabled || llm["model"] != "scheduler-settings" || llm["contextLength"] != float64(65536) {
+		if stored["revision"] != configuration["revision"] || llm["enabled"] != enabled || llm["invoiceEnabled"] != enabled || llm["model"] != "scheduler-settings" {
 			t.Fatal("settings failed to persist during scheduler transaction", stored)
 		}
 	}

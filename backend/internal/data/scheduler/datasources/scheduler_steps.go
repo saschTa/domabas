@@ -14,7 +14,7 @@ import (
 // calls before releasing its leadership session, including during shutdown.
 func (s *SchedulerDataSource) RunStep(ctx context.Context, id, stage string, work func(context.Context) error) error {
 	if stage == "stage:embedding" {
-		return s.RunResources(ctx, id, stage, []string{stage, "ollama"}, work)
+		return s.RunResources(ctx, id, stage, []string{stage, "embedding-runtime"}, work)
 	}
 	return s.RunResources(ctx, id, stage, []string{stage}, work)
 }

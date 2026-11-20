@@ -3,7 +3,7 @@
 ## Start here
 
 Domabas is a document library with a Flutter client, a Go API with embedded
-Go workers, PostgreSQL, a private document processor and Ollama. Read the
+Go workers, PostgreSQL, a private document processor and a private llama.cpp embedding server. Read the
 files below before choosing where a change belongs. The README is for people
 evaluating or hosting the app; this file is the working guide for coding agents.
 

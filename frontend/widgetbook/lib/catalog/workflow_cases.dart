@@ -423,7 +423,7 @@ class _JobsExampleState extends State<_JobsExample> {
             builder: (context) => const GlacierDialog(
               title: 'Resource rules',
               child: Text(
-                'Retrieval and thumbnails need worker capacity. Ingestion also needs Ollama; document AI needs its accepted provider. Waiting does not identify which resource is unavailable unless recorded. An accepted original continues processing after this screen closes.',
+                'Retrieval and thumbnails need worker capacity. Ingestion also needs the embedding runtime; document AI needs its accepted provider. Waiting does not identify which resource is unavailable unless recorded. An accepted original continues processing after this screen closes.',
               ),
             ),
           ),
@@ -603,7 +603,7 @@ class _JobsExampleState extends State<_JobsExample> {
           Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              'Jobs wait for shared worker and provider capacity. Email and Paperless retrievals use workers; document ingestion also requires Ollama. Current visible jobs cannot identify a specific blocked resource.',
+              'Jobs wait for shared worker and provider capacity. Email and Paperless retrievals use workers; document ingestion also requires the embedding runtime. Current visible jobs cannot identify a specific blocked resource.',
             ),
           ),
         ],

@@ -1203,66 +1203,30 @@ final class _GlacierActivityPreviewPainter extends CustomPainter {
 final class GlacierModelConnection extends StatelessWidget {
   const GlacierModelConnection({
     super.key,
-    required this.provider,
-    this.onProviderChanged,
     required this.modelField,
-    required this.contextField,
     required this.credentialField,
     required this.endpointField,
     this.compatibilityControl,
-    this.providerField,
-    this.enabled = true,
   });
-  final String provider;
-  final ValueChanged<String>? onProviderChanged;
-  final Widget modelField, contextField, credentialField, endpointField;
-  final Widget? compatibilityControl, providerField;
-  final bool enabled;
+
+  final Widget modelField, credentialField, endpointField;
+  final Widget? compatibilityControl;
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      GlacierFieldGrid(
-        children: [
-          providerField ??
-              DropdownButtonFormField<String>(
-                initialValue: provider,
-                isExpanded: true,
-                style: Theme.of(context).textTheme.bodyMedium,
-                decoration: const InputDecoration(labelText: 'Provider'),
-                items: const [
-                  DropdownMenuItem(value: 'local', child: Text('Local Ollama')),
-                  DropdownMenuItem(
-                    value: 'external',
-                    child: Text('OpenAI-compatible service'),
-                  ),
-                ],
-                onChanged: enabled && onProviderChanged != null
-                    ? (value) {
-                        if (value != null) onProviderChanged!(value);
-                      }
-                    : null,
-              ),
-          modelField,
-        ],
-      ),
+      GlacierFieldGrid(children: [endpointField, modelField]),
       const SizedBox(height: 20),
-      if (provider == 'external') ...[
-        endpointField,
+      const AppNotice(
+        message: 'Selected document content is sent to your OpenAI-compatible service.',
+        tone: AppTone.warning,
+      ),
+      credentialField,
+      if (compatibilityControl != null) ...[
         const SizedBox(height: 20),
-        const AppNotice(
-          message: 'Selected document content is sent to this provider. Choose a service you trust.',
-          tone: AppTone.warning,
-        ),
-        const SizedBox(height: 20),
-        credentialField,
-        const SizedBox(height: 20),
-        if (compatibilityControl != null) ...[
-          compatibilityControl!,
-          const SizedBox(height: 20),
-        ],
+        compatibilityControl!,
       ],
-      contextField,
     ],
   );
 }

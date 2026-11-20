@@ -148,7 +148,7 @@ func TestInvoiceAISwitchIsIndependentAndPreservedWhenOmitted(t *testing.T) {
 		t.Fatal("fresh AI settings are not off", err)
 	}
 	for _, choices := range [][2]bool{{true, false}, {false, true}, {true, true}, {false, false}} {
-		input := m.DocumentProcessingConfiguration{Language: current.Language, Segmentation: current.Segmentation, ExpectedRevision: &current.Revision, LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: choices[0], InvoiceEnabled: new(choices[1]), Provider: "ollama", Model: "qwen3.5:4b"}}
+		input := m.DocumentProcessingConfiguration{Language: current.Language, Segmentation: current.Segmentation, ExpectedRevision: &current.Revision, LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: choices[0], InvoiceEnabled: new(choices[1]), Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"}}
 		next, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, input)
 		if err != nil || next.Revision != current.Revision+1 || next.LLM.Enabled != choices[0] || next.LLM.InvoiceExtractionEnabled() != choices[1] || next.AutomaticBatchID != "" {
 			t.Fatalf("independent switch update failed: %+v %v", next, err)
@@ -175,7 +175,7 @@ func TestLLMPropertiesPreserveMetadataAndFenceGenerations(t *testing.T) {
 	s := llmSource(t, f)
 	f.resourceCapacity(t, 4)
 	ctx := t.Context()
-	_, err := f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{Language: "eng+deu", Segmentation: "auto", LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, Provider: "ollama", Model: "qwen3.5:4b"}})
+	_, err := f.service.SetProcessingConfiguration(ctx, f.actor, m.DocumentProcessingConfiguration{Language: "eng+deu", Segmentation: "auto", LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: true, Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"}})
 	if err != nil {
 		t.Fatal(err)
 	}

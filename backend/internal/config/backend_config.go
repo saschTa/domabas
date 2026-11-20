@@ -18,23 +18,23 @@ type BackendConfig struct {
 	DocumentAIConcurrency            int
 	DocumentIngestionConcurrencyMode string
 	DocumentAIConcurrencyMode        string
-	OllamaMaxQueue                   int
-	LLMOllamaURL                     string
-	LLMCredentialKey                 string
-	LLMCredentialKeyFile             string
-	PaperlessCredentialKey           string
-	PaperlessCredentialKeyFile       string
-	DatabaseURL                      string
-	HTTPAddress                      string
-	CORSOrigins                      []string
-	DocumentProcessorURL             string
-	DocumentIngestionRoot            string
-	DocumentStorageRoot              string
-	EmailCredentialKeys              string
-	EmailCredentialKeyFile           string
-	EmailActiveKeyID                 string
-	EmailIMAPCAFile                  string
-	EmailIMAPAllowedHosts            []string
+	EmbeddingQueueSize               int
+
+	LLMCredentialKey           string
+	LLMCredentialKeyFile       string
+	PaperlessCredentialKey     string
+	PaperlessCredentialKeyFile string
+	DatabaseURL                string
+	HTTPAddress                string
+	CORSOrigins                []string
+	DocumentProcessorURL       string
+	DocumentIngestionRoot      string
+	DocumentStorageRoot        string
+	EmailCredentialKeys        string
+	EmailCredentialKeyFile     string
+	EmailActiveKeyID           string
+	EmailIMAPCAFile            string
+	EmailIMAPAllowedHosts      []string
 }
 
 func Load() (BackendConfig, error) {
@@ -61,20 +61,20 @@ func Load() (BackendConfig, error) {
 	}
 	config := BackendConfig{DatabaseURL: value("DATABASE_URL", ""), HTTPAddress: value("HTTP_ADDR", "127.0.0.1:8080")}
 	var capacityErr error
-	config.OllamaMaxQueue, capacityErr = strconv.Atoi(value("OLLAMA_MAX_QUEUE", "128"))
-	if capacityErr != nil || config.OllamaMaxQueue < 1 {
-		return BackendConfig{}, errors.New("OLLAMA_MAX_QUEUE must be a positive integer")
+	config.EmbeddingQueueSize, capacityErr = strconv.Atoi(value("EMBEDDING_QUEUE_SIZE", "128"))
+	if capacityErr != nil || config.EmbeddingQueueSize < 2 {
+		return BackendConfig{}, errors.New("EMBEDDING_QUEUE_SIZE must be at least 2")
 	}
-	config.DocumentIngestionConcurrency, config.DocumentIngestionConcurrencyMode, capacityErr = documentConcurrency("DOCUMENT_INGESTION_CONCURRENCY", value("DOCUMENT_INGESTION_CONCURRENCY", "1"), config.OllamaMaxQueue)
+	config.DocumentIngestionConcurrency, config.DocumentIngestionConcurrencyMode, capacityErr = documentConcurrency("DOCUMENT_INGESTION_CONCURRENCY", value("DOCUMENT_INGESTION_CONCURRENCY", "1"), config.EmbeddingQueueSize)
 	if capacityErr != nil {
 		return BackendConfig{}, capacityErr
 	}
-	config.DocumentAIConcurrency, config.DocumentAIConcurrencyMode, capacityErr = documentConcurrency("DOCUMENT_AI_CONCURRENCY", value("DOCUMENT_AI_CONCURRENCY", "1"), config.OllamaMaxQueue)
+	config.DocumentAIConcurrency, config.DocumentAIConcurrencyMode, capacityErr = documentConcurrency("DOCUMENT_AI_CONCURRENCY", value("DOCUMENT_AI_CONCURRENCY", "1"), config.EmbeddingQueueSize)
 	if capacityErr != nil {
 		return BackendConfig{}, capacityErr
 	}
 	config.EmailCredentialKeys = value("EMAIL_CREDENTIAL_KEYS", "")
-	config.LLMOllamaURL = value("LLM_OLLAMA_URL", "http://127.0.0.1:11435")
+
 	config.LLMCredentialKey = value("LLM_CREDENTIAL_KEY", "")
 	config.PaperlessCredentialKey = value("PAPERLESS_CREDENTIAL_KEY", "")
 	config.EmailActiveKeyID = value("EMAIL_CREDENTIAL_ACTIVE_KEY_ID", "")
@@ -142,11 +142,11 @@ func Load() (BackendConfig, error) {
 func documentConcurrency(name, value string, queue int) (int, string, error) {
 	limit := max(1, queue/2)
 	if value == "auto" {
-		return limit, "ollama_half_queue", nil
+		return limit, "embedding_half_queue", nil
 	}
 	capacity, err := strconv.Atoi(value)
 	if err != nil || capacity < 1 || capacity > limit {
-		return 0, "", fmt.Errorf("%s must be auto or an integer between 1 and %d (half OLLAMA_MAX_QUEUE, minimum 1)", name, limit)
+		return 0, "", fmt.Errorf("%s must be auto or an integer between 1 and %d (half EMBEDDING_QUEUE_SIZE, minimum 1)", name, limit)
 	}
 	return capacity, "fixed", nil
 }

@@ -44,13 +44,13 @@ func TestStrictDocumentObjectsPreserveEmptyClearsAndMetadataNormalization(t *tes
 
 func TestInvoiceExtractionSwitchUsesStrictBooleanValidation(t *testing.T) {
 	for _, field := range []string{"", `,"invoiceEnabled":true`, `,"invoiceEnabled":false`} {
-		body := `{"language":"eng+deu","segmentation":"auto","llm":{"enabled":false,"provider":"ollama","model":"qwen3.5:4b","baseUrl":""` + field + `}}`
+		body := `{"language":"eng+deu","segmentation":"auto","llm":{"enabled":false,"provider":"openai","model":"fixture","baseUrl":"https://provider.test/v1"` + field + `}}`
 		if err := ValidateObject([]byte(body), "configuration"); err != nil {
 			t.Fatalf("valid independent invoice switch rejected: %v", err)
 		}
 	}
 	for _, field := range []string{`"invoiceEnabled":null`, `"invoiceEnabled":"true"`, `"invoiceEnabled":true,"invoiceEnabled":false`} {
-		body := `{"enabled":false,"provider":"ollama","model":"qwen3.5:4b","baseUrl":"",` + field + `}`
+		body := `{"enabled":false,"provider":"openai","model":"fixture","baseUrl":"https://provider.test/v1",` + field + `}`
 		if err := ValidateObject([]byte(body), "llm"); err == nil {
 			t.Fatal("invalid invoice switch accepted")
 		}
@@ -103,7 +103,7 @@ func TestOCRJSONPreservesExactUnicodeAndRejectsReplacementDecoding(t *testing.T)
 func TestThinkingSettingsRequireUnambiguousBooleans(t *testing.T) {
 	for _, name := range []string{"propertyThinkingEnabled", "invoiceThinkingEnabled"} {
 		for _, value := range []string{"true", "false", "null", `"true"`, "1", "true,\"" + name + "\":false"} {
-			body := `{"enabled":false,"provider":"ollama","model":"fixture","baseUrl":"","` + name + `":` + value + `}`
+			body := `{"enabled":false,"provider":"openai","model":"fixture","baseUrl":"https://provider.test/v1","` + name + `":` + value + `}`
 			err := ValidateObject([]byte(body), "llm")
 			if (err == nil) != (value == "true" || value == "false") {
 				t.Fatalf("invalid thinking validation %s: %v", body, err)

@@ -6,7 +6,7 @@ contain the Bun TypeScript implementations and their tests.
 | Folder | Purpose | Task entry points |
 | --- | --- | --- |
 | [ci](ci/) | CI suite selection and result gate, local suites, runner setup, Flutter installation and Docker networking | `task ci`, `task ci:select`, `task ci:gate`, `task ci:setup`, `task ci:flutter`, `task ci:database` |
-| [development](development/) | Local app builds, development, Compose, PostgreSQL and native Ollama | `task build:app`, `task build:android`, `task build:ios`, `task build:macos`, `task build:windows`, `task dev`, `task infra:up`, `task compose:up`, `task db:up` |
+| [development](development/) | Local app builds, development, Compose, PostgreSQL and embedding runtime selection | `task build:app`, `task build:android`, `task build:ios`, `task build:macos`, `task build:windows`, `task dev`, `task infra:up`, `task compose:up`, `task db:up` |
 | [diagnostics](diagnostics/) | Memory reports and AI model comparisons | `task diagnose:memory`, `task evaluate:ai` |
 | [generation](generation/) | API clients, database adapters, icons, license inventories and generated-code checks | `task generate`, `task generate:db`, `task generate:icons`, `task generate:licenses` |
 | [release](release/) | Version reservation, native preview packaging, image publication and GitHub releases | `task release:prepare`, `task release:native`, `task release` |

@@ -12,8 +12,8 @@ type SchedulerPipelineRecord struct {
 }
 
 type SchedulerSettingsRecord struct {
-	Revision        int64
-	OllamaQueueSize int
-	Resources       []SchedulerResourceRecord
-	Pipelines       []SchedulerPipelineRecord
+	Revision           int64
+	EmbeddingQueueSize int
+	Resources          []SchedulerResourceRecord
+	Pipelines          []SchedulerPipelineRecord
 }

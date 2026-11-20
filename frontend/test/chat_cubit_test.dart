@@ -14,18 +14,21 @@ Future<void> settle() async {
 }
 
 void main() {
-  test('new chat drafts use Qwen and saved drafts retain their model', () {
-    expect(const ChatConfigurationDraft().model, 'qwen3.5:4b');
-    final saved = ChatConfigurationDraft.saved(
-      const ChatConfiguration(
-        enabled: true,
-        provider: 'ollama',
-        model: 'gemma3:4b',
-        revision: 1,
-      ),
-    );
-    expect(saved.model, 'gemma3:4b');
-  });
+  test(
+    'new chat drafts start unconfigured and saved drafts retain their model',
+    () {
+      expect(const ChatConfigurationDraft().model, isEmpty);
+      final saved = ChatConfigurationDraft.saved(
+        const ChatConfiguration(
+          enabled: true,
+          provider: 'openai',
+          model: 'gemma3:4b',
+          revision: 1,
+        ),
+      );
+      expect(saved.model, 'gemma3:4b');
+    },
+  );
 
   test('uncertain acceptance reuses IDs, retains the draft and blocks duplicate sends', () async {
     final repository = FakeChatRepository()
@@ -168,7 +171,7 @@ void main() {
     expect(cubit.state.canSave, isFalse);
     repository.saved = const ChatConfiguration(
       enabled: true,
-      provider: 'ollama',
+      provider: 'openai',
       model: 'updated',
       revision: 2,
     );
@@ -182,25 +185,6 @@ void main() {
     expect(cubit.state.saved!.revision, 3);
     expect(cubit.state.notice, contains('saved'));
   });
-
-  test(
-    'catalog failure does not erase settings; continuation appends models',
-    () async {
-      final repository = FakeChatRepository()
-        ..modelFailure = const ChatFailure('unavailable');
-      final cubit = ChatSettingsCubit(repository, allowed: true)
-        ..setActive(true);
-      addTearDown(cubit.close);
-      await settle();
-      expect(cubit.state.saved!.model, 'qwen3.5:4b');
-      expect(cubit.state.modelsError, isNotNull);
-      repository.modelFailure = null;
-      await cubit.loadModels();
-      await cubit.loadModels(more: true);
-      expect(cubit.state.models, ['qwen3.5:4b', 'qwen3:8b']);
-      expect(cubit.state.nextModelOffset, isNull);
-    },
-  );
 
   test('forbidden scopes never read and closed reads never emit', () async {
     final repository = FakeChatRepository();

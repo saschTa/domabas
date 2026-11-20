@@ -326,9 +326,8 @@ ingestion succeeds, and personal activity identifies AI attempts independently.
 
 Property extraction settings live under Admin settings → Document processing.
 The existing system processing claim governs the instance-wide form and graph
-edit action. Internal Ollama defaults to `qwen3.5:4b` with extraction off; its model
-downloads when a durable job first needs it. External mode accepts an
-OpenAI-compatible API base URL, model and optional replacement key. The client
+edit action. Property and invoice AI start disabled. Their shared external
+connection accepts an OpenAI-compatible API base URL, model and optional key. The client
 receives only whether a credential is stored. A blank key preserves it at the
 same destination; an explicit removal or changed destination removes it unless
 replaced. Submitted keys clear after confirmed saves. OCR and extraction changes
@@ -338,35 +337,16 @@ Disabling an AI step preserves existing extracted results.
 
 Each extraction step has its own **Enable thinking** switch directly below its
 enable control. Thinking defaults off and remains editable while the step is
-disabled. Both providers show the switches; provider changes and background
-refresh preserve drafts. Save settings persists each choice independently, and
+disabled. Background refresh preserves drafts. Save settings persists each choice independently, and
 Use saved settings restores them. Older API responses without the fields mean
 off. The same controls appear in the pipeline dialog. Supported models may take
 longer when thinking is enabled; the shared LM Studio JSON preference is separate.
 
 External service shows **LM Studio compatibility mode** directly below API base
 URL in the shared model connection. It defaults off and applies to both property
-and invoice extraction. The native switch uses the existing explicit Save settings
+and invoice extraction. The switch uses the existing explicit Save settings
 and Use saved settings actions; changing it marks the form as unsaved. Drafts
-survive background refresh and temporary provider changes. The switch is hidden
-for Ollama, which ignores its retained preference. Older API responses without
-the field are read as off. The same form is used in the pipeline edit dialog.
-
-Internal Ollama has a requested context field shared by property and invoice
-extraction, independent of AI chat. It defaults to 32,768 tokens and accepts whole
-numbers from 1,024 through 1,048,576. Use 32k default updates the draft, while Use
-saved settings restores the saved form. Optional Check model limit uses the
-document administrator endpoint, so no chat claim is required. It displays the
-model maximum and the smaller effective context without reducing the requested
-setting. Inference verifies this limit for each accepted pipeline snapshot.
-Unknown metadata leaves the effective value unknown and does not block saving.
-
-The shared `AppModelContextField` presenter receives values and callbacks from
-the feature. Its Cubit preserves invalid numeric drafts across refreshes,
-cancels obsolete lookups, and separates discovery errors from save errors.
-External mode retains the Ollama setting and explains that the provider manages
-context. An invalid temporary Ollama draft is omitted on an external save so the
-server retains its existing value.
+survive background refresh. The same form is used in the pipeline edit dialog. The external provider manages its context window.
 
 `LLMConfiguration` is an immutable safe read model; `LLMSettingsDraft` contains
 temporary write values and validation. The settings Cubit preserves drafts and

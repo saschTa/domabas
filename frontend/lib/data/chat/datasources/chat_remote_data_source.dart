@@ -32,19 +32,6 @@ final class ChatRemoteDataSource {
     (abort) => _api.updateChatConfiguration(body, abortTrigger: abort),
     cancel,
   );
-  Future<api.ChatModelPage> models(int offset, Future<void>? cancel) =>
-      _request(
-        (abort) =>
-            _api.listChatModels(limit: 20, offset: offset, abortTrigger: abort),
-        cancel,
-      );
-  Future<api.OllamaModelContext> modelContext(
-    String model,
-    Future<void>? cancel,
-  ) => _request(
-    (abort) => _api.getChatModelContext(model, abortTrigger: abort),
-    cancel,
-  );
   Future<api.ChatConversationPage> conversations(
     String? cursor,
     Future<void>? cancel,

@@ -18,6 +18,7 @@ func (s *DocumentIngestionService) configurationChange(ctx context.Context, curr
 			return change, err
 		}
 		next := current.LLM.Defaults()
+		invoiceEnabled := next.InvoiceExtractionEnabled()
 		if update.ClearAPIKey || update.Provider != next.Provider || update.BaseURL != next.BaseURL {
 			next.CredentialID = ""
 		}
@@ -34,11 +35,13 @@ func (s *DocumentIngestionService) configurationChange(ctx context.Context, curr
 		if update.ContextLength != nil {
 			next.ContextLength = *update.ContextLength
 		}
-		invoiceEnabled := next.InvoiceExtractionEnabled()
 		if update.InvoiceEnabled != nil {
 			invoiceEnabled = *update.InvoiceEnabled
 		}
 		next.InvoiceEnabled = &invoiceEnabled
+		if err := next.Validate(); err != nil {
+			return change, err
+		}
 		if update.APIKey != nil {
 			same := false
 			if next.CredentialID != "" {

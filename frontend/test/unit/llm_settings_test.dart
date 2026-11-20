@@ -28,7 +28,7 @@ void main() {
     expect(cubit.state.llm.propertyThinkingEnabled, isFalse);
     expect(cubit.state.llm.invoiceThinkingEnabled, isFalse);
     expect(cubit.state.llm.lmStudioCompatibility, isFalse);
-    expect(cubit.state.llm.model, 'qwen3.5:4b');
+    expect(cubit.state.llm.model, isEmpty);
     expect(cubit.canSave, isFalse);
     cubit.edit(language: 'eng');
     await cubit.save();
@@ -82,7 +82,6 @@ void main() {
         baseUrl: 'https://models.example/v1',
       );
       await cubit.load(poll: true);
-      cubit.editLLM(provider: 'ollama');
       expect(cubit.state.llm.propertyThinkingEnabled, isFalse);
       expect(cubit.state.llm.invoiceThinkingEnabled, isTrue);
       cubit.resetDraft();
@@ -99,6 +98,7 @@ void main() {
         pipeline: repository.pipeline,
         llm: const DocumentLLMConfiguration(
           provider: 'openai',
+          model: 'fixture',
           baseUrl: 'http://127.0.0.1:1234/v1',
         ),
       );
@@ -115,7 +115,6 @@ void main() {
       expect(repository.llmUpdates.single!.lmStudioCompatibility, isTrue);
       expect(cubit.state.configuration!.llm.lmStudioCompatibility, isTrue);
       expect(cubit.state.dirty, isFalse);
-      cubit.editLLM(provider: 'ollama');
       await cubit.save();
       expect(cubit.state.configuration!.llm.lmStudioCompatibility, isTrue);
       cubit.editLLM(provider: 'openai', baseUrl: 'http://127.0.0.1:1234/v1');
@@ -158,7 +157,12 @@ void main() {
         (true, true),
         (false, false),
       ]) {
-        cubit.editLLM(enabled: choices.$1, invoiceEnabled: choices.$2);
+        cubit.editLLM(
+          enabled: choices.$1,
+          invoiceEnabled: choices.$2,
+          model: 'fixture',
+          baseUrl: 'https://models.example/v1',
+        );
         await cubit.load(poll: true);
         expect(cubit.state.llm.enabled, choices.$1);
         expect(cubit.state.llm.invoiceEnabled, choices.$2);
@@ -253,6 +257,7 @@ void main() {
     cubit.editLLM(
       enabled: true,
       provider: 'openai',
+      model: 'fixture',
       baseUrl: 'https://models.example/v1',
       apiKey: 'secret',
     );
@@ -264,6 +269,7 @@ void main() {
       llm: const DocumentLLMConfiguration(
         enabled: true,
         provider: 'openai',
+        model: 'fixture',
         baseUrl: 'https://models.example/v1',
         credentialConfigured: true,
       ),
@@ -283,7 +289,7 @@ void main() {
     expect(cubit.state.llm.model, 'custom');
     cubit.resetDraft();
     expect(cubit.state.draftRevision, isNull);
-    expect(cubit.state.llm.model, 'qwen3.5:4b');
+    expect(cubit.state.llm.model, isEmpty);
   });
 
   test('refresh cannot confirm a failed credential removal while a key remains stored', () async {
@@ -291,6 +297,7 @@ void main() {
       pipeline: repository.pipeline,
       llm: const DocumentLLMConfiguration(
         provider: 'openai',
+        model: 'fixture',
         baseUrl: 'https://models.example/v1',
         credentialConfigured: true,
       ),

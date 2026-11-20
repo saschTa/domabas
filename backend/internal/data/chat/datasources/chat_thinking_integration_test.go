@@ -15,7 +15,7 @@ func TestChatThinkingPersistsPerAcceptedTurn(t *testing.T) {
 	if err != nil || c.ThinkingEnabled {
 		t.Fatal("thinking must default off", err)
 	}
-	update := m.ChatConfigurationUpdate{ExpectedRevision: c.Revision, Enabled: true, Provider: "ollama", Model: c.Model, ThinkingEnabled: new(true)}
+	update := m.ChatConfigurationUpdate{ExpectedRevision: c.Revision, Enabled: true, Provider: "openai", BaseURL: "https://first.test/v1", Model: c.Model, ThinkingEnabled: new(true)}
 	saved, err := f.source.UpdateConfiguration(ctx, f.actor, update)
 	if err != nil || !saved.ThinkingEnabled || saved.Revision != c.Revision+1 {
 		t.Fatal("thinking save lost", saved, err)

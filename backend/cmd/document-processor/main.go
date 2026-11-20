@@ -31,13 +31,13 @@ func listenAddress(value string) (string, error) {
 	return value, nil
 }
 
-func ollamaQueueCapacity(value string) (int, error) {
+func embeddingQueueCapacity(value string) (int, error) {
 	if value == "" {
 		value = "128"
 	}
 	capacity, err := strconv.Atoi(value)
 	if err != nil || capacity < 1 {
-		return 0, errors.New("OLLAMA_MAX_QUEUE must be a positive integer")
+		return 0, errors.New("EMBEDDING_QUEUE_SIZE must be a positive integer")
 	}
 	return capacity, nil
 }
@@ -52,13 +52,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	queueCapacity, err := ollamaQueueCapacity(os.Getenv("OLLAMA_MAX_QUEUE"))
+	queueCapacity, err := embeddingQueueCapacity(os.Getenv("EMBEDDING_QUEUE_SIZE"))
 	if err != nil {
 		return err
 	}
-	config := document.DocumentProcessorConfig{ModelCacheRoot: os.Getenv("MODEL_CACHE_ROOT"), OllamaCacheRoot: os.Getenv("OLLAMA_CACHE_ROOT"), OllamaURL: os.Getenv("OLLAMA_URL"), OllamaMaxQueue: queueCapacity}
-	if config.ModelCacheRoot == "" || config.OllamaCacheRoot == "" || config.OllamaURL == "" {
-		return errors.New("MODEL_CACHE_ROOT, OLLAMA_CACHE_ROOT and OLLAMA_URL are required")
+	config := document.DocumentProcessorConfig{ModelCacheRoot: os.Getenv("MODEL_CACHE_ROOT"), EmbeddingModelPath: os.Getenv("EMBEDDING_MODEL_PATH"), EmbeddingURL: os.Getenv("EMBEDDING_URL"), EmbeddingQueueSize: queueCapacity}
+	if config.ModelCacheRoot == "" || config.EmbeddingModelPath == "" || config.EmbeddingURL == "" {
+		return errors.New("MODEL_CACHE_ROOT, EMBEDDING_MODEL_PATH and EMBEDDING_URL are required")
 	}
 	container, err := document.NewDocumentProcessorContainer(ctx, config)
 	if err != nil {

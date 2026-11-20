@@ -25,12 +25,12 @@ import (
 )
 
 type DocumentOptions struct {
-	Logger                                                                                                       *slog.Logger
-	Scheduler                                                                                                    documentsources.DocumentResourceScheduler
-	IngestionConcurrency                                                                                         int
-	AIConcurrency, OllamaQueueSize                                                                               int
-	IngestionConcurrencyMode, AIConcurrencyMode                                                                  string
-	IngestionRoot, StorageRoot, ProcessorURL, DashboardURL, LLMOllamaURL, LLMCredentialKey, LLMCredentialKeyFile string
+	Logger                                                                                         *slog.Logger
+	Scheduler                                                                                      documentsources.DocumentResourceScheduler
+	IngestionConcurrency                                                                           int
+	AIConcurrency, EmbeddingQueueSize                                                              int
+	IngestionConcurrencyMode, AIConcurrencyMode                                                    string
+	IngestionRoot, StorageRoot, ProcessorURL, DashboardURL, LLMCredentialKey, LLMCredentialKeyFile string
 }
 type DocumentContainer struct {
 	thumbnails *documentservices.DocumentThumbnailService
@@ -72,20 +72,12 @@ func NewDocumentContainer(ctx context.Context, database *postgres.PostgresDataba
 		_ = files.Close()
 		return nil, err
 	}
-	if options.LLMOllamaURL == "" {
-		options.LLMOllamaURL = "http://127.0.0.1:11435"
-	}
-	languageModel, err := llm.NewDocumentPropertyRemoteDataSource(options.LLMOllamaURL, options.Logger)
-	if err != nil {
-		remote.Close()
-		_ = files.Close()
-		return nil, err
-	}
+	languageModel := llm.NewDocumentPropertyRemoteDataSource(options.Logger)
 	capacity := options.IngestionConcurrency
 	if capacity == 0 {
 		capacity = 1
 	}
-	source := documentsources.NewDocumentLLMDataSource(database, files, options.DashboardURL, vault, options.Scheduler, records.DocumentIngestionLimits{Concurrency: capacity, AIConcurrency: max(1, options.AIConcurrency), OllamaQueueSize: max(1, options.OllamaQueueSize), ConcurrencyMode: options.IngestionConcurrencyMode, AIConcurrencyMode: options.AIConcurrencyMode, UnlimitedInference: true})
+	source := documentsources.NewDocumentLLMDataSource(database, files, options.DashboardURL, vault, options.Scheduler, records.DocumentIngestionLimits{Concurrency: capacity, AIConcurrency: max(1, options.AIConcurrency), EmbeddingQueueSize: max(1, options.EmbeddingQueueSize), ConcurrencyMode: options.IngestionConcurrencyMode, AIConcurrencyMode: options.AIConcurrencyMode, UnlimitedInference: true})
 	if err := documentservices.NewDocumentInitializationService(documentrepos.NewDocumentInitializationRepository(source)).Initialize(ctx); err != nil {
 		languageModel.Close()
 		remote.Close()
@@ -93,7 +85,7 @@ func NewDocumentContainer(ctx context.Context, database *postgres.PostgresDataba
 		return nil, fmt.Errorf("initialize document pipeline: %w", err)
 	}
 	service := documentservices.NewDocumentService(documentrepos.NewDocumentRepository(source), now)
-	ingestion := documentservices.NewDocumentIngestionService(documentrepos.NewDocumentIngestionRepository(source), documentrepos.NewDocumentContentRepository(files), documentrepos.NewDocumentProcessorRepository(remote), authority, now, documentrepos.NewDocumentModelContextRepository(languageModel))
+	ingestion := documentservices.NewDocumentIngestionService(documentrepos.NewDocumentIngestionRepository(source), documentrepos.NewDocumentContentRepository(files), documentrepos.NewDocumentProcessorRepository(remote), authority, now)
 	imports := documentservices.NewDocumentImportService(documentrepos.NewDocumentImportRepository(source), documentrepos.NewDocumentContentRepository(files), documentrepos.NewDocumentEmailInspectionRepository(mimecontent.NewDocumentMimeContentDataSource()), authority, now)
 	vocabulary := documentservices.NewDocumentVocabularyService(documentrepos.NewDocumentVocabularyRepository(source), authority)
 	properties := documentservices.NewDocumentPropertyService(documentrepos.NewDocumentPropertyRepository(source), documentrepos.NewDocumentPropertyExtractionRepository(languageModel))

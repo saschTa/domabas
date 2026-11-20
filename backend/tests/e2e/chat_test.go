@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -227,40 +226,7 @@ func TestAIChatIndependentSettingsToolsPrivacyRecoveryAndResourceAdmission(t *te
 		}
 	}))
 	defer external.Close()
-	var internalHold atomic.Bool
-	internalStarted := make(chan struct{}, 8)
-	internalCancelled := make(chan struct{}, 8)
-	ollama := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.Copy(io.Discard, r.Body)
-		switch r.URL.Path {
-		case "/api/tags":
-			_ = json.NewEncoder(w).Encode(map[string]any{"models": []any{map[string]any{"name": "qwen3.5:4b"}, map[string]any{"name": "another-model"}}})
-		case "/api/show":
-			_, _ = w.Write([]byte(`{"capabilities":["completion"],"model_info":{"general.architecture":"qwen35","qwen35.context_length":131072}}`))
-		case "/api/chat":
-			if internalHold.Load() {
-				select {
-				case internalStarted <- struct{}{}:
-				default:
-				}
-				select {
-				case <-r.Context().Done():
-				case <-fixtureStop:
-				}
-				select {
-				case internalCancelled <- struct{}{}:
-				default:
-				}
-				return
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"done": true, "done_reason": "stop", "message": map[string]any{"role": "assistant", "content": `{"action":"answer","content":"Internal reply completed.","query":"","documentId":"","offset":0}`}})
-		default:
-			w.WriteHeader(404)
-		}
-	}))
-	defer ollama.Close()
 	defer close(fixtureStop)
-	env = append(env, "LLM_OLLAMA_URL="+ollama.URL)
 	base, stop := startServer(t, binary, databaseURL, env)
 	defer func() { stop() }()
 	api := &ingestionAPI{t: t, baseURL: base, client: &http.Client{Timeout: 15 * time.Second}, spec: spec}
@@ -270,7 +236,7 @@ func TestAIChatIndependentSettingsToolsPrivacyRecoveryAndResourceAdmission(t *te
 	api.request(other, "GET", settingsPath, "", 403, "Error")
 	api.request(other, "PUT", settingsPath, "{", 403, "Error")
 	settings := api.request(admin, "GET", settingsPath, "", 200, "ChatConfiguration")
-	if settings["model"] != "qwen3.5:4b" || settings["enabled"] != true || settings["hasApiKey"] != false || settings["thinkingEnabled"] != false {
+	if settings["model"] != "" || settings["enabled"] != false || settings["hasApiKey"] != false || settings["thinkingEnabled"] != false {
 		t.Fatal("chat defaults", settings)
 	}
 	pipeline := api.request(admin, "GET", "/api/v1/system/document-processing", "", 200, "DocumentProcessingConfiguration")
@@ -480,29 +446,16 @@ func TestAIChatIndependentSettingsToolsPrivacyRecoveryAndResourceAdmission(t *te
 	externalHold.Store(false)
 	api.waitChat(admin, path, runningID, "completed", "")
 	backlog(false)
-	update("ollama", "qwen3.5:4b", "", "")
-	models := api.request(admin, "GET", "/api/v1/system/chat/models?limit=1", "", 200, "ChatModelPage")
-	if len(models["items"].([]any)) != 1 || models["nextOffset"] != float64(1) {
-		t.Fatal("model pagination", models)
-	}
-	internalHold.Store(true)
-	pending := api.request(admin, "POST", path+"/messages", fmt.Sprintf(`{"requestId":%q,"content":"Test shared Ollama resource."}`, uuid.NewString()), 202, "ChatAcceptedTurn")["assistantMessage"].(map[string]any)
+	externalHold.Store(true)
+	pending := api.request(admin, "POST", path+"/messages", fmt.Sprintf(`{"requestId":%q,"content":"External resource test: resume after worker restart."}`, uuid.NewString()), 202, "ChatAcceptedTurn")["assistantMessage"].(map[string]any)
 	pendingID := pending["turnId"].(string)
 	select {
-	case <-internalStarted:
+	case <-externalStarted:
 	case <-time.After(20 * time.Second):
-		t.Fatal("internal turn did not start")
+		t.Fatal("external turn did not start")
 	}
-	backlog(true)
-	select {
-	case <-internalCancelled:
-		t.Fatal("ingestion cancelled admitted internal inference")
-	case <-time.After(1500 * time.Millisecond):
-	}
-	api.waitChat(admin, path, pendingID, "running", "generating")
 	stop()
-	internalHold.Store(false)
-	backlog(false)
+	externalHold.Store(false)
 	base, stop = startServer(t, binary, databaseURL, env)
 	api.baseURL = base
 	api.waitChat(admin, path, pendingID, "completed", "")

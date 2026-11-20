@@ -201,10 +201,6 @@ class ApiClient {
           return ChatMessage.fromJson(value);
         case 'ChatMessagePage':
           return ChatMessagePage.fromJson(value);
-        case 'ChatModel':
-          return ChatModel.fromJson(value);
-        case 'ChatModelPage':
-          return ChatModelPage.fromJson(value);
         case 'ChatSource':
           return ChatSource.fromJson(value);
         case 'Claim':
@@ -335,8 +331,6 @@ class ApiClient {
           return LLMConfiguration.fromJson(value);
         case 'Login':
           return Login.fromJson(value);
-        case 'OllamaModelContext':
-          return OllamaModelContext.fromJson(value);
         case 'PaperlessOptions':
           return PaperlessOptions.fromJson(value);
         case 'PaperlessOutcome':

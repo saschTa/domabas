@@ -75,6 +75,7 @@ class _GlacierActivityDockState extends State<GlacierActivityDock>
     with SingleTickerProviderStateMixin {
   final _portal = OverlayPortalController();
   final _tokenFocus = FocusNode();
+  final _tokenContentKey = GlobalKey();
   final _tapGroup = Object();
   late final _animation = AnimationController(
     vsync: this,
@@ -324,68 +325,72 @@ class _GlacierActivityDockState extends State<GlacierActivityDock>
         ),
       ),
     );
-    return Tooltip(
-      message: _compact ? '$_title · $_subtitle' : '',
-      child: AnimatedSize(
-        alignment: Alignment.bottomRight,
-        duration: _reduced ? Duration.zero : const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        child: SizedBox(
-          width: _compact ? 48 : 280,
-          child: Stack(
-            children: [
-              if (multiple && !_compact)
-                Positioned(
-                  top: 0,
-                  left: 8,
-                  right: 8,
-                  bottom: 8,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: GlacierTokens.of(context).glass,
-                      border: Border.all(color: GlacierTokens.of(context).edge),
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                  ),
+    final sizedToken = SizedBox(
+      key: _tokenContentKey,
+      width: _compact ? 48 : 280,
+      child: Stack(
+        children: [
+          if (multiple && !_compact)
+            Positioned(
+              top: 0,
+              left: 8,
+              right: 8,
+              bottom: 8,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: GlacierTokens.of(context).glass,
+                  border: Border.all(color: GlacierTokens.of(context).edge),
+                  borderRadius: BorderRadius.circular(13),
                 ),
-              Padding(
-                padding: EdgeInsets.only(top: multiple && !_compact ? 6 : 0),
-                child: token,
               ),
-              if (_compact &&
-                  (_count ?? 0) > 1 &&
-                  (widget.summary != null ||
-                      GlacierNativePresentationScope.maybeOf(context) != null))
-                Positioned(
-                  right: 3,
-                  top: 3,
-                  child: IgnorePointer(
-                    child: ExcludeSemantics(
-                      child: Container(
-                        constraints: const BoxConstraints(minWidth: 14),
-                        height: 14,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Text(
-                          '$_count',
-                          textScaler: TextScaler.noScaling,
-                          style: TextStyle(
-                            fontSize: 9,
-                            height: 1,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
+            ),
+          Padding(
+            padding: EdgeInsets.only(top: multiple && !_compact ? 6 : 0),
+            child: token,
+          ),
+          if (_compact &&
+              (_count ?? 0) > 1 &&
+              (widget.summary != null ||
+                  GlacierNativePresentationScope.maybeOf(context) != null))
+            Positioned(
+              right: 3,
+              top: 3,
+              child: IgnorePointer(
+                child: ExcludeSemantics(
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 14),
+                    height: 14,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Text(
+                      '$_count',
+                      textScaler: TextScaler.noScaling,
+                      style: TextStyle(
+                        fontSize: 9,
+                        height: 1,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),
                 ),
-            ],
-          ),
-        ),
+              ),
+            ),
+        ],
       ),
+    );
+    return Tooltip(
+      message: _compact ? '$_title · $_subtitle' : '',
+      child: _reduced
+          ? sizedToken
+          : AnimatedSize(
+              alignment: Alignment.bottomRight,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              child: sizedToken,
+            ),
     );
   }
 

@@ -31,9 +31,7 @@ go run ./cmd/server
 ```
 
 The server applies pending database migrations before it starts serving. Use
-`go tool air` instead of `go run ./cmd/server` for automatic rebuilds. With the
-native macOS MLX runtime, `task infra:up` stays in the foreground; run the backend
-in a second terminal. See [Ollama runtime selection](../docs/development/compose.md#select-the-development-ollama-runtime).
+`go tool air` instead of `go run ./cmd/server` for automatic rebuilds. See [embedding runtime selection](../docs/development/compose.md#select-the-embedding-runtime).
 
 Stop a packaged backend before starting a native backend on the same task queue:
 `docker compose stop web backend` from the root leaves infrastructure running.
@@ -51,13 +49,11 @@ secrets out of tracked files.
 | `DATABASE_URL` | Required PostgreSQL connection string. The development file uses port `54329`. |
 | `HTTP_ADDR` | HTTP listen address; `127.0.0.1:8080`. |
 | `CORS_ORIGINS` | Exact allowed browser origins; local development uses port `7357`. |
-| `OLLAMA_MAX_QUEUE` | Ollama queue budget; `128`. Keep it consistent on Ollama, backend replicas and the processor. |
+| `EMBEDDING_QUEUE_SIZE` | Embedding admission budget, default `128`. Use the same value on the backend replicas and processor. |
 | `TEST_DATABASE_URL` | Explicit database connection for directly invoked database tests. |
 
 Administrators set background capacity in **Admin settings → Workload limits**.
-Worker capacity defaults to ten jobs, shared Ollama capacity to one, and each
-external provider origin to two. Ollama background capacity cannot exceed half
-its configured queue budget. The old `DOCUMENT_INGESTION_CONCURRENCY` and
+Worker capacity defaults to ten jobs, local embedding capacity to one and each external provider origin to two. The maximum for background embedding jobs is half the configured queue budget. The old `DOCUMENT_INGESTION_CONCURRENCY` and
 `DOCUMENT_AI_CONCURRENCY` settings no longer control admission. See
 [resource scheduling](../docs/arch/backend/resource-scheduler.md).
 

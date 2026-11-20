@@ -1,4 +1,3 @@
-import 'package:domabas/ui/app_model_context_field.dart';
 import 'package:domabas/ui/app_presenters.dart';
 import 'package:domabas/ui/glacier/glacier_controls.dart';
 import 'package:domabas/ui/glacier/glacier_settings.dart';
@@ -270,19 +269,13 @@ List<CatalogCase> settingsCases() => [
     (
       'chat-settings',
       'AI settings',
-      'Local chat configuration',
+      'Chat configuration',
       'GlacierModelConnection',
     ),
     (
       'external-model',
       'AI settings',
       'External provider and credential removal',
-      'GlacierModelConnection',
-    ),
-    (
-      'model-unavailable',
-      'AI settings',
-      'Model lookup unavailable',
       'GlacierModelConnection',
     ),
     (
@@ -443,7 +436,6 @@ class _SettingsExampleState extends State<_SettingsExample> {
   final Map<String, bool> choices = {};
   String? message;
   String role = 'Viewer',
-      provider = 'local',
       mode = 'system',
       background = 'activity',
       pattern = 'line';
@@ -454,7 +446,6 @@ class _SettingsExampleState extends State<_SettingsExample> {
   @override
   void initState() {
     super.initState();
-    if (widget.kind == 'external-model') provider = 'external';
     final appearance = widget.appearanceValue;
     if (appearance != null) {
       mode = appearance.mode;
@@ -800,10 +791,8 @@ class _SettingsExampleState extends State<_SettingsExample> {
   );
 
   Widget model() => GlacierModelConnection(
-    provider: provider,
-    onProviderChanged: (value) => setState(() => provider = value),
     endpointField: field('API base URL', 'https://ai.example.test/v1'),
-    modelField: field('Model', 'qwen3.5:4b'),
+    modelField: field('Model', 'example-model'),
     credentialField: GlacierCredentialField(
       label: 'API key',
       controller: controller('API key'),
@@ -812,23 +801,6 @@ class _SettingsExampleState extends State<_SettingsExample> {
       onRemoveChanged: (value) => setState(() => removeStored = value),
     ),
     compatibilityControl: choice('LM Studio compatibility mode'),
-    contextField: AppModelContextField(
-      controller: controller('Context', '32768'),
-      fieldKey: const Key('settings-context'),
-      checkKey: const Key('settings-context-check'),
-      defaultKey: const Key('settings-context-default'),
-      scope: 'This setting applies to future requests.',
-      enabled: true,
-      loading: false,
-      lookupError: widget.kind == 'model-unavailable'
-          ? 'The model limit could not be checked. Your draft is retained.'
-          : null,
-      maxContextLength: widget.kind == 'model-unavailable' ? null : 65536,
-      requestedContextLength: 32768,
-      onChanged: (_) {},
-      onCheck: () => tell('The fictional model supports 65,536 tokens.'),
-      onDefault: () => setState(() => controller('Context').text = '32768'),
-    ),
   );
 
   @override
@@ -1425,11 +1397,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
         ),
       ], save: true);
     }
-    if ([
-      'chat-settings',
-      'external-model',
-      'model-unavailable',
-    ].contains(kind)) {
+    if (['chat-settings', 'external-model'].contains(kind)) {
       return pageLayout([
         section(
           'AI chat',
@@ -1558,7 +1526,8 @@ class _SettingsExampleState extends State<_SettingsExample> {
                   'pipeline:document_ingestion' => 'Generate a thumbnail, recognize text and embed the document.',
                   'stage:paperless' =>
                     'Simultaneous downloads before ingestion.',
-                  'ollama' => 'Shared by embeddings and AI pipelines configured to use Ollama.',
+                  'embedding-runtime' =>
+                    'Used by document indexing and semantic search.',
                   'external' => 'Shared by background jobs using the same provider address.',
                   _ => null,
                 },
@@ -1575,8 +1544,8 @@ class _SettingsExampleState extends State<_SettingsExample> {
                   ),
                   validator: (value) => workload.validate(id, value ?? ''),
                 ),
-                notice: id == 'ollama'
-                    ? 'Ollama queue size 8. The maximum is half the configured queue.'
+                notice: id == 'embedding-runtime'
+                    ? 'Embedding runtime queue size 8. The maximum is half the configured queue.'
                     : null,
               ),
           ],

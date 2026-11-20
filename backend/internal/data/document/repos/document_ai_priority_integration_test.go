@@ -33,10 +33,11 @@ func TestAIResourceAdmissionDoesNotWaitForUnreservedIngestion(t *testing.T) {
 	}
 }
 
-func TestAIAndIngestionShareRetainedOllamaCapacity(t *testing.T) {
+func TestAIAndIngestionShareTheWorkerUntilExecutionCloses(t *testing.T) {
 	f, source, doc := aiResourceFixture(t)
+	f.exec(t, "UPDATE scheduler_resources SET concurrency_limit=1 WHERE id='worker'")
 	lease := aiIndependentClaim(t, source, doc.ID)
-	queued := f.accept(t, f.actor, strings.Repeat("b", 64), "Ingestion waiting for Ollama")
+	queued := f.accept(t, f.actor, strings.Repeat("b", 64), "Ingestion waiting for a worker")
 	for _, terminal := range []bool{false, true} {
 		if terminal {
 			if err := source.AIFail(t.Context(), lease.Job, "inference_unavailable"); err != nil {
@@ -44,7 +45,7 @@ func TestAIAndIngestionShareRetainedOllamaCapacity(t *testing.T) {
 			}
 		}
 		if jobs, err := f.service.Claim(t.Context(), 1, time.Second, "resource-ingestion"); err != nil || len(jobs) != 0 {
-			t.Fatalf("unclosed AI released model capacity: %+v %v", jobs, err)
+			t.Fatalf("unclosed AI released worker capacity: %+v %v", jobs, err)
 		}
 		aiIndependentAssertSearchable(t, f, doc.ID)
 	}
@@ -84,9 +85,9 @@ func TestAIAndPaperlessCompeteOnlyForWorkerCapacity(t *testing.T) {
 				t.Fatal("AI exceeded shared worker capacity")
 			}
 			if workers == 2 && (len(leases) != 1 || leases[0].Job.DocumentID != doc.ID) {
-				t.Fatalf("Paperless consumed Ollama capacity: %+v", leases)
+				t.Fatalf("Paperless blocked independent provider capacity: %+v", leases)
 			}
-			if count := issue12Count(t, f, `SELECT count(*) FROM scheduler_request_resources r JOIN scheduler_requests q USING(workflow_id) WHERE q.pipeline='paperless' AND r.resource_id='ollama'`); count != 0 {
+			if count := issue12Count(t, f, `SELECT count(*) FROM scheduler_request_resources r JOIN scheduler_requests q USING(workflow_id) WHERE q.pipeline='paperless' AND r.resource_id='embedding-runtime'`); count != 0 {
 				t.Fatal("Paperless acquired model resource")
 			}
 		})
@@ -108,7 +109,7 @@ func TestAIInvoiceOnlyUsesAcceptedProviderResource(t *testing.T) {
 	}
 	doc := f.accept(t, f.actor, strings.Repeat("c", 64), "Invoice provider snapshot")
 	aiIndependentReady(t, f, doc, "Invoice total 42 EUR")
-	_, err = f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{Language: accepted.Language, Segmentation: accepted.Segmentation, ExpectedRevision: &accepted.Revision, LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: &enabled, Provider: "ollama", Model: "qwen3.5:4b"}})
+	_, err = f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{Language: accepted.Language, Segmentation: accepted.Segmentation, ExpectedRevision: &accepted.Revision, LLMUpdate: &m.DocumentLLMConfigurationUpdate{Enabled: false, InvoiceEnabled: &enabled, Provider: "openai", BaseURL: "https://provider.test/v1", Model: "qwen3.5:4b"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,10 +158,9 @@ func TestAIResourceCandidateScanDiscoversOtherEndpointsAfterBlockedPage(t *testi
 			t.Fatal(err)
 		}
 		invoice := false
-		update := m.DocumentLLMConfigurationUpdate{Enabled: endpoint != "", InvoiceEnabled: &invoice, Provider: "ollama", Model: "fixture-model"}
+		update := m.DocumentLLMConfigurationUpdate{Enabled: endpoint != "", InvoiceEnabled: &invoice, Provider: "openai", BaseURL: endpoint}
 		if endpoint != "" {
-			update.Provider = "openai"
-			update.BaseURL = endpoint
+			update.Model = "fixture-model"
 		}
 		configured, err := f.service.SetProcessingConfiguration(t.Context(), f.actor, m.DocumentProcessingConfiguration{Language: current.Language, Segmentation: current.Segmentation, ExpectedRevision: &current.Revision, LLMUpdate: &update})
 		if err != nil {

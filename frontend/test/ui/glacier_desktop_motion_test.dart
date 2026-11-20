@@ -294,6 +294,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('View all activity'), findsNothing);
       expect(tester.widget<InkWell>(token).focusNode!.hasFocus, isTrue);
+      final tokenElement = tester.element(token);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
+      update(() => multiple = false);
+      await tester.pump();
+      expect(tester.getRect(token), single);
+      expect(tester.element(token), same(tokenElement));
+      expect(tester.widget<InkWell>(token).focusNode!.hasFocus, isTrue);
       expect(tester.takeException(), isNull);
     },
   );

@@ -476,10 +476,8 @@ class _MobileActivityPreview extends CustomPainter {
 class GlacierMobileProviderFields extends StatelessWidget {
   const GlacierMobileProviderFields({
     super.key,
-    required this.provider,
     required this.model,
     required this.baseUrl,
-    required this.onProviderChanged,
     required this.onModelChanged,
     required this.onBaseUrlChanged,
     required this.onKeyChanged,
@@ -489,11 +487,8 @@ class GlacierMobileProviderFields extends StatelessWidget {
     this.compatibility = false,
     this.onCompatibilityChanged,
   });
-  final String provider, model, baseUrl;
-  final ValueChanged<String> onProviderChanged,
-      onModelChanged,
-      onBaseUrlChanged,
-      onKeyChanged;
+  final String model, baseUrl;
+  final ValueChanged<String> onModelChanged, onBaseUrlChanged, onKeyChanged;
   final bool removeKey, extraction, compatibility;
   final ValueChanged<bool> onRemoveKeyChanged;
   final ValueChanged<bool>? onCompatibilityChanged;
@@ -503,16 +498,9 @@ class GlacierMobileProviderFields extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (provider == 'External service')
-          const GlacierMobileNotice(
-            title: 'External processing',
-            message: 'Extracted document text is sent to the configured external service for this operation.',
-          ),
-        GlacierMobileSelectField(
-          label: 'Provider',
-          value: provider,
-          options: const ['Internal Ollama', 'External service'],
-          onChanged: onProviderChanged,
+        const GlacierMobileNotice(
+          title: 'External processing',
+          message: 'Extracted document text is sent to the configured external service for this operation.',
         ),
         GlacierMobileField(
           label: 'Model',
@@ -521,7 +509,7 @@ class GlacierMobileProviderFields extends StatelessWidget {
         ),
         GlacierMobileDisclosure(
           label: 'External service and credentials',
-          initiallyExpanded: provider == 'External service',
+          initiallyExpanded: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

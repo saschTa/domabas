@@ -19,7 +19,7 @@ ghcr.io/<owner>/<repository>-init:v0.0.1
 ```
 
 Owner and repository names are lowercased for GHCR. Git tags use the same `v`
-prefix. Third-party PostgreSQL and Ollama images keep their existing
+prefix. Third-party PostgreSQL and llama.cpp images keep their existing
 pins and are not republished.
 
 ## Selecting the next version
@@ -56,9 +56,9 @@ Versions below 1.0.0 are marked as GitHub prereleases. Moving to 1.0.0 should be
 an intentional support decision. There is no floating `latest` container tag;
 use the explicit version or digest from the release notes.
 
-The [quick-start Compose file](../../compose.quickstart.yaml) currently pins the published v0.0.10 images. Update its four Domabas image references together when promoting a release and verify anonymous pulls. The generic Compose in each release’s notes comes from the root `compose.yaml`.
+The [source quick-start file](../../compose.quickstart.yaml) includes the root source Compose configuration. Release notes contain a standalone configuration with all first-party images pinned to the release digests.
 
-Release packaging also attaches standalone `compose.cpu.yaml`, `compose.cuda.yaml` and `compose.rocm.yaml` assets for TrueNAS. It substitutes that release’s four immutable image references into the [source templates](../../truenas/README.md), preserving the editable anchors and hardware configuration. The source templates use local tags for deployments built from the checkout.
+Release packaging attaches `compose.cpu.yaml` and `compose.vulkan.yaml` assets for TrueNAS. Each substitutes the four release images into the [source templates](../../truenas/README.md) while preserving the operator settings.
 
 ## Publication and retries
 
@@ -215,7 +215,7 @@ Coverage depends on scanner support and package metadata. Trivy can detect Go
 modules embedded in binaries, but custom statically linked OCR code and compiled
 Flutter web dependencies are not comprehensively inventoried by this scan. OSV
 remains required for source dependencies. Third-party Compose service images
-(PostgreSQL and Ollama) are not built here and are outside this
+(PostgreSQL and llama.cpp) are not built here and are outside this
 four-image gate. Changes to those pins still need separate review. Future
 scheduled scans of published digests can detect advisories disclosed between
 releases; this workflow does not yet schedule them.

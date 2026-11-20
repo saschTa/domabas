@@ -5,6 +5,7 @@ import "testing"
 func TestRetainedExtractionFingerprintAndMediaMatrix(t *testing.T) {
 	legacy := DefaultConfiguration()
 	legacy.LLM = DocumentLLMConfiguration{}
+	legacy.EmbeddingDigest = LegacyEmbeddingDigest
 	legacy.ManifestRevision, legacy.ExtractionRevision = 1, LegacyExtractionRevision
 	fingerprint, err := legacy.CanonicalFingerprint()
 	if err != nil || fingerprint != "ab28ece7e83347f4eae67fbbf21e410fb09ac3f8c6b1379ad86b2ff59804f552" {

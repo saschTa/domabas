@@ -49,7 +49,7 @@ func ValidateObject(body []byte, operation string) error {
 		fields = map[string]string{"language": "string", "segmentation": "string", "expectedRevision": "integer", "llm": "llm"}
 		required = []string{"language", "segmentation"}
 	case "llm":
-		fields = map[string]string{"enabled": "boolean", "invoiceEnabled": "boolean", "lmStudioCompatibility": "boolean", "propertyThinkingEnabled": "boolean", "invoiceThinkingEnabled": "boolean", "contextLength": "integer", "provider": "string", "model": "string", "baseUrl": "string", "apiKey": "string", "clearApiKey": "boolean"}
+		fields = map[string]string{"enabled": "boolean", "invoiceEnabled": "boolean", "lmStudioCompatibility": "boolean", "propertyThinkingEnabled": "boolean", "invoiceThinkingEnabled": "boolean", "provider": "string", "model": "string", "baseUrl": "string", "apiKey": "string", "clearApiKey": "boolean"}
 		required = []string{"enabled", "provider", "model", "baseUrl"}
 	case "unlock":
 		fields = map[string]string{"password": "string", "generation": "integer"}

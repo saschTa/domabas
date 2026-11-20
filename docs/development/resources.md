@@ -1,12 +1,6 @@
 # Runtime resources and memory diagnosis
 
-For a small home installation with one admitted ingestion job, start with
-**4 CPU cores and 5 GiB of available RAM for Domabas**, plus memory for Ollama
-models when using AI. Add capacity for the host OS, Docker VM overhead,
-TrueNAS/ZFS and other apps. Search embeddings also use Ollama, independently of
-optional chat and invoice/property AI, so include that model in your allowance.
-For Docker Desktop or Rancher Desktop, the VM allocation must cover the
-containers, independently of installed host RAM; native Ollama uses host memory.
+For a small home library with a single admitted ingestion job, allow four CPU cores and 5 GiB for the base application plus room for embeddings. Docker's VM, the operating system, ZFS and other applications also need capacity. A self-hosted external generation provider has its own requirements.
 
 This is a starting recommendation, not a benchmarked minimum or enough headroom
 for every service to reach its configured ceiling at once. Large documents,
@@ -21,11 +15,9 @@ Measure the workload and adjust capacity or concurrency when needed.
 | Backend, including all application workers | 2 GiB | 1536 MiB | `BACKEND_MEMORY_LIMIT`, `BACKEND_GOMEMLIMIT` |
 | Document processor and extraction children | 4 GiB | — | `DOCUMENT_PROCESSOR_MEMORY_LIMIT` |
 | Web server | 512 MiB | — | `WEB_MEMORY_LIMIT` |
-| Ollama | 8 GiB | — | `OLLAMA_MEMORY_LIMIT` |
+| llama.cpp embeddings | 2 GiB | — | `EMBEDDING_MEMORY_LIMIT` |
 
-The long-running ceilings total **8.5 GiB excluding Ollama**, or
-**16.5 GiB including it**. These are upper limits, not the RAM needed to start a
-small installation. Ceilings do not preallocate memory and do not reserve it on
+The five long-running service ceilings total **10.5 GiB**. These limits do not reserve memory on
 an overcommitted host. A 5 GiB base allocation cannot absorb every simultaneous
 peak; raising limits or concurrency requires revisiting total capacity.
 Initialization/build processes, native Go/Flutter development, browsers and
@@ -50,14 +42,12 @@ queue can spool many 100 MiB originals, and active OCR also needs temporary
 space. Do not move all scratch to tmpfs without measuring the resulting RAM
 demand. See [processing bounds](../arch/backend/document-ingestion.md).
 
-Start with the default Ollama job limit of `1` in Admin settings → Workload
+Start with one embedding job in Admin settings → Workload
 limits. Lower the shared worker limit if CPU processing or total memory is under
 pressure, and increase limits only after measuring the host. The former ingestion
 and document AI concurrency environment settings, including `auto`, no longer
 control admission. See [shared resource scheduling](../arch/backend/resource-scheduler.md).
-CPU-based OCR and PostgreSQL still use host memory on GPU-equipped systems. An integrated GPU
-shares system RAM; native macOS Ollama is outside Docker limits. Model size,
-context length and concurrent inference determine Ollama's separate requirement.
+CPU-based OCR and PostgreSQL use host memory. An integrated GPU shares system RAM.
 
 ## Apply the settings
 
@@ -96,9 +86,7 @@ task diagnose:memory -- --project=domabas --duration=1800 --interval=5
 
 The command reads the selected Docker context; it never starts, stops or
 deletes containers. It writes a new `.logs/memory-<timestamp>.jsonl` file and
-excludes Ollama from the displayed totals while retaining its measurements.
-It only measures containers in that project. Native Go/Air, Flutter, browsers,
-native Ollama and the host itself require separate host process monitoring.
+reports the sum across all project containers. Native development tools, external inference servers and the host require separate monitoring.
 Use `--output=PATH` to choose a new output file. It requires Linux cgroup v2
 with `memory.peak` support and `cat` inside the images. Unsupported counters
 are marked as missing rather than interpreted as zero. Partial totals are
@@ -145,8 +133,8 @@ the question and continue through completion or failure. Record the backend
 image tag/digest, chat model, turn status, document/chunk counts, number of
 consecutive searches and whether ingestion was active. Inspect the backend,
 worker and PostgreSQL separately
-even when Ollama remains healthy. The failed container's evidence determines
-whether its own limit or host pressure was involved; a healthy Ollama container
+even when embeddings remain healthy. The failed container's evidence determines
+whether its own limit or host pressure was involved; a healthy embedding container
 does not identify which other service failed.
 
 In the current implementation, chat limits each turn to 30 document/catalog

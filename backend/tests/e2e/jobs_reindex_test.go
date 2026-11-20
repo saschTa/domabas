@@ -24,7 +24,7 @@ import (
 func TestIssue12JobsReindexStrictHTTPHistoryAndOriginalRetention(t *testing.T) {
 	databaseURL := testdb.New(t)
 	environment := newServerEnvironment(t, databaseURL)
-	environment = append(environment, "OLLAMA_MAX_QUEUE=9")
+	environment = append(environment, "EMBEDDING_QUEUE_SIZE=9")
 	binary := filepath.Join(t.TempDir(), "server")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"

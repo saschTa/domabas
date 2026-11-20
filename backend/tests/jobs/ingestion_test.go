@@ -72,7 +72,7 @@ func TestUploadResumesEmbeddingAfterWorkerRestart(t *testing.T) {
 	defer processor.Close()
 	defer close(unblock)
 	storage := t.TempDir()
-	settings := config.BackendConfig{OllamaMaxQueue: 128, LLMOllamaURL: processor.URL, DatabaseURL: testdb.New(t), DocumentProcessorURL: processor.URL, DocumentIngestionRoot: filepath.Join(storage, "ingestion"), DocumentStorageRoot: filepath.Join(storage, "documents")}
+	settings := config.BackendConfig{EmbeddingQueueSize: 128, DatabaseURL: testdb.New(t), DocumentProcessorURL: processor.URL, DocumentIngestionRoot: filepath.Join(storage, "ingestion"), DocumentStorageRoot: filepath.Join(storage, "documents")}
 	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Second)
 	defer cancel()
 	connection, err := pgx.Connect(ctx, settings.DatabaseURL)
@@ -202,11 +202,11 @@ func TestUploadResumesEmbeddingAfterWorkerRestart(t *testing.T) {
 			ingestionSlots = pipeline["activeSlots"].(map[string]any)
 		}
 	}
-	if ingestionSlots["stage:embedding"] != float64(1) || ingestionSlots["ollama"] != float64(1) || ingestionSlots["stage:ocr"] != float64(0) {
+	if ingestionSlots["stage:embedding"] != float64(1) || ingestionSlots["embedding-runtime"] != float64(1) || ingestionSlots["stage:ocr"] != float64(0) {
 		t.Fatalf("HTTP workload snapshot does not reflect running job: %v", ingestionSlots)
 	}
 	var holds int
-	if err := connection.QueryRow(ctx, "SELECT count(*) FROM scheduler_step_permits WHERE resource_id IN ('ollama','stage:embedding')").Scan(&holds); err != nil || holds != 2 {
+	if err := connection.QueryRow(ctx, "SELECT count(*) FROM scheduler_step_permits WHERE resource_id IN ('embedding-runtime','stage:embedding')").Scan(&holds); err != nil || holds != 2 {
 		t.Fatal("missing embedding permits", holds, err)
 	}
 	stop()

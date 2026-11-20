@@ -16,7 +16,7 @@ const _resources = {
   'stage:embedding': (label: 'Embeddings', initial: 2),
   'stage:llm': (label: 'Language model calls', initial: 2),
   'stage:paperless': (label: 'Paperless downloads', initial: 2),
-  'ollama': (label: 'Ollama', initial: 1),
+  'embedding-runtime': (label: 'Embedding runtime', initial: 1),
   'external': (
     label: 'https://ai.example.test (external API provider)',
     initial: 1,
@@ -37,7 +37,7 @@ class SampleWorkload {
 
   int maximum(String id) => switch (id) {
     'worker' => 16,
-    'ollama' => 4,
+    'embedding-runtime' => 4,
     'external' => 8,
     'stage:paperless' => 10,
     _ => 256,
@@ -61,10 +61,10 @@ class SampleWorkload {
         'stage:thumbnail': preview,
         'stage:ocr': ocr,
         'stage:embedding': embedding,
-        'ollama': embedding,
+        'embedding-runtime': embedding,
       },
-      'invoice': {'stage:llm': inference, 'ollama': inference},
-      'tags': {'stage:llm': 0, 'ollama': 0},
+      'invoice': {'stage:llm': inference, 'external': inference},
+      'tags': {'stage:llm': 0, 'external': 0},
       'document_ai': {'worker': 3, 'pipeline:invoice': 3, 'pipeline:tags': 0},
       'document_thumbnail': {'worker': 0, 'stage:thumbnail': 0},
       'chat': {'stage:llm': 0, 'external': 0},

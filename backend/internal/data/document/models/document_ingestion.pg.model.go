@@ -120,14 +120,14 @@ type DocumentPendingRecord struct {
 type DocumentIngestionLimits struct {
 	Concurrency                        int
 	AIConcurrency                      int
-	OllamaQueueSize                    int
+	EmbeddingQueueSize                 int
 	ConcurrencyMode, AIConcurrencyMode string
 	UnlimitedInference                 bool
 }
 
 type DocumentSchedulingRecord struct {
-	IngestionConcurrency, AIConcurrency, OllamaQueueSize, ProviderStepRetries int
-	IngestionConcurrencyMode, AIConcurrencyMode, PriorityPolicy               string
+	IngestionConcurrency, AIConcurrency, EmbeddingQueueSize, ProviderStepRetries int
+	IngestionConcurrencyMode, AIConcurrencyMode, PriorityPolicy                  string
 }
 
 type DocumentPropertyWorkRecord struct {

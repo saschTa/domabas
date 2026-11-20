@@ -39,7 +39,7 @@ func newSchedulerAdmissionFixture(t *testing.T) *schedulerAdmissionFixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { connection.Close(context.Background()) })
-	source := NewSchedulerDataSource(database.Database(), 128, "http://ollama.test:11434")
+	source := NewSchedulerDataSource(database.Database(), 128)
 	if err = source.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -110,10 +110,10 @@ func TestSchedulerAdmitsOldestFeasibleWithoutPartialReservations(t *testing.T) {
 	f := newSchedulerAdmissionFixture(t)
 	f.exec(`UPDATE scheduler_resources SET concurrency_limit=2 WHERE id='worker'`)
 	running, older, bypass, younger := f.paperless(), f.paperless(), f.paperless(), f.paperless()
-	if !f.reserve(running, "ollama") {
+	if !f.reserve(running, "embedding-runtime") {
 		t.Fatal("initial model job not admitted")
 	}
-	if !f.reserve(bypass, "ollama") || f.active("ollama") != 0 {
+	if !f.reserve(bypass, "embedding-runtime") || f.active("embedding-runtime") != 0 {
 		t.Fatal("provider capacity was charged during admission")
 	}
 	if f.reserve(older) || f.reserve(younger) || f.feasible(older) {
@@ -137,23 +137,23 @@ func TestSchedulerResourceDecreaseAndCancellationKeepRunningOwner(t *testing.T) 
 	f := newSchedulerAdmissionFixture(t)
 	f.exec(`UPDATE scheduler_resources SET concurrency_limit=2 WHERE id='pipeline:paperless'`)
 	first, second, waiting := f.paperless(), f.paperless(), f.paperless()
-	if !f.reserve(first, "ollama") || !f.reserve(second, "ollama") {
+	if !f.reserve(first, "embedding-runtime") || !f.reserve(second, "embedding-runtime") {
 		t.Fatal("initial jobs not admitted")
 	}
 	f.exec(`UPDATE scheduler_resources SET concurrency_limit=1 WHERE id='pipeline:paperless'`)
 	f.exec(`UPDATE paperless_runs SET state='cancelled',cancel_requested=true WHERE 'domabas-paperless-'||id::text=$1`, first)
-	if f.reserve(waiting, "ollama") || f.active("pipeline:paperless") != 2 {
+	if f.reserve(waiting, "embedding-runtime") || f.active("pipeline:paperless") != 2 {
 		t.Fatal("lowered limit or visible cancellation released running reservation")
 	}
-	if !f.reserve(second, "ollama") {
+	if !f.reserve(second, "embedding-runtime") {
 		t.Fatal("existing delivery blocked by capacity reduction")
 	}
 	f.close(first)
-	if f.reserve(waiting, "ollama") {
+	if f.reserve(waiting, "embedding-runtime") {
 		t.Fatal("new job admitted while drain still equals lowered limit")
 	}
 	f.close(second)
-	if !f.reserve(waiting, "ollama") {
+	if !f.reserve(waiting, "embedding-runtime") {
 		t.Fatal("new job not admitted after owners closed")
 	}
 }
@@ -161,8 +161,8 @@ func TestSchedulerResourceDecreaseAndCancellationKeepRunningOwner(t *testing.T) 
 func TestSchedulerConcurrentReplicasShareAllPipelineBudgets(t *testing.T) {
 	f := newSchedulerAdmissionFixture(t)
 	f.exec(`UPDATE scheduler_resources SET concurrency_limit=5 WHERE id='worker'`)
-	f.exec(`UPDATE scheduler_resources SET concurrency_limit=3 WHERE id='ollama'`)
-	second := NewSchedulerDataSource(f.database.Database(), 128, "http://ollama.test:11434/v1")
+	f.exec(`UPDATE scheduler_resources SET concurrency_limit=3 WHERE id='embedding-runtime'`)
+	second := NewSchedulerDataSource(f.database.Database(), 128)
 	if err := second.Initialize(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestSchedulerConcurrentReplicasShareAllPipelineBudgets(t *testing.T) {
 			pipeline := []string{"document_ingestion", "document_ai", "chat", "email", "paperless"}[index%5]
 			var providers []string
 			if index%5 < 3 {
-				providers = []string{"ollama"}
+				providers = []string{"embedding-runtime"}
 			}
 			err := pgx.BeginFunc(t.Context(), f.database.Database(), func(tx pgx.Tx) error {
 				_, err := source.Reserve(t.Context(), tx, fmt.Sprintf("concurrent-%d", index), pipeline, providers)
@@ -201,7 +201,7 @@ func TestSchedulerConcurrentReplicasShareAllPipelineBudgets(t *testing.T) {
 	if got := f.active("worker"); got != 5 {
 		t.Fatalf("worker admissions %d, want5", got)
 	}
-	if got := f.active("ollama"); got > 3 {
+	if got := f.active("embedding-runtime"); got > 3 {
 		t.Fatalf("shared model admissions %d exceed3", got)
 	}
 	if err := second.Initialize(t.Context()); err != nil {

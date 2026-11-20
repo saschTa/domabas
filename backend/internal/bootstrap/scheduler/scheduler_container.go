@@ -24,8 +24,8 @@ type SchedulerContainer struct {
 	service *services.SchedulerService
 }
 
-func NewSchedulerContainer(ctx context.Context, db *postgres.PostgresDatabase, authority interfaces.SchedulerAuthority, queueSize int, ollamaOrigin string) (*SchedulerContainer, error) {
-	source := datasources.NewSchedulerDataSource(db, queueSize, ollamaOrigin)
+func NewSchedulerContainer(ctx context.Context, db *postgres.PostgresDatabase, authority interfaces.SchedulerAuthority, queueSize int) (*SchedulerContainer, error) {
+	source := datasources.NewSchedulerDataSource(db, queueSize)
 	if err := source.Initialize(ctx); err != nil {
 		return nil, err
 	}

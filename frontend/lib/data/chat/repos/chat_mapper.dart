@@ -11,21 +11,7 @@ ChatConfiguration chatConfigurationMapper(api.ChatConfiguration value) =>
       revision: value.revision,
       baseUrl: value.baseUrl,
       hasApiKey: value.hasApiKey,
-      contextLength: value.contextLength,
     );
-ChatModelContext chatModelContextMapper(
-  api.OllamaModelContext value,
-  String model,
-) {
-  if (value.model != model || value.maxContextLength < 1) {
-    throw const FormatException('Invalid model context');
-  }
-  return ChatModelContext(
-    model: value.model,
-    maxContextLength: value.maxContextLength,
-  );
-}
-
 ChatConfiguration chatSummaryMapper(api.ChatConfigurationSummary value) =>
     ChatConfiguration(
       enabled: value.enabled,

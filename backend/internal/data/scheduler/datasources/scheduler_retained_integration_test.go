@@ -32,7 +32,7 @@ func TestSchedulerRetainedMissingSnapshotBlocksNewWorkWithoutBlockingStartup(t *
 	if _, err = connection.Exec(t.Context(), `INSERT INTO document_processing_executions(account_id,document_id,generation,workflow_id,admitted_at,delivery_deadline,legacy) VALUES($1,$2,1,$3,clock_timestamp(),clock_timestamp()+interval '1 hour',true)`, account, document, workflowID); err != nil {
 		t.Fatal(err)
 	}
-	source := NewSchedulerDataSource(database.Database(), 128, "http://ollama.test:11434")
+	source := NewSchedulerDataSource(database.Database(), 128)
 	if err = source.Initialize(t.Context()); err != nil {
 		t.Fatalf("unknown retained provider prevented recovery startup: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestSchedulerRetainedMissingSnapshotBlocksNewWorkWithoutBlockingStartup(t *
 	if reserve("domabas-paperless-"+uuid.NewString(), "paperless", nil) {
 		t.Fatal("unknown retained workload did not block new admission")
 	}
-	if !reserve(workflowID, "document_ingestion", []string{"ollama", "https://legacy-provider.test/v1"}) {
+	if !reserve(workflowID, "document_ingestion", []string{"embedding-runtime", "https://legacy-provider.test/v1"}) {
 		t.Fatal("retained delivery or reconciliation was blocked")
 	}
 	if err = source.Initialize(t.Context()); err != nil {

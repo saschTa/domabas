@@ -14,7 +14,7 @@ void main() {
   late Future<void> Function(HttpRequest) respond;
   final settings = <String, Object>{
     'revision': 3,
-    'ollamaQueueSize': 128,
+    'embeddingQueueSize': 128,
     'resources': [
       {
         'id': 'worker',
@@ -24,8 +24,8 @@ void main() {
         'activeJobs': 6,
       },
       {
-        'id': 'ollama',
-        'label': 'Ollama',
+        'id': 'embedding-runtime',
+        'label': 'Embedding runtime',
         'limit': 8,
         'maximumLimit': 64,
         'activeJobs': 1,
@@ -93,7 +93,11 @@ void main() {
         'external:future-provider',
       ]);
       await repository.updateSettings(
-        limits: {'worker': 5, 'ollama': 12, 'external:future-provider': 2},
+        limits: {
+          'worker': 5,
+          'embedding-runtime': 12,
+          'external:future-provider': 2,
+        },
         expectedRevision: loaded.revision,
       );
       expect(requests.map((r) => r.method), ['GET', 'PUT']);
@@ -105,7 +109,7 @@ void main() {
         'expectedRevision': 3,
         'resources': [
           {'id': 'worker', 'limit': 5},
-          {'id': 'ollama', 'limit': 12},
+          {'id': 'embedding-runtime', 'limit': 12},
           {'id': 'external:future-provider', 'limit': 2},
         ],
       });

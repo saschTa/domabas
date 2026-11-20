@@ -6,17 +6,14 @@ import 'package:domabas/domain/chat/models/chat.dart';
 final class FakeChatRepository implements ChatRepository {
   ChatConfiguration saved = const ChatConfiguration(
     enabled: true,
-    provider: 'ollama',
-    model: 'qwen3.5:4b',
+    provider: 'openai',
+    baseUrl: 'https://models.example/v1',
+    model: 'example-model',
     revision: 1,
   );
   List<ChatConversation> history = [];
   Map<String, List<ChatMessage>> transcript = {};
-  ChatFailure? sendFailure,
-      saveFailure,
-      modelFailure,
-      deleteFailure,
-      historyFailure;
+  ChatFailure? sendFailure, saveFailure, deleteFailure, historyFailure;
   Completer<ChatPage<ChatMessage>>? delayedMessages;
   Completer<ChatPage<ChatConversation>>? delayedHistory;
   Completer<void>? delayedDelete;
@@ -28,14 +25,6 @@ final class FakeChatRepository implements ChatRepository {
   final deleteRequests = <String>[];
   int readCount = 0, saveCount = 0, cancelCount = 0;
   ChatConfigurationDraft? lastDraft;
-  Future<ChatModelContext> Function(String)? onModelContext;
-  @override
-  Future<ChatModelContext> modelContext(
-    String model, {
-    Future<void>? cancel,
-  }) async => onModelContext != null
-      ? onModelContext!(model)
-      : ChatModelContext(model: model, maxContextLength: 131072);
   bool cancelled = false;
   @override
   void cancelRequests() => cancelled = true;
@@ -63,16 +52,6 @@ final class FakeChatRepository implements ChatRepository {
       hasApiKey:
           !draft.clearApiKey && (draft.apiKey.isNotEmpty || saved.hasApiKey),
       revision: expectedRevision + 1,
-      contextLength: draft.contextLengthValue ?? saved.contextLength,
-    );
-  }
-
-  @override
-  Future<ChatModelPage> models({int offset = 0, Future<void>? cancel}) async {
-    if (modelFailure != null) throw modelFailure!;
-    return ChatModelPage(
-      items: offset == 0 ? ['qwen3.5:4b'] : ['qwen3:8b'],
-      nextOffset: offset == 0 ? 20 : null,
     );
   }
 

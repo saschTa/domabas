@@ -39,7 +39,7 @@ func TestChatToolActionsRejectUnboundedOrArbitraryArguments(t *testing.T) {
 	}
 }
 func TestChatContextLengthValidationPreservesOmission(t *testing.T) {
-	update := ChatConfigurationUpdate{ExpectedRevision: 1, Provider: "ollama", Model: "qwen3.5:4b"}
+	update := ChatConfigurationUpdate{ExpectedRevision: 1, Provider: "openai", Model: "fixture", BaseURL: "https://provider.test/v1"}
 	if normalized, err := update.Normalize(); err != nil || normalized.ContextLength != nil {
 		t.Fatal("omitted context changed", normalized, err)
 	}

@@ -14,38 +14,17 @@ import (
 )
 
 type DocumentIngestionService struct {
-	repository   p.DocumentIngestionRepository
-	authority    p.DocumentAuthority
-	store        p.DocumentContentStore
-	processor    p.DocumentProcessor
-	modelContext p.DocumentModelContextReader
-	now          func() time.Time
+	repository p.DocumentIngestionRepository
+	authority  p.DocumentAuthority
+	store      p.DocumentContentStore
+	processor  p.DocumentProcessor
+	now        func() time.Time
 }
 
-func NewDocumentIngestionService(repository p.DocumentIngestionRepository, store p.DocumentContentStore, processor p.DocumentProcessor, authority p.DocumentAuthority, now func() time.Time, readers ...p.DocumentModelContextReader) *DocumentIngestionService {
-	service := &DocumentIngestionService{repository: repository, authority: authority, store: store, processor: processor, now: now}
-	if len(readers) > 0 {
-		service.modelContext = readers[0]
-	}
-	return service
+func NewDocumentIngestionService(repository p.DocumentIngestionRepository, store p.DocumentContentStore, processor p.DocumentProcessor, authority p.DocumentAuthority, now func() time.Time) *DocumentIngestionService {
+	return &DocumentIngestionService{repository: repository, authority: authority, store: store, processor: processor, now: now}
 }
 
-func (s *DocumentIngestionService) ModelContext(ctx context.Context, a m.DocumentActor, model string) (m.DocumentModelContext, error) {
-	if err := s.authorize(ctx, a, identity.SystemDocumentProcessingManage); err != nil {
-		return m.DocumentModelContext{}, err
-	}
-	if _, err := s.repository.GetConfiguration(ctx, a); err != nil {
-		return m.DocumentModelContext{}, err
-	}
-	input, err := (m.DocumentLLMConfigurationUpdate{Provider: "ollama", Model: model}).Normalize()
-	if err != nil {
-		return m.DocumentModelContext{}, err
-	}
-	if s.modelContext == nil {
-		return m.DocumentModelContext{}, m.ErrUnavailable
-	}
-	return s.modelContext.ModelContext(ctx, input.Model)
-}
 func documentID() (string, error) {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {

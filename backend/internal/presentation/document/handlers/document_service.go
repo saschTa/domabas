@@ -35,6 +35,6 @@ type DocumentIngestionService interface {
 	Retry(context.Context, domain.DocumentActor, string) (domain.DocumentProcessing, error)
 	Search(context.Context, domain.DocumentActor, domain.DocumentSearchInput) (domain.DocumentSearchResults, error)
 	GetProcessingConfiguration(context.Context, domain.DocumentActor) (domain.DocumentProcessingConfiguration, error)
-	ModelContext(context.Context, domain.DocumentActor, string) (domain.DocumentModelContext, error)
+
 	SetProcessingConfiguration(context.Context, domain.DocumentActor, domain.DocumentProcessingConfiguration) (domain.DocumentProcessingConfiguration, error)
 }

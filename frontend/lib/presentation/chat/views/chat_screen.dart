@@ -363,9 +363,10 @@ final class _ChatScreenState extends State<ChatScreen> {
                                           .textTheme
                                           .titleMedium,
                                     ),
-                                    if (state.configuration != null)
+                                    if (state.configuration?.model.isNotEmpty ==
+                                        true)
                                       Text(
-                                        '${state.configuration!.provider == 'ollama' ? 'Internal Ollama' : 'External service'} · ${state.configuration!.model}',
+                                        'External service · ${state.configuration!.model}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context)

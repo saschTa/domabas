@@ -1,6 +1,7 @@
 import 'package:domabas/ui/domabas_ui.dart';
 import 'package:domabas/app/job_activity_cubit.dart';
 import 'package:domabas/app/job_activity_indicator.dart';
+import 'package:domabas/presentation/paperless/widgets/paperless_jobs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -170,14 +171,23 @@ Future<void> exercisePaperlessWorkflow(
   await tester.tap(details);
   await tester.pumpAndSettle();
   expect(find.text('Job details'), findsOneWidget);
-  expect(find.text('Partially completed'), findsOneWidget);
+  final jobDetails = find.byType(PaperlessJobDetails);
+  Finder detailText(String text) =>
+      find.descendant(of: jobDetails, matching: find.text(text));
+  expect(detailText('Partially completed'), findsOneWidget);
   expect(
-    find.text('2 discovered · 1 imported · 0 duplicates · 1 failed'),
+    detailText('2 discovered · 1 imported · 0 duplicates · 1 failed'),
     findsOneWidget,
   );
-  await _reveal(tester, find.text('Document results'));
+  await tester.ensureVisible(detailText('Document results'));
+  await tester.pumpAndSettle();
   expect(
-    find.textContaining('Only PDF, PNG, JPEG and EML originals are supported.'),
+    find.descendant(
+      of: jobDetails,
+      matching: find.textContaining(
+        'Only PDF, PNG, JPEG and EML originals are supported.',
+      ),
+    ),
     findsOneWidget,
   );
   final back = find.text('Back to jobs');

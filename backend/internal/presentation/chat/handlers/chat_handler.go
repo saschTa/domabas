@@ -21,8 +21,6 @@ type ChatHTTPService interface {
 	Messages(context.Context, m.ChatActor, string, m.ChatPageRequest) (m.ChatMessagePage, error)
 	Send(context.Context, m.ChatActor, string, m.ChatSendInput) (m.ChatSendResult, error)
 	Cancel(context.Context, m.ChatActor, string, string) (m.ChatMessage, error)
-	Models(context.Context, m.ChatActor, int, int) (m.ChatModelPage, error)
-	ModelContext(context.Context, m.ChatActor, string) (m.ChatModelContext, error)
 }
 type ChatHandler struct{ service ChatHTTPService }
 
@@ -88,47 +86,11 @@ func (h *ChatHandler) UpdateChatConfiguration(ctx context.Context, q contract.Up
 	if b == nil {
 		return chatFailure(m.ChatValidationError{}), nil
 	}
-	v, err := h.service.UpdateConfiguration(ctx, a, m.ChatConfigurationUpdate{ThinkingEnabled: b.ThinkingEnabled, ExpectedRevision: b.ExpectedRevision, ContextLength: b.ContextLength, Enabled: b.Enabled, Provider: string(b.Provider), Model: b.Model, BaseURL: b.BaseUrl, APIKey: b.ApiKey, ClearAPIKey: b.ClearApiKey != nil && *b.ClearApiKey})
+	v, err := h.service.UpdateConfiguration(ctx, a, m.ChatConfigurationUpdate{ThinkingEnabled: b.ThinkingEnabled, ExpectedRevision: b.ExpectedRevision, Enabled: b.Enabled, Provider: string(b.Provider), Model: b.Model, BaseURL: b.BaseUrl, APIKey: b.ApiKey, ClearAPIKey: b.ClearApiKey != nil && *b.ClearApiKey})
 	if err != nil {
 		return chatFailure(err), nil
 	}
 	return contract.UpdateChatConfiguration200JSONResponse(chatConfigurationMapper(v)), nil
-}
-func (h *ChatHandler) GetChatModelContext(ctx context.Context, q contract.GetChatModelContextRequestObject) (contract.GetChatModelContextResponseObject, error) {
-	a, err := h.actor(ctx)
-	if err != nil {
-		return chatFailure(err), nil
-	}
-	v, err := h.service.ModelContext(ctx, a, q.Params.Model)
-	if err != nil {
-		return chatFailure(err), nil
-	}
-	return contract.GetChatModelContext200JSONResponse{Model: v.Model, MaxContextLength: v.MaxContextLength}, nil
-}
-func (h *ChatHandler) ListChatModels(ctx context.Context, q contract.ListChatModelsRequestObject) (contract.ListChatModelsResponseObject, error) {
-	a, err := h.actor(ctx)
-	if err != nil {
-		return chatFailure(err), nil
-	}
-	limit, offset := 20, 0
-	if q.Params.Limit != nil {
-		limit = *q.Params.Limit
-	}
-	if q.Params.Offset != nil {
-		offset = *q.Params.Offset
-	}
-	if limit < 1 || limit > 50 || offset < 0 {
-		return chatFailure(m.ChatValidationError{}), nil
-	}
-	v, err := h.service.Models(ctx, a, limit, offset)
-	if err != nil {
-		return chatFailure(err), nil
-	}
-	result := contract.ListChatModels200JSONResponse{Items: []contract.ChatModel{}, NextOffset: v.NextOffset}
-	for _, item := range v.Items {
-		result.Items = append(result.Items, contract.ChatModel{Name: item.Name})
-	}
-	return result, nil
 }
 func (h *ChatHandler) CreateChatConversation(ctx context.Context, q contract.CreateChatConversationRequestObject) (contract.CreateChatConversationResponseObject, error) {
 	a, err := h.actor(ctx)

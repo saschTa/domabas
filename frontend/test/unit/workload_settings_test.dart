@@ -46,7 +46,7 @@ void main() {
   });
 
   test('positive whole-number bounds and immutable resource mappings', () {
-    final settings = testWorkloadSettings(activeOllama: 10);
+    final settings = testWorkloadSettings(activeEmbeddings: 10);
     final resource = settings.resources[1];
     for (final draft in ['', '0', '-1', '1.5', '65', '1e1', '+2']) {
       expect(resource.validateLimit(draft), isNotNull, reason: draft);
@@ -66,14 +66,14 @@ void main() {
     final cubit = WorkloadSettingsCubit(repository, allowed: true)
       ..setActive(true);
     await settle();
-    cubit.edit('ollama', '65');
+    cubit.edit('embedding-runtime', '65');
     expect(cubit.state.canSave, isFalse);
-    cubit.edit('ollama', '12');
+    cubit.edit('embedding-runtime', '12');
     expect(cubit.state.canSave, isTrue);
     await cubit.save();
     expect(repository.writes.single.limits, {
       'worker': 4,
-      'ollama': 12,
+      'embedding-runtime': 12,
       'external:abc': 2,
     });
     expect(repository.writes.single.revision, 5);
@@ -115,18 +115,18 @@ void main() {
         ..setActive(true);
       await settle();
       cubit.edit('worker', '');
-      cubit.edit('ollama', '12');
+      cubit.edit('embedding-runtime', '12');
       repository.current = testWorkloadSettings(
         revision: 2,
-        ollamaLimit: 4,
-        ollamaMaximum: 6,
+        embeddingLimit: 4,
+        embeddingMaximum: 6,
       );
       await cubit.load();
       expect(cubit.state.drafts['worker'], '');
-      expect(cubit.state.drafts['ollama'], '12');
+      expect(cubit.state.drafts['embedding-runtime'], '12');
       expect(cubit.state.canSave, isFalse);
       cubit.resetDraft();
-      expect(cubit.state.drafts['ollama'], '4');
+      expect(cubit.state.drafts['embedding-runtime'], '4');
       expect(cubit.state.dirty, isFalse);
       await cubit.close();
     },
@@ -140,7 +140,7 @@ void main() {
         ..setActive(true);
       await settle();
       cubit.edit('worker', '12');
-      repository.current = testWorkloadSettings(activeOllama: 3);
+      repository.current = testWorkloadSettings(activeEmbeddings: 3);
       await cubit.sampleUsage();
       expect(cubit.state.settings!.resources[1].activeJobs, 3);
       expect(cubit.state.drafts['worker'], '12');

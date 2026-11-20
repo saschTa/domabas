@@ -32,8 +32,6 @@ lib/model/chat_conversation.dart
 lib/model/chat_conversation_page.dart
 lib/model/chat_message.dart
 lib/model/chat_message_page.dart
-lib/model/chat_model.dart
-lib/model/chat_model_page.dart
 lib/model/chat_source.dart
 lib/model/claim.dart
 lib/model/claim_list.dart
@@ -99,7 +97,6 @@ lib/model/job_status_count.dart
 lib/model/job_status_counts.dart
 lib/model/llm_configuration.dart
 lib/model/login.dart
-lib/model/ollama_model_context.dart
 lib/model/paperless_options.dart
 lib/model/paperless_outcome.dart
 lib/model/paperless_outcome_page.dart

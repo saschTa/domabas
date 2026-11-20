@@ -1,4 +1,5 @@
 import { SQL } from "bun";
+import { provisionEmbeddingModel } from "./embedding-model.ts";
 
 function value(name: string): string {
   const result = process.env[name];
@@ -37,7 +38,11 @@ async function databases(): Promise<void> {
 }
 
 try {
-  await databases();
+  switch (Bun.argv[2]) {
+    case "databases": await databases(); break;
+    case "embedding-model": await provisionEmbeddingModel(); break;
+    default: throw new Error("Expected databases or embedding-model.");
+  }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

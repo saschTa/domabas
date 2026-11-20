@@ -13,35 +13,26 @@ import (
 	records "github.com/domabas/domabas/backend/internal/data/document/models"
 )
 
-type OllamaEmbeddingDataSource struct {
+type LlamaEmbeddingDataSource struct {
 	base   string
 	client *http.Client
 }
 
-func NewOllamaEmbeddingDataSource(base string) (*OllamaEmbeddingDataSource, error) {
+func NewLlamaEmbeddingDataSource(base string) (*LlamaEmbeddingDataSource, error) {
 	base, err := validURL(base)
 	if err != nil {
 		return nil, err
 	}
 	client := privateClient()
-	return &OllamaEmbeddingDataSource{base: base, client: client}, nil
+	return &LlamaEmbeddingDataSource{base: base, client: client}, nil
 }
-func (o *OllamaEmbeddingDataSource) Close() { o.client.CloseIdleConnections() }
-func (o *OllamaEmbeddingDataSource) wait(ctx context.Context) error {
+func (l *LlamaEmbeddingDataSource) Close() { l.client.CloseIdleConnections() }
+func (l *LlamaEmbeddingDataSource) wait(ctx context.Context) error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for attempt := 0; attempt < 60; attempt++ {
-		probe, cancel := context.WithTimeout(ctx, 2*time.Second)
-		data, status, err := requestJSON(probe, o.client, http.MethodGet, o.base+"/api/version", nil, 4096)
-		cancel()
-		if err == nil && status == http.StatusOK {
-			var version struct {
-				Version string `json:"version"`
-			}
-			if json.Unmarshal(data, &version) == nil && version.Version == "0.34.1" {
-				return nil
-			}
-			return errors.New("unexpected Ollama version")
+		if l.Ready(ctx) == nil {
+			return nil
 		}
 		select {
 		case <-ctx.Done():
@@ -49,35 +40,27 @@ func (o *OllamaEmbeddingDataSource) wait(ctx context.Context) error {
 		case <-ticker.C:
 		}
 	}
-	return errors.New("Ollama startup unavailable")
+	return errors.New("llama.cpp embedding server unavailable")
 }
-func (o *OllamaEmbeddingDataSource) pull(ctx context.Context) error {
-	_, status, err := requestJSON(ctx, o.client, http.MethodPost, o.base+"/api/pull", map[string]any{"model": ModelName, "stream": false}, 64<<10)
+func (l *LlamaEmbeddingDataSource) Ready(ctx context.Context) error {
+	probe, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	data, status, err := requestJSON(probe, l.client, http.MethodGet, l.base+"/v1/models", nil, 128<<10)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if err != nil || status != http.StatusOK {
-		return errors.New("pinned embedding pull failed")
+		return records.DocumentProcessorError{Code: "inference_unavailable"}
+	}
+	var models struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(data, &models) != nil || len(models.Data) != 1 || models.Data[0].ID != ModelName {
+		return records.DocumentProcessorError{Code: "inference_unavailable"}
 	}
 	return nil
-}
-func (o *OllamaEmbeddingDataSource) Ready(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	data, status, err := requestJSON(ctx, o.client, http.MethodGet, o.base+"/api/tags", nil, 128<<10)
-	if err != nil || status != http.StatusOK {
-		return records.DocumentProcessorError{Code: "inference_unavailable"}
-	}
-	var tags documentProcessorOllamaTags
-	if json.Unmarshal(data, &tags) != nil {
-		return records.DocumentProcessorError{Code: "inference_unavailable"}
-	}
-	for _, model := range tags.Models {
-		if model.Name == ModelName || model.Model == ModelName {
-			if model.Digest == ModelDigest {
-				return nil
-			}
-			break
-		}
-	}
-	return records.DocumentProcessorError{Code: "inference_unavailable"}
 }
 func validateInputs(purpose string, inputs []string) error {
 	if (purpose != "query" && purpose != "document") || len(inputs) < 1 || len(inputs) > 8 {
@@ -117,21 +100,21 @@ func normalizedVectors(vectors [][]float64, count int) ([][]float64, error) {
 	}
 	return result, nil
 }
-func (o *OllamaEmbeddingDataSource) Embed(ctx context.Context, space records.DocumentEmbeddingSpaceRecord, purpose string, inputs []string) (records.DocumentEmbeddingResult, error) {
+func (l *LlamaEmbeddingDataSource) Embed(ctx context.Context, space records.DocumentEmbeddingSpaceRecord, purpose string, inputs []string) (records.DocumentEmbeddingResult, error) {
 	if space != installedEmbeddingSpace() {
 		return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "configuration_unavailable"}
 	}
 	if err := validateInputs(purpose, inputs); err != nil {
 		return records.DocumentEmbeddingResult{}, err
 	}
-	if err := o.Ready(ctx); err != nil {
+	if err := l.Ready(ctx); err != nil {
 		return records.DocumentEmbeddingResult{}, err
 	}
 	prefixed := make([]string, len(inputs))
 	for i, input := range inputs {
 		prefixed[i] = "search_" + purpose + ": " + input
 	}
-	data, status, err := requestJSON(ctx, o.client, http.MethodPost, o.base+"/api/embed", documentProcessorOllamaEmbedRequest{Model: ModelName, Input: prefixed, Truncate: false, KeepAlive: "10m"}, 1<<20)
+	data, status, err := requestJSON(ctx, l.client, http.MethodPost, l.base+"/v1/embeddings", documentProcessorLlamaEmbedRequest{Model: ModelName, Input: prefixed, EncodingFormat: "float"}, 1<<20)
 	if err != nil {
 		if ctx.Err() != nil {
 			return records.DocumentEmbeddingResult{}, ctx.Err()
@@ -141,21 +124,27 @@ func (o *OllamaEmbeddingDataSource) Embed(ctx context.Context, space records.Doc
 	if status == http.StatusTooManyRequests || status == http.StatusServiceUnavailable {
 		return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "overloaded"}
 	}
-	var response documentProcessorOllamaEmbedResponse
+	var response documentProcessorLlamaEmbedResponse
 	if json.Unmarshal(data, &response) != nil {
 		return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "inference_unavailable"}
 	}
 	if status != http.StatusOK {
-		message := strings.ToLower(response.Error)
-		if status == http.StatusBadRequest && (strings.Contains(message, "context length") || strings.Contains(message, "input length")) {
+		if response.Error.Type == "exceed_context_size_error" || (status == http.StatusInternalServerError && strings.Contains(response.Error.Message, "increase the physical batch size")) {
 			return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "context_length"}
 		}
 		return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "inference_unavailable"}
 	}
-	if response.Model != ModelName {
+	if response.Model != ModelName || len(response.Data) != len(inputs) {
 		return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "processing_failed"}
 	}
-	vectors, err := normalizedVectors(response.Embeddings, len(inputs))
+	ordered := make([][]float64, len(inputs))
+	for _, item := range response.Data {
+		if item.Index == nil || *item.Index < 0 || *item.Index >= len(ordered) || item.Embedding == nil || ordered[*item.Index] != nil {
+			return records.DocumentEmbeddingResult{}, records.DocumentProcessorError{Code: "processing_failed"}
+		}
+		ordered[*item.Index] = item.Embedding
+	}
+	vectors, err := normalizedVectors(ordered, len(inputs))
 	return records.DocumentEmbeddingResult{Space: space, Model: ModelName, Digest: ModelDigest, Vectors: vectors}, err
 }
 

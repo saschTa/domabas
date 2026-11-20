@@ -5,14 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+
 	"github.com/domabas/domabas/backend/internal/data/jobs"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	m "github.com/domabas/domabas/backend/internal/domain/chat/models"
@@ -21,57 +19,18 @@ import (
 
 const chatProviderResponseLimit = 256 << 10
 
-var errChatModelMissing = errors.New("chat model missing")
-
 type ChatProviderRemoteDataSource struct {
-	ollama string
 	client *http.Client
-	logger *slog.Logger
 }
 
-func NewChatProviderRemoteDataSource(ollamaOrigin string, loggers ...*slog.Logger) (*ChatProviderRemoteDataSource, error) {
-	parsed, err := url.Parse(ollamaOrigin)
-	if err != nil || !validProviderURL(parsed) || (parsed.Path != "" && parsed.Path != "/") {
-		return nil, errors.New("chat Ollama URL must be an HTTP(S) origin")
-	}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	var logger *slog.Logger
-	if len(loggers) > 0 {
-		logger = loggers[0]
-	}
-	return &ChatProviderRemoteDataSource{
-		logger: logger,
-		ollama: strings.TrimRight(ollamaOrigin, "/"),
-		client: &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
-	}, nil
+func NewChatProviderRemoteDataSource() *ChatProviderRemoteDataSource {
+	return &ChatProviderRemoteDataSource{client: &http.Client{Transport: http.DefaultTransport.(*http.Transport).Clone(), CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 }
 
 func (p *ChatProviderRemoteDataSource) Close() { p.client.CloseIdleConnections() }
 
 func validProviderURL(parsed *url.URL) bool {
 	return parsed != nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Hostname() != "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == ""
-}
-
-func (p *ChatProviderRemoteDataSource) UsesInternalRuntime(configuration m.ChatConfiguration) bool {
-	if configuration.Provider == "ollama" {
-		return true
-	}
-	configured, err := url.Parse(configuration.BaseURL)
-	if err != nil || !validProviderURL(configured) {
-		return false
-	}
-	internal, _ := url.Parse(p.ollama)
-	return strings.EqualFold(configured.Scheme, internal.Scheme) && strings.EqualFold(configured.Hostname(), internal.Hostname()) && providerPort(configured) == providerPort(internal)
-}
-
-func providerPort(parsed *url.URL) string {
-	if port := parsed.Port(); port != "" {
-		return port
-	}
-	if parsed.Scheme == "https" {
-		return "443"
-	}
-	return "80"
 }
 
 func (p *ChatProviderRemoteDataSource) Generate(ctx context.Context, input m.ChatInferenceInput) (m.ChatAction, error) {
@@ -90,18 +49,11 @@ func (p *ChatProviderRemoteDataSource) Generate(ctx context.Context, input m.Cha
 	}
 	ctx, cancel := context.WithTimeout(ctx, m.ChatProviderTimeout)
 	defer cancel()
-	switch input.Configuration.Provider {
-	case "ollama":
-		return p.generateOllama(ctx, input)
-	case "openai":
-		parsed, err := url.Parse(input.Configuration.BaseURL)
-		if err != nil || !validProviderURL(parsed) {
-			return m.ChatAction{}, m.ChatProcessingError{Code: "configuration_unavailable"}
-		}
-		return p.generateExternal(ctx, input)
-	default:
+	parsed, err := url.Parse(input.Configuration.BaseURL)
+	if input.Configuration.Provider != "openai" || err != nil || !validProviderURL(parsed) {
 		return m.ChatAction{}, m.ChatProcessingError{Code: "configuration_unavailable"}
 	}
+	return p.generateExternal(ctx, input)
 }
 
 func (p *ChatProviderRemoteDataSource) request(ctx context.Context, method, endpoint, key string, input, output any, limit int64) error {
@@ -133,9 +85,7 @@ func (p *ChatProviderRemoteDataSource) send(ctx context.Context, method, endpoin
 		return m.ChatProcessingError{Code: "provider_unavailable", Retryable: true}
 	}
 	defer response.Body.Close()
-	if response.StatusCode == http.StatusNotFound {
-		return errors.Join(errChatModelMissing, m.ChatProcessingError{Code: "provider_rejected"})
-	}
+
 	if response.StatusCode != http.StatusOK {
 		return m.ChatProcessingError{Code: "provider_rejected", Retryable: response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500}
 	}
@@ -153,72 +103,6 @@ func (p *ChatProviderRemoteDataSource) send(ctx context.Context, method, endpoin
 		return m.ChatProcessingError{Code: "invalid_response"}
 	}
 	return nil
-}
-
-func (p *ChatProviderRemoteDataSource) generateOllama(ctx context.Context, input m.ChatInferenceInput) (action m.ChatAction, resultError error) {
-	requested := input.Configuration.ContextLength
-	if requested == 0 {
-		requested = m.ChatDefaultContextLength
-	}
-	if requested < m.ChatMinimumContextLength || requested > m.ChatMaximumContextLength {
-		return m.ChatAction{}, m.ChatProcessingError{Code: "configuration_unavailable"}
-	}
-	modelContext, err := p.modelInformation(ctx, input.Configuration.Model)
-	if errors.Is(err, errChatModelMissing) {
-		var pulled struct {
-			Status string `json:"status"`
-		}
-		err = p.request(ctx, http.MethodPost, p.ollama+"/api/pull", "", map[string]any{"model": input.Configuration.Model, "stream": false}, &pulled, chatProviderResponseLimit)
-		if err == nil && pulled.Status != "success" {
-			err = m.ChatProcessingError{Code: "provider_unavailable", Retryable: true}
-		}
-		if err == nil {
-			modelContext, err = p.modelInformation(ctx, input.Configuration.Model)
-		}
-	}
-	if err != nil {
-		return m.ChatAction{}, err
-	}
-	transcript := providerTranscriptMapper(input.Messages)
-	encoded, err := json.Marshal(transcript)
-	if err != nil {
-		return m.ChatAction{}, m.ChatProcessingError{Code: "invalid_response"}
-	}
-	var response chatInferenceResponse
-	schema := chatActionSchemaMapper(input.AnswerOnly || input.ToolsUsed == m.ChatMaxToolCalls)
-	thinking := input.Configuration.ThinkingEnabled
-	outputBudget := 2048
-	if thinking {
-		outputBudget += 4096
-	}
-	requestPayload := map[string]any{
-		"model": input.Configuration.Model, "stream": false, "format": schema,
-		"messages":   []ChatProviderMessage{{Role: "user", Content: chatOllamaPromptMapper(input, encoded, schema)}},
-		"keep_alive": "5m", "options": map[string]any{"temperature": 0.2, "num_ctx": min(requested, modelContext.MaxContextLength), "num_predict": outputBudget},
-	}
-	requestPayload["think"] = thinking
-	start := time.Now()
-	err = p.request(ctx, http.MethodPost, p.ollama+"/api/chat", "", requestPayload, &response, chatProviderResponseLimit)
-	defer func() {
-		p.logInference(ctx, "chat", input.Configuration.Model, requested, min(requested, modelContext.MaxContextLength), utf8.RuneCount(encoded), outputBudget, thinking, start, response, resultError)
-	}()
-	if err != nil {
-		return m.ChatAction{}, err
-	}
-	if response.DoneReason == "length" {
-		return m.ChatAction{}, m.ChatProcessingError{Code: "output_limit"}
-	}
-	if !response.Done || response.DoneReason != "stop" {
-		return m.ChatAction{}, m.ChatProcessingError{Code: "invalid_response"}
-	}
-	if strings.TrimSpace(response.Message.Content) == "" {
-		return m.ChatAction{}, m.ChatProcessingError{Code: "empty_response"}
-	}
-	var payload ChatProviderActionPayload
-	if decodeStrict(response.Message.Content, &payload) != nil || !requiredJSONFields(response.Message.Content, "action", "content", "query", "documentId", "offset") {
-		return m.ChatAction{}, m.ChatProcessingError{Code: "invalid_response"}
-	}
-	return validateChatAction(m.ChatAction{Kind: payload.Action, Content: payload.Content, Query: payload.Query, DocumentID: payload.DocumentID, Offset: payload.Offset})
 }
 
 func (p *ChatProviderRemoteDataSource) generateExternal(ctx context.Context, input m.ChatInferenceInput) (m.ChatAction, error) {
@@ -369,35 +253,4 @@ func validateChatAction(action m.ChatAction) (m.ChatAction, error) {
 		return m.ChatAction{}, m.ChatProcessingError{Code: "invalid_response"}
 	}
 	return action, nil
-}
-
-func (p *ChatProviderRemoteDataSource) Models(ctx context.Context, limit, offset int) (m.ChatModelPage, error) {
-	if limit < 1 || limit > 50 || offset < 0 {
-		return m.ChatModelPage{}, m.ChatValidationError{Message: "invalid model pagination"}
-	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	var catalog ChatOllamaModelCatalog
-	if err := p.request(ctx, http.MethodGet, p.ollama+"/api/tags", "", nil, &catalog, 4<<20); err != nil {
-		return m.ChatModelPage{}, err
-	}
-	names := make([]string, 0, len(catalog.Models))
-	seen := make(map[string]bool)
-	for _, model := range catalog.Models {
-		if model.Name != "" && !seen[model.Name] {
-			seen[model.Name] = true
-			names = append(names, model.Name)
-		}
-	}
-	sort.Strings(names)
-	page := m.ChatModelPage{Items: []m.ChatModel{}}
-	start := min(offset, len(names))
-	end := start + min(limit, len(names)-start)
-	for _, name := range names[start:end] {
-		page.Items = append(page.Items, m.ChatModel{Name: name})
-	}
-	if end < len(names) {
-		page.NextOffset = &end
-	}
-	return page, nil
 }

@@ -9,5 +9,5 @@ func documentSchedulingResponseMapper(value *domain.DocumentProcessingScheduling
 	if value == nil {
 		return nil
 	}
-	return &contract.DocumentProcessingScheduling{IngestionConcurrency: value.IngestionConcurrency, AiConcurrency: value.AIConcurrency, OllamaQueueSize: value.OllamaQueueSize, IngestionConcurrencyMode: contract.DocumentProcessingSchedulingIngestionConcurrencyMode(value.IngestionConcurrencyMode), AiConcurrencyMode: contract.DocumentProcessingSchedulingAiConcurrencyMode(value.AIConcurrencyMode), ProviderStepRetries: value.ProviderStepRetries, PriorityPolicy: contract.DocumentProcessingSchedulingPriorityPolicy(value.PriorityPolicy)}
+	return &contract.DocumentProcessingScheduling{IngestionConcurrency: value.IngestionConcurrency, AiConcurrency: value.AIConcurrency, EmbeddingQueueSize: value.EmbeddingQueueSize, IngestionConcurrencyMode: contract.DocumentProcessingSchedulingIngestionConcurrencyMode(value.IngestionConcurrencyMode), AiConcurrencyMode: contract.DocumentProcessingSchedulingAiConcurrencyMode(value.AIConcurrencyMode), ProviderStepRetries: value.ProviderStepRetries, PriorityPolicy: contract.DocumentProcessingSchedulingPriorityPolicy(value.PriorityPolicy)}
 }

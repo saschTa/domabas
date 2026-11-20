@@ -26,21 +26,18 @@ func (r *recordedInference) Generate(ctx context.Context, provider, model, baseU
 	return r.response, err
 }
 
-func TestLiveQwenClassifiedInvoiceSchema(t *testing.T) {
-	endpoint := os.Getenv("LLM_OLLAMA_URL")
-	if endpoint == "" {
-		t.Fatal("LLM_OLLAMA_URL is required for live Qwen invoice tests")
+func TestLiveProviderClassifiedInvoiceSchema(t *testing.T) {
+	endpoint := os.Getenv("LM_STUDIO_BASE_URL")
+	if endpoint == "" || os.Getenv("LM_STUDIO_MODEL") == "" {
+		t.Fatal("LM_STUDIO_BASE_URL and LM_STUDIO_MODEL are required for live invoice tests")
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	remote, err := llm.NewDocumentPropertyRemoteDataSource(endpoint, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	remote := llm.NewDocumentPropertyRemoteDataSource(logger)
 	t.Cleanup(remote.Close)
 	inference := &recordedInference{remote: remote}
 	classifier := datasources.NewInvoiceClassifierDataSource(inference, logger)
 	extractor := datasources.NewInvoiceExtractorDataSource(inference, logger)
-	config := document.DocumentLLMConfiguration{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: 32768}
+	config := document.DocumentLLMConfiguration{Provider: "openai", Model: os.Getenv("LM_STUDIO_MODEL"), BaseURL: endpoint, LMStudioCompatibility: true}
 	for _, scenario := range []struct{ name, text, decision, number string }{
 		{"career profile", "Career profile\nExample Candidate\nSoftware engineer, 2019-2026. Education: Computer Science. Skills: Go, SQL and Flutter.", "not_invoice", ""},
 		{"invoice without optional dates", "Invoice No. SCHEMA-1\nSeller: Example Supplies Ltd\nCurrency: EUR\nNet Total: 100.00 EUR\nTax Total: 19.00 EUR\nGrand Total: 119.00 EUR", "invoice", "SCHEMA-1"},
@@ -49,14 +46,14 @@ func TestLiveQwenClassifiedInvoiceSchema(t *testing.T) {
 		t.Run(scenario.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 6*time.Minute)
 			defer cancel()
-			classification, err := classifier.Classify(ctx, config, "", invoice.SelectInvoiceClassificationInput(scenario.text, 1))
+			classification, err := classifier.Classify(ctx, config, os.Getenv("LM_STUDIO_API_KEY"), invoice.SelectInvoiceClassificationInput(scenario.text, 1))
 			if err != nil || classification.Decision != scenario.decision {
 				t.Fatalf("classification=%+v error=%v", classification, err)
 			}
 			if classification.Decision != "invoice" {
 				return
 			}
-			value, err := extractor.InferClassified(ctx, config, "", scenario.text)
+			value, err := extractor.InferClassified(ctx, config, os.Getenv("LM_STUDIO_API_KEY"), scenario.text)
 			if err != nil || value == nil {
 				t.Fatalf("classified extraction failed: %v; synthetic response: %s", err, inference.response)
 			}
@@ -67,15 +64,12 @@ func TestLiveQwenClassifiedInvoiceSchema(t *testing.T) {
 	}
 }
 
-func TestLiveQwenInvoiceTaxCurrencies(t *testing.T) {
-	endpoint := os.Getenv("LLM_OLLAMA_URL")
-	if endpoint == "" {
-		t.Fatal("LLM_OLLAMA_URL is required for live Qwen invoice tests")
+func TestLiveProviderInvoiceTaxCurrencies(t *testing.T) {
+	endpoint := os.Getenv("LM_STUDIO_BASE_URL")
+	if endpoint == "" || os.Getenv("LM_STUDIO_MODEL") == "" {
+		t.Fatal("LM_STUDIO_BASE_URL and LM_STUDIO_MODEL are required for live invoice tests")
 	}
-	remote, err := llm.NewDocumentPropertyRemoteDataSource(endpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
+	remote := llm.NewDocumentPropertyRemoteDataSource()
 	t.Cleanup(remote.Close)
 	inference := &recordedInference{remote: remote}
 	extractor := datasources.NewInvoiceExtractorDataSource(inference)
@@ -120,7 +114,7 @@ Total VAT for accounting and reporting: 6.49 USD`,
 					if classified {
 						infer = extractor.InferClassified
 					}
-					v, err := infer(ctx, document.DocumentLLMConfiguration{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: 32768}, "", scenario.text)
+					v, err := infer(ctx, document.DocumentLLMConfiguration{Provider: "openai", Model: os.Getenv("LM_STUDIO_MODEL"), BaseURL: endpoint, LMStudioCompatibility: true}, os.Getenv("LM_STUDIO_API_KEY"), scenario.text)
 					if err != nil {
 						t.Fatalf("%v: %s", err, inference.response)
 					}
@@ -133,15 +127,12 @@ Total VAT for accounting and reporting: 6.49 USD`,
 	}
 }
 
-func TestLiveQwenInvoiceSourceClassification(t *testing.T) {
-	endpoint := os.Getenv("LLM_OLLAMA_URL")
-	if endpoint == "" {
-		t.Fatal("LLM_OLLAMA_URL is required for live Qwen invoice tests")
+func TestLiveProviderInvoiceSourceClassification(t *testing.T) {
+	endpoint := os.Getenv("LM_STUDIO_BASE_URL")
+	if endpoint == "" || os.Getenv("LM_STUDIO_MODEL") == "" {
+		t.Fatal("LM_STUDIO_BASE_URL and LM_STUDIO_MODEL are required for live invoice tests")
 	}
-	remote, err := llm.NewDocumentPropertyRemoteDataSource(endpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
+	remote := llm.NewDocumentPropertyRemoteDataSource()
 	t.Cleanup(remote.Close)
 	inference := &recordedInference{remote: remote}
 	extractor := datasources.NewInvoiceExtractorDataSource(inference)
@@ -157,7 +148,7 @@ func TestLiveQwenInvoiceSourceClassification(t *testing.T) {
 		t.Run(scenario.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 4*time.Minute)
 			defer cancel()
-			value, err := extractor.Infer(ctx, document.DocumentLLMConfiguration{Provider: "ollama", Model: "qwen3.5:4b"}, "", scenario.text)
+			value, err := extractor.Infer(ctx, document.DocumentLLMConfiguration{Provider: "openai", Model: os.Getenv("LM_STUDIO_MODEL"), BaseURL: endpoint, LMStudioCompatibility: true}, os.Getenv("LM_STUDIO_API_KEY"), scenario.text)
 			if err != nil {
 				t.Fatalf("%v; synthetic response: %s", err, inference.response)
 			}
@@ -171,28 +162,25 @@ func TestLiveQwenInvoiceSourceClassification(t *testing.T) {
 	}
 }
 
-func TestLiveQwenInvoicePrintedFormats(t *testing.T) {
-	endpoint := os.Getenv("LLM_OLLAMA_URL")
-	if endpoint == "" {
-		t.Fatal("LLM_OLLAMA_URL is required for live Qwen invoice tests")
+func TestLiveProviderInvoicePrintedFormats(t *testing.T) {
+	endpoint := os.Getenv("LM_STUDIO_BASE_URL")
+	if endpoint == "" || os.Getenv("LM_STUDIO_MODEL") == "" {
+		t.Fatal("LM_STUDIO_BASE_URL and LM_STUDIO_MODEL are required for live invoice tests")
 	}
-	remote, err := llm.NewDocumentPropertyRemoteDataSource(endpoint)
-	if err != nil {
-		t.Fatal(err)
-	}
+	remote := llm.NewDocumentPropertyRemoteDataSource()
 	t.Cleanup(remote.Close)
 	inference := &recordedInference{remote: remote}
 	classifier := datasources.NewInvoiceClassifierDataSource(inference)
 	extractor := datasources.NewInvoiceExtractorDataSource(inference)
-	config := document.DocumentLLMConfiguration{Provider: "ollama", Model: "qwen3.5:4b", ContextLength: 32768}
+	config := document.DocumentLLMConfiguration{Provider: "openai", Model: os.Getenv("LM_STUDIO_MODEL"), BaseURL: endpoint, LMStudioCompatibility: true}
 	text := "Rechnungs-Nr. FORMAT-2026-1 / 16.09.2026\nVerkäufer: Beispiel Lieferant GmbH\nNetto-Summe: 1.000,00 EUR\nMehrwertsteuer: 19 % auf 1.000,00 EUR = 190,00 EUR\nRechnungsendbetrag in EUR 1.190,00"
 	ctx, cancel := context.WithTimeout(t.Context(), 6*time.Minute)
 	defer cancel()
-	classification, err := classifier.Classify(ctx, config, "", invoice.SelectInvoiceClassificationInput(text, 1))
+	classification, err := classifier.Classify(ctx, config, os.Getenv("LM_STUDIO_API_KEY"), invoice.SelectInvoiceClassificationInput(text, 1))
 	if err != nil || classification.Decision != "invoice" {
 		t.Fatalf("classification=%+v error=%v", classification, err)
 	}
-	value, err := extractor.InferClassified(ctx, config, "", text)
+	value, err := extractor.InferClassified(ctx, config, os.Getenv("LM_STUDIO_API_KEY"), text)
 	if err != nil || value == nil {
 		t.Fatalf("classified extraction failed: %v; synthetic response: %s", err, inference.response)
 	}

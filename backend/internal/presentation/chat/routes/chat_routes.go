@@ -23,12 +23,9 @@ func Register(server contract.ServerInterface, guard *transport.HTTPIdentityGuar
 }
 func chatQuery(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		modelContext := r.URL.Path == "/api/v1/system/chat/model-context"
+
 		for name, values := range r.URL.Query() {
 			allowed := name == "limit" || name == "cursor" || name == "offset"
-			if modelContext {
-				allowed = name == "model"
-			}
 			if !allowed || len(values) != 1 || values[0] == "" {
 				transport.WriteError(w, 400, "invalid_request", "Use single nonempty supported query parameters.")
 				return

@@ -113,7 +113,7 @@ func (s *DocumentDataSource) admitDocument(ctx context.Context, tx pgx.Tx, c m.D
 		prefix = "document-ingestion-v2"
 	}
 	workflow := fmt.Sprintf(prefix+"/%s/%s/%d", row.Job.AccountID, row.Job.DocumentID, row.Job.Generation)
-	providers := []string{"ollama"}
+	providers := []string{"embedding-runtime"}
 	if !split {
 		var provider, endpoint string
 		if err = tx.QueryRow(ctx, "SELECT scheduler_provider,scheduler_base_url FROM document_processing_jobs WHERE account_id=$1 AND document_id=$2 AND generation=$3", row.Job.AccountID, row.Job.DocumentID, row.Job.Generation).Scan(&provider, &endpoint); err != nil {

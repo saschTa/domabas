@@ -36,7 +36,7 @@ final class DocumentSchedulingSummary extends StatelessWidget {
             expandedCrossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Paperless imports, email retrievals and thumbnail generation need workers. Document ingestion and full reindexing also need Ollama for embeddings. Document AI and chat share their configured provider.',
+                'Paperless imports, email retrievals and thumbnail generation need workers. Document ingestion and full reindexing use the local embedding model. Document AI and chat use their configured external providers.',
               ),
               const SizedBox(height: 12),
               const Text(
@@ -45,7 +45,7 @@ final class DocumentSchedulingSummary extends StatelessWidget {
               if (scheduling case final policy?) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'Provider steps in new workflows retry temporary Ollama or external provider failures up to ${policy.providerStepRetries} times after the first request, with waits between attempts. Retries stay within the current job attempt.',
+                  'Provider steps in new workflows retry temporary inference failures up to ${policy.providerStepRetries} times after the first request, with waits between attempts. Retries stay within the current job attempt.',
                 ),
               ],
             ],

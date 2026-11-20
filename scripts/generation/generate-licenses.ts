@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -39,13 +40,13 @@ export function identifyLicense(text: string): string {
 async function trackedInputs(scope: ProcessScope, root: string): Promise<Record<string, string>> {
   const result = await scope.capture(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: root });
   if (result.code) throw new Error("Cannot enumerate tracked license inputs.");
-  const paths = result.stdout.split("\0").filter(path => path && (
+  const paths = result.stdout.split("\0").filter(path => path && existsSync(join(root, path)) && (
     /(^|\/)(go\.(mod|sum)|pubspec\.(yaml|lock)|package\.json|bun\.lock|Dockerfile|.*\.podspec|.*\.gradle\.kts|CMakeLists\.txt|.*Package\.swift|Package\.resolved|Podfile\.lock)$/.test(path) ||
     /(^|\/)compose[^/]*\.yaml$/.test(path) ||
     path.startsWith("third_party/") && !path.startsWith("third_party/licenses/") && !path.endsWith(".md") ||
     path.startsWith("frontend/assets/licenses/") && path !== assetPath ||
     /^\.github\/workflows\/.*\.ya?ml$/.test(path) ||
-    [".tool-versions", ".bun-version", "scripts/security/scan-dependencies.ts", "scripts/security/scan-image.ts", "scripts/ci/setup-flutter.ts", "scripts/testing/browser/browser-tools.ts", "scripts/generation/generate-client.ts", "scripts/development/native-ollama.ts", "frontend/android/gradle/wrapper/gradle-wrapper.properties", "backend/internal/data/document/datasources/processor/document_pins.go"].includes(path)
+    [".tool-versions", ".bun-version", "scripts/security/scan-dependencies.ts", "scripts/security/scan-image.ts", "scripts/ci/setup-flutter.ts", "scripts/testing/browser/browser-tools.ts", "scripts/generation/generate-client.ts", "infra/init/embedding-model.ts", "frontend/android/gradle/wrapper/gradle-wrapper.properties", "backend/internal/data/document/datasources/processor/document_pins.go"].includes(path)
   ));
   paths.push("third_party/licenses/supplemental.json", "third_party/licenses/android-resolution.json");
   const supplemental = JSON.parse(await readFile(join(root, "third_party/licenses/supplemental.json"), "utf8")) as Supplemental[];

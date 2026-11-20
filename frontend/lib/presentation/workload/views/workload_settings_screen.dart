@@ -76,7 +76,7 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                     _ when resource.id.startsWith('stage:') =>
                       'Shared across all pipelines that use this stage.',
                     'embedding-runtime' =>
-                      'Used by document indexing and semantic search.',
+                      'Limits concurrent embedding requests from background jobs. The bundled llama.cpp server has one inference slot.',
                     _ => 'Shared by background jobs using this provider address, including different models and API paths.',
                   },
                   limitField: _WorkloadLimitField(
@@ -94,7 +94,7 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                     onChanged: (value) => cubit.edit(resource.id, value),
                   ),
                   notice: resource.id == 'embedding-runtime'
-                      ? 'Embedding runtime queue size ${settings.embeddingQueueSize}. The maximum is half the configured queue.'
+                      ? 'Configured queue size ${settings.embeddingQueueSize} · Up to ${resource.maximumLimit} scheduler slots'
                       : null,
                 ),
                 const SizedBox(height: 16),

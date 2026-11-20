@@ -295,14 +295,6 @@ void main() {
           await waitForDocumentCollection();
         },
       );
-      await exercisePaperlessSettings(
-        tester,
-        (key) => navigateWorkspace(
-          tester,
-          key,
-          group: key == 'managePaperless' ? 'Admin settings' : 'Workspace',
-        ),
-      );
       expect(find.text('Your library is unavailable'), findsNothing);
       await revealWorkspaceAction(tester, 'newDocument');
       await tester.tap(find.byKey(const Key('newDocument')));
@@ -639,25 +631,23 @@ Future<void> exerciseWorkloadSettings(
   WorkloadSettingsScreen screen() => tester.widget<WorkloadSettingsScreen>(
     find.byType(WorkloadSettingsScreen),
   );
-  Finder workerField() => find.byWidgetPredicate(
-    (widget) =>
-        widget is TextFormField &&
-        widget.key is ValueKey<String> &&
-        (widget.key! as ValueKey<String>).value.startsWith(
-          'workloadLimit-worker-',
-        ),
-  );
+  Finder field(String id) => find.byKey(ValueKey('workloadLimit-$id-input'));
   Future<void> reveal(Finder target) => revealWorkspacePageContent(
     tester,
     target,
     list: find.byKey(const Key('workloadSettingsScroll')),
   );
 
-  Future<void> save(int limit) async {
+  Future<void> save(int workers, int downloads) async {
     final cubit = screen().cubit;
-    await reveal(workerField());
-    await tester.enterText(workerField(), '$limit');
-    await tester.pumpAndSettle();
+    for (final (id, value) in [
+      ('worker', workers),
+      ('stage:paperless', downloads),
+    ]) {
+      await reveal(field(id));
+      await tester.enterText(field(id), '$value');
+      await tester.pumpAndSettle();
+    }
     expect(cubit.state.canSave, isTrue);
     final save = find.byKey(const Key('saveWorkloadSettings'));
     await reveal(save);
@@ -676,47 +666,50 @@ Future<void> exerciseWorkloadSettings(
     expect(cubit.state.error, isNull);
     expect(tester.getRect(save), saveBounds);
     expect(save.hitTestable(), findsOneWidget);
-    expect(
-      cubit.state.settings!.resources
-          .singleWhere((r) => r.id == 'worker')
-          .limit,
-      limit,
-    );
+    expect(cubit.state.drafts['worker'], '$workers');
+    expect(cubit.state.drafts['stage:paperless'], '$downloads');
   }
 
   await open();
   final settings = screen().cubit.state.settings!;
   final worker = settings.resources.singleWhere((r) => r.id == 'worker');
+  final downloads = settings.resources.singleWhere(
+    (r) => r.id == 'stage:paperless',
+  );
   expect(
     settings.pipelines.singleWhere((p) => p.id == 'paperless').resourceIds,
-    ['worker'],
+    unorderedEquals(['worker', 'stage:paperless']),
   );
   expect(
     settings.pipelines
         .singleWhere((p) => p.id == 'document_ingestion')
         .resourceIds,
-    unorderedEquals(['worker', 'ollama']),
+    unorderedEquals([
+      'worker',
+      'stage:thumbnail',
+      'stage:ocr',
+      'stage:embedding',
+      'ollama',
+    ]),
   );
-  await reveal(find.text('What shares these limits'));
-  final matrix = find.ancestor(
-    of: find.text('What shares these limits'),
-    matching: find.byType(AppSurface),
-  );
-  for (final label in [
-    'Document ingestion',
-    'Paperless imports',
-    worker.label,
-    settings.resources.singleWhere((r) => r.id == 'ollama').label,
-  ]) {
+  final picker = find.byKey(const ValueKey('flow-pipeline-picker'));
+  await reveal(picker);
+  await tester.tap(picker);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Paperless imports').hitTestable().last);
+  await tester.pumpAndSettle();
+  final flow = find.byType(GlacierWorkloadFlow);
+  for (final resource in [worker, downloads]) {
     expect(
-      find.descendant(of: matrix, matching: find.text(label)),
-      findsWidgets,
+      find.descendant(of: flow, matching: find.text(resource.label)),
+      findsOneWidget,
     );
   }
   final changedLimit = worker.limit < worker.maximumLimit
       ? worker.limit + 1
       : worker.limit - 1;
-  await save(changedLimit);
+  final changedDownloads = downloads.limit == 3 ? 2 : 3;
+  await save(changedLimit, changedDownloads);
   await remount();
   await open();
   expect(
@@ -729,7 +722,13 @@ Future<void> exerciseWorkloadSettings(
     screen().cubit.state.settings!.revision,
     greaterThan(settings.revision),
   );
-  await save(worker.limit);
+  expect(
+    screen().cubit.state.settings!.resources
+        .singleWhere((r) => r.id == 'stage:paperless')
+        .limit,
+    changedDownloads,
+  );
+  await save(worker.limit, downloads.limit);
   await navigateWorkspace(tester, 'documentsNavigation', group: 'Workspace');
 }
 

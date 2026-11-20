@@ -494,7 +494,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                 icon: Icons.account_tree_outlined,
                 key: Key('manageDocumentProcessing'),
               ),
-            if (_paperlessSettings.allowed)
+            if (_paperlessSettings.allowed && !_workloadSettings.allowed)
               const AppNavigationItem(
                 id: 'paperless-settings',
                 label: 'Paperless retrievals',
@@ -921,7 +921,7 @@ final class _AccountWorkspaceState extends State<AccountWorkspace>
                 'password' => 'Change the password for your account.',
                 'licenses' => 'Read the licenses included with Domabas.',
                 'workload-settings' =>
-                  'Set shared worker and AI provider capacity.',
+                  'Set limits for pipelines, downloads and shared resources.',
                 'chat-settings' =>
                   'Configure the model and provider for AI chat.',
                 'system-users' =>

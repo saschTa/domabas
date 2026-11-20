@@ -61,14 +61,14 @@ final class WorkloadSettingsScreen extends StatelessWidget {
                 (r) => r.id.startsWith('pipeline:') == pipelines,
               )) ...[
                 GlacierWorkloadResource(
-                  label: resource.label,
+                  label: _resourceLabel(resource),
                   active: resource.activeJobs,
                   savedLimit: resource.limit,
                   maximumLimit: resource.maximumLimit,
                   description: switch (resource.id) {
                     'worker' => 'One slot per active background job across all pipelines.',
                     'pipeline:document_ingestion' => 'Generate a thumbnail, extract text, then embed the document.',
-                    'pipeline:paperless' => 'Concurrent import runs. Retrieval concurrency controls downloads from Paperless.',
+                    'pipeline:paperless' => 'Import runs across all libraries. Each run can download several files.',
                     'pipeline:invoice' => 'Extract structured invoice fields from XML or recognized text.',
                     'pipeline:tags' => 'Extract document tags and properties from recognized text.',
                     'stage:paperless' => 'Simultaneous downloads from Paperless before document ingestion.',
@@ -147,6 +147,11 @@ final class WorkloadSettingsScreen extends StatelessWidget {
   );
 }
 
+String _resourceLabel(WorkloadResource resource) =>
+    resource.id.startsWith('external:')
+    ? '${resource.label} (external API provider)'
+    : resource.label;
+
 List<GlacierFlowPipeline> _flowPipelines(WorkloadSettings settings) {
   final resources = {
     for (final resource in settings.resources) resource.id: resource,
@@ -163,7 +168,7 @@ List<GlacierFlowPipeline> _flowPipelines(WorkloadSettings settings) {
             if (resources[id] case final resource?)
               (
                 id: id,
-                label: resource.label,
+                label: _resourceLabel(resource),
                 active: resource.activeJobs,
                 limit: resource.limit,
                 fromPipeline: pipeline.activeSlots[id],

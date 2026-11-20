@@ -59,10 +59,10 @@ The Paperless Settings screen accepts each
 user's source URL and API token, starts durable imports and monitors persisted
 progress through its repository and Cubit; it
 does not execute the pipeline. See [Paperless import](../backend/paperless-import.md).
-Admin settings → Paperless retrievals requires `system:paperless:manage` and is
-available independently of namespace import permission. Its dedicated repository
-and Cubit load and save installation-wide parallel retrievals (1–10) with an
-expected revision. Refresh preserves an edited choice while showing the current
+Workload administrators edit Paperless downloads in Workload limits. Users with
+`system:paperless:manage` who lack workload access see the Paperless retrievals
+editor. Its repository and Cubit load and save the installation-wide download
+limit (1–10) with an expected revision. Refresh preserves an edited choice while showing the current
 saved value; a conflict or uncertain write requires refresh before another save.
 The screen explains source retrieval protection and the shared worker capacity used by imports.
 Add domain services only when a use case

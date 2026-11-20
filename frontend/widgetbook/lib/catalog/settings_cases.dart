@@ -1421,10 +1421,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
         ),
         section(
           'Shared worker capacity',
-          stack([
-            const Text('4 active · 2 waiting'),
-            button('View workload limits'),
-          ]),
+          const Text('Import runs share workers with other background jobs.'),
         ),
       ], save: true);
     }

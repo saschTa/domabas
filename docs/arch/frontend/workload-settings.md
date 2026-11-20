@@ -35,8 +35,9 @@ resource reference is present before displaying the response. It does not infer
 a specific job's blocked resource or its queue position from these requirements.
 The diagram shows configured resources and any other provider still serving an active request for the selected pipeline. A missing attribution field from an older backend is displayed as unavailable. Capacity changes animate unless the device requests reduced motion.
 
-Paperless download capacity can be edited here or in Paperless settings.
-That settings form also supports pull-to-refresh and preserves an unsaved choice.
+Workload administrators edit Paperless download capacity here. Users who can
+manage Paperless retrievals but lack workload access see a dedicated editor instead.
+External addresses in the flow and limit fields carry an “external API provider” label.
 Paperless and email retrieval reserve worker capacity; accepted originals enter
 the separate ingestion pipeline. Document AI and chat use the selected provider
 resource. Pipeline screens no longer describe ingestion preemption or show the

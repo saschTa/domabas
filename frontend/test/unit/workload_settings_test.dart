@@ -74,7 +74,7 @@ void main() {
     expect(repository.writes.single.limits, {
       'worker': 4,
       'ollama': 12,
-      'provider:abc': 2,
+      'external:abc': 2,
     });
     expect(repository.writes.single.revision, 5);
     expect(cubit.state.settings!.revision, 6);

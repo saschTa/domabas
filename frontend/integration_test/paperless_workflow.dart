@@ -21,44 +21,6 @@ Future<void> _reveal(WidgetTester tester, Finder target) =>
       center: false,
     );
 
-Future<void> exercisePaperlessSettings(
-  WidgetTester tester,
-  Future<void> Function(String) navigate,
-) async {
-  await navigate('managePaperless');
-  final field = find.byType(DropdownButtonFormField<int>);
-  final deadline = DateTime.now().add(const Duration(seconds: 15));
-  while (field.evaluate().isEmpty && DateTime.now().isBefore(deadline)) {
-    await tester.pump(const Duration(milliseconds: 100));
-  }
-  expect(field, findsOneWidget);
-  await _reveal(tester, field);
-  await tester.tap(field);
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('3').last);
-  await tester.pumpAndSettle();
-  final save = find.byKey(const Key('savePaperlessSettings'));
-  await _reveal(tester, save);
-  await tester.tap(save);
-  await tester.pumpAndSettle();
-  final saved = find.text('Paperless retrieval settings saved.');
-  final savedDeadline = DateTime.now().add(const Duration(seconds: 15));
-  while (saved.evaluate().isEmpty && DateTime.now().isBefore(savedDeadline)) {
-    await tester.pump(const Duration(milliseconds: 100));
-  }
-  expect(saved, findsOneWidget);
-  await navigate('documentsNavigation');
-  await navigate('managePaperless');
-  final refreshedDeadline = DateTime.now().add(const Duration(seconds: 15));
-  final persisted = find.text('Currently saved: 3 parallel retrievals.');
-  while (persisted.evaluate().isEmpty &&
-      DateTime.now().isBefore(refreshedDeadline)) {
-    await tester.pump(const Duration(milliseconds: 100));
-  }
-  expect(persisted, findsOneWidget);
-  await navigate('documentsNavigation');
-}
-
 Future<void> exercisePaperlessWorkflow(
   WidgetTester tester,
   Future<void> Function(String) navigate,

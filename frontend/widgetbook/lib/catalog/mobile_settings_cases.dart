@@ -575,12 +575,6 @@ class _SettingsExampleState extends State<_SettingsExample> {
                   'processing-settings',
                   icon: Icons.settings_outlined,
                 ),
-                row(
-                  'Paperless retrievals',
-                  'Import concurrency',
-                  'paperless-limits',
-                  icon: Icons.download_outlined,
-                ),
               ]),
             )
           else
@@ -1198,12 +1192,7 @@ class _SettingsExampleState extends State<_SettingsExample> {
           ),
           section(
             'Shared worker capacity',
-            stack([
-              text(
-                'Imports also share worker limits with other background jobs. Each import retrieves files one at a time; requests back off when Paperless is unavailable.',
-              ),
-              actions([link('Workload limits', 'workload')]),
-            ]),
+            text('Import runs share workers with other background jobs.'),
           ),
         ]);
       case 'ai':

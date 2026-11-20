@@ -291,11 +291,6 @@ class _DesktopWorkspaceState extends State<_DesktopWorkspace> {
       label: 'Document processing',
       icon: Icons.auto_awesome_outlined,
     ),
-    GlacierDestination(
-      id: 'settings-retrievals',
-      label: 'Paperless retrievals',
-      icon: Icons.download_outlined,
-    ),
   ];
 
   Widget libraryPicker(BuildContext dialogContext) => GlacierDialog(
@@ -511,6 +506,5 @@ String _description(String id) => switch (id) {
   'settings-users' => 'Manage access to this Domabas server.',
   'settings-processing' =>
     'Configure document indexing, extraction and analysis.',
-  'settings-retrievals' => 'Review Paperless retrievals and their progress.',
   _ => '',
 };

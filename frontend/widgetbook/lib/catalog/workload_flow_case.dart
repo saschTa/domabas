@@ -17,7 +17,10 @@ const _resources = {
   'stage:llm': (label: 'Language model calls', initial: 2),
   'stage:paperless': (label: 'Paperless downloads', initial: 2),
   'ollama': (label: 'Ollama', initial: 1),
-  'external': (label: 'External provider', initial: 1),
+  'external': (
+    label: 'https://ai.example.test (external API provider)',
+    initial: 1,
+  ),
 };
 
 class SampleWorkload {

@@ -95,7 +95,7 @@ final class PaperlessSettingsScreen extends StatelessWidget {
           const AppNotice(
             tone: AppTone.info,
             title: 'Shared worker capacity',
-            message: 'Paperless retrievals use workers. Retrieved documents enter document ingestion separately, where they also need Ollama for embeddings. Manage shared capacity in Workload limits. Running AI jobs continue when imports arrive.',
+            message: 'Paperless retrievals use workers. Retrieved documents enter document ingestion separately, where they also need Ollama for embeddings.',
           ),
         ],
       ),

@@ -12,6 +12,7 @@ import '../support/fake_activity_repository.dart';
 import '../support/fake_document_repository.dart';
 import '../support/fake_email_repository.dart';
 import '../support/fake_identity_repository.dart';
+import '../support/fake_paperless_settings_repository.dart';
 import '../support/fake_processing_repository.dart';
 import '../support/fake_realtime_repository.dart';
 import '../support/fake_workload_settings_repository.dart';
@@ -81,7 +82,10 @@ void main() {
         await tester.tap(find.text('AI chat').last);
         await tester.pumpAndSettle();
         expect(tester.widget<DropdownButton<String>>(picker).value, 'chat');
-        expect(find.text('External AI · example.test'), findsWidgets);
+        expect(
+          find.text('http://192.0.2.1:1234 (external API provider)'),
+          findsWidgets,
+        );
         await revealWorkspaceContent(
           tester,
           field('ollama'),
@@ -93,6 +97,22 @@ void main() {
         expect(cubit.state.canSave, isFalse);
         await tester.enterText(field('ollama'), '12');
         await tester.pumpAndSettle();
+        await revealWorkspaceContent(
+          tester,
+          field('external:abc'),
+          scrollable: scrollable,
+        );
+        expect(
+          tester
+              .widget<GlacierWorkloadResource>(
+                find.ancestor(
+                  of: field('external:abc'),
+                  matching: find.byType(GlacierWorkloadResource),
+                ),
+              )
+              .label,
+          'http://192.0.2.1:1234 (external API provider)',
+        );
         await revealWorkspaceContent(
           tester,
           find.byKey(const Key('saveWorkloadSettings')),
@@ -125,7 +145,10 @@ void main() {
                 role: AccountRole.admin,
                 extraPermissions: [
                   IdentityPermission.connectRealtime,
-                  if (administrator) IdentityPermission.manageWorkloads,
+                  if (administrator) ...[
+                    IdentityPermission.manageWorkloads,
+                    IdentityPermission.managePaperless,
+                  ],
                 ],
               ),
               dependencies: AuthenticatedDependencies(
@@ -136,6 +159,7 @@ void main() {
                 identity: FakeIdentityRepository(),
                 processing: FakeProcessingRepository(),
                 workloadSettings: repository,
+                paperlessSettings: FakePaperlessSettingsRepository(),
                 externalLinks: FakeExternalLinkLauncher(),
                 close: () {},
               ),
@@ -148,6 +172,13 @@ void main() {
         await tester.pumpAndSettle();
         expect(repository.reads, 0);
         if (administrator) {
+          await navigateWorkspace(
+            tester,
+            'navigation-admin-settings',
+            group: 'Admin settings',
+          );
+          expect(find.byKey(const Key('manageWorkloads')), findsOneWidget);
+          expect(find.byKey(const Key('managePaperless')), findsNothing);
           await navigateWorkspace(
             tester,
             'manageWorkloads',

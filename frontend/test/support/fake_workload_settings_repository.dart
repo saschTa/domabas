@@ -26,8 +26,8 @@ WorkloadSettings testWorkloadSettings({
       activeJobs: activeOllama,
     ),
     const WorkloadResource(
-      id: 'provider:abc',
-      label: 'External AI · example.test',
+      id: 'external:abc',
+      label: 'http://192.0.2.1:1234',
       limit: 2,
       maximumLimit: 256,
       activeJobs: 0,
@@ -47,7 +47,7 @@ WorkloadSettings testWorkloadSettings({
     WorkloadPipeline(
       id: 'chat',
       label: 'AI chat',
-      resourceIds: ['worker', 'provider:abc'],
+      resourceIds: ['worker', 'external:abc'],
     ),
   ],
 );

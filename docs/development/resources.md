@@ -1,13 +1,17 @@
 # Runtime resources and memory diagnosis
 
-For a small home library with a single admitted ingestion job, allow four CPU cores and 5 GiB for the base application plus room for embeddings. Docker's VM, the operating system, ZFS and other applications also need capacity. A self-hosted external generation provider has its own requirements.
-
-This is a starting recommendation, not a benchmarked minimum or enough headroom
-for every service to reach its configured ceiling at once. Large documents,
-bulk imports, larger models and higher concurrency can require more memory.
-Measure the workload and adjust capacity or concurrency when needed.
+Observed application memory use ranged from **500 MB to 1.2 GB**, excluding the
+Nomic embedding service. Domabas has no benchmarked minimum RAM requirement.
+To size a host, measure the whole stack while importing a typical batch,
+including a large scanned document if you use OCR. Allow room for the operating
+system, other applications and any chat or extraction model you host separately.
 
 ## Default service budgets
+
+Compose caps the processor and embedding server at four CPUs each. Both share
+the host's CPUs. If Docker has fewer than four CPUs available, set
+`DOCUMENT_PROCESSOR_CPUS` and `EMBEDDING_CPUS` before starting the stack. For
+example, on a two-CPU host set both to `2` in the Compose environment file.
 
 | Service | Container RAM ceiling | Go runtime soft target | Compose override |
 | --- | --- | --- | --- |
@@ -17,9 +21,9 @@ Measure the workload and adjust capacity or concurrency when needed.
 | Web server | 512 MiB | — | `WEB_MEMORY_LIMIT` |
 | llama.cpp embeddings | 2 GiB | — | `EMBEDDING_MEMORY_LIMIT` |
 
-The five long-running service ceilings total **10.5 GiB**. These limits do not reserve memory on
-an overcommitted host. A 5 GiB base allocation cannot absorb every simultaneous
-peak; raising limits or concurrency requires revisiting total capacity.
+The five long-running service ceilings total **10.5 GiB**. Docker does not
+reserve this amount at startup. Actual memory use depends on the active work,
+and several services can peak together during an import.
 Initialization/build processes, native Go/Flutter development, browsers and
 container image builds are additional consumers.
 

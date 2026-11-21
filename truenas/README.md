@@ -9,10 +9,9 @@ Separate startup health-check intervals also require Docker Engine 25+ and
 Compose 2.20.2+. Steady checks run every 30 seconds; see
 [health-check behavior and backend image requirements](../docs/development/compose.md#health-checks).
 
-This guide is for NAS operators. For a small home library, start with **4 CPU
-cores and 5 GiB available RAM**, plus memory for the embedding service, TrueNAS and other
-apps. You also need a dedicated dataset and usable Domabas image references as
-described below. A GPU and HTTPS proxy are optional.
+You need a dedicated dataset and the Domabas images described below. The CPU
+template runs OCR and embeddings on the NAS without a GPU. See [Resources](#resources)
+for CPU limits and memory sizing alongside TrueNAS and ZFS.
 
 [Choose a file](#1-choose-a-file) · [Storage](#2-prepare-the-dataset) ·
 [Settings](#3-fill-in-your-settings) · [GPU setup](#4-check-your-gpu-on-the-host) ·
@@ -123,7 +122,7 @@ In the private copy, edit `x-settings` at the top. Leave the YAML anchor names
 | `dataset_path` | Existing dataset path from step 2 |
 | `postgres_admin_password` | PostgreSQL provisioning password |
 | `postgres_password` | Separate password for the Domabas database role |
-| `public_origin` | Browser HTTP or HTTPS origin, such as `http://192.168.0.230:8088` or `https://documents.example.com`; include a non-default port if used, with no path or trailing slash |
+| `public_origin` | Browser HTTP or HTTPS origin, such as `https://documents.example.com`. Include a non-default port if used. Omit the path and trailing slash. |
 | `web_bind_address`, `web_port` | NAS address and host port reached by your browser or proxy; `0.0.0.0` binds all IPv4 interfaces |
 | `embedding_queue_size` | Embedding admission budget, default 128. Background slots are capped at half this value. |
 | `render_device`, `render_group` | Vulkan only. Render node mapping and numeric owning group from step 4. |
@@ -145,8 +144,8 @@ Use the Vulkan filename for GPU embeddings. This validates syntax only; password
 and dataset settings must still be filled in, and the NAS must be able to pull
 the images before deployment.
 
-Open Domabas directly at `http://<NAS-address>:<web_port>`, for example
-`http://192.168.0.230:8088`, and set `public_origin` to that exact origin.
+Open Domabas directly at `http://<NAS-address>:<web_port>` using your NAS
+address and published port, and set `public_origin` to that exact origin.
 Browser sign-in and installed apps support this HTTP address. HTTP does not
 encrypt traffic. To use HTTPS, point your proxy at the same HTTP address; the
 proxy must preserve the original Host and Origin and support WebSocket upgrades.
@@ -271,6 +270,9 @@ sudo docker logs --tail 200 EMBEDDING_CONTAINER_NAME
 For permission errors, check the selected render node and its numeric group against your template. The CPU template uses the same GGUF model.
 
 ## Resources
+
+Both templates set `cpus: 4` on `document-processor` and `embeddings`. If Docker
+has fewer CPUs available, lower both values in your private YAML before deployment.
 
 Allow memory for local OCR, PostgreSQL, the backend and embeddings alongside TrueNAS, ZFS and other apps. The templates limit PostgreSQL, the backend and embeddings to 2 GiB each, the processor to 4 GiB and web to 512 MiB. The total ceiling is 10.5 GiB. The Go soft target is 1536 MiB.
 

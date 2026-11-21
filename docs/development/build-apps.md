@@ -262,7 +262,7 @@ if you do not know it. You can change it later in **Settings → Server**.
 
 `localhost` on a phone means the phone itself, not your computer. Use a server
 hostname or LAN address reachable from that device, such as
-`http://192.168.0.230:8088`. Release mobile builds support HTTP too. Allow local
+`http://<server-address>:8088`. Release mobile builds support HTTP too. Allow local
 network access if asked. For private certificates and development addresses, see the
 [server guide](../arch/frontend/server-configuration.md).
 

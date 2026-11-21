@@ -32,7 +32,7 @@ Repository toolchain and image pins:
 | Chrome for Testing | 153.0.8010.47 | [Chrome availability](https://googlechromelabs.github.io/chrome-for-testing/) |
 | Bun | 1.4.2 | [Bun release](https://github.com/oven-sh/bun/releases/tag/bun-v1.4.2) |
 | TypeScript | 7.0.2 | [TypeScript package](https://www.npmjs.com/package/typescript/v/7.0.2) |
-| Nginx | 1.30.5 | [Nginx releases](https://nginx.org/en/download.html) |
+| nginx | 1.30.7 | [Web image](../../frontend/Dockerfile) |
 
 Install Task 3.x, Bun 1.4.2, Docker Engine 25+ and Compose 2.20.2+. The Docker minimums support separate startup and steady health-check intervals. Java 17+ is required only to regenerate the Dart client. On macOS, installed Homebrew OpenJDK 21 is detected automatically. `JAVA_HOME` takes priority. Flutter platform toolchain requirements are reported by `task doctor`.
 

@@ -46,7 +46,7 @@ func TestPersistentBrowserAndNativeSessionLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 		if browser {
-			r.Host = "192.168.0.230:8088"
+			r.Host = "10.0.0.2:8088"
 			r.Header.Set("X-Domabas-Browser", "1")
 			if origin == "" {
 				origin = "http://" + r.Host

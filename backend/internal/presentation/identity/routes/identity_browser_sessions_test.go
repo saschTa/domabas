@@ -109,13 +109,13 @@ func TestBrowserSessionsSupportHTTPHostsAndHTTPSProxies(t *testing.T) {
 		allowed                 []string
 		secure, forbidden       bool
 	}{
-		{name: "LAN IP", authority: "192.168.0.230", origin: "http://192.168.0.230"},
-		{name: "LAN port", authority: "192.168.0.230:8088", origin: "http://192.168.0.230:8088"},
-		{name: "LAN IPv6", authority: "[fd00::230]:8088", origin: "http://[fd00::230]:8088"},
+		{name: "LAN IP", authority: "10.0.0.2", origin: "http://10.0.0.2"},
+		{name: "LAN port", authority: "10.0.0.2:8088", origin: "http://10.0.0.2:8088"},
+		{name: "LAN IPv6", authority: "[fd00::2]:8088", origin: "http://[fd00::2]:8088"},
 		{name: "hostname", authority: "documents.example:8088", origin: "http://documents.example:8088"},
-		{name: "allowed origin", authority: "192.168.0.230:8080", origin: "http://192.168.0.230:8088", allowed: []string{"http://192.168.0.230:8088"}},
-		{name: "untrusted origin", authority: "192.168.0.230", origin: "http://evil.example", forbidden: true},
-		{name: "untrusted port", authority: "192.168.0.230:8088", origin: "http://192.168.0.230:9000", forbidden: true},
+		{name: "allowed origin", authority: "10.0.0.2:8080", origin: "http://10.0.0.2:8088", allowed: []string{"http://10.0.0.2:8088"}},
+		{name: "untrusted origin", authority: "10.0.0.2", origin: "http://evil.example", forbidden: true},
+		{name: "untrusted port", authority: "10.0.0.2:8088", origin: "http://10.0.0.2:9000", forbidden: true},
 		{name: "HTTPS proxy", authority: "documents.example", origin: "https://documents.example", secure: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {

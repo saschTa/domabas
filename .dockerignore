@@ -2,10 +2,14 @@
 .cache
 .tools
 .logs
+docs/plans
+.impeccable
 .playwright*
 .task
 node_modules
 **/.dart_tool
+**/.flutter-plugins-dependencies
+**/ephemeral
 **/build
 **/coverage
 **/tmp

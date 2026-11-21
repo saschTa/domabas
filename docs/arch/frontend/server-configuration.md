@@ -48,8 +48,8 @@ backend claim or HTTP endpoint. Existing authorization checks still apply to
 every authenticated operation.
 
 All native build modes support HTTP and HTTPS servers. For a LAN installation,
-enter an address such as `http://192.168.0.230:8088`; use the published web port
-or the API's reachable port. The iOS simulator can reach the Mac at
+enter the host's LAN address with the published web port or the API's reachable
+port, for example `http://<server-address>:8088`. The iOS simulator can reach the Mac at
 `http://localhost:8080`; Android emulators use `http://10.0.2.2:8080`. Physical
 devices need a reachable server hostname or LAN address and must allow local
 network access when the operating system asks. HTTP does not encrypt traffic;

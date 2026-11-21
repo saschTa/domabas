@@ -63,7 +63,7 @@ Chat and AI extraction start disabled. An administrator can connect an OpenAI-co
 
 ## Screenshots
 
-These screenshots show the web app with fictional documents and users.
+These screenshots show fictional documents and users in an earlier version of the web interface. The current app uses the [Glacier interface](docs/arch/frontend/glacier.md).
 
 **Document grid**
 
@@ -94,20 +94,18 @@ See the [screenshot guide](docs/screenshots/index.md) for capture details.
 
 ## What you need to host it
 
-The complete web app runs with Docker Compose. You do not need Go, Flutter or
-other development tools on the host.
+The complete web app runs on a CPU with Docker Engine 25+ and Compose 2.20.2+.
+Docker handles the build tools, OCR and local search. A GPU is optional.
 
-| Requirement | Starting point |
+| Resource | What to plan for |
 | --- | --- |
-| **Container runtime** | Docker Engine 25+ with [Compose 2.20.2+](https://docs.docker.com/compose/install/). ARM64 hosts need AMD64 emulation for the published images and the web build stage when building from source. |
-| **CPU and memory** | For a small library, start with **4 CPU cores and 5 GiB of RAM for the base application**, plus room for local embeddings. The embedding container has a **2 GiB** default memory limit. Leave headroom for the operating system. |
+| **CPU** | Published images target Linux AMD64. ARM64 hosts need AMD64 emulation for those images and for the web build stage when building from source. If Docker has fewer than four CPUs available, lower the two [CPU limits](docs/development/resources.md#default-service-budgets) before starting. |
+| **Memory** | Observed RAM use for the application was **500 MB to 1.2 GB**, excluding the Nomic embedding service. Allow additional memory for Nomic and the operating system. Large scans and concurrent jobs can raise usage above this range. |
 | **Storage** | Allow **274 MB** for the cached Nomic embedding model, plus space for OCR models, container images, originals, database and search indexes, encryption keys, temporary processing files and backups. |
-| **Network** | Internet access for the initial image and model downloads. HTTP works on LAN addresses; HTTPS encrypts traffic for remote access. |
-| **GPU** | CPU embeddings work by default. For GPU acceleration, use the [Linux Vulkan override](docs/development/compose.md#select-the-embedding-runtime) with a compatible driver and an accessible render node. |
+| **Network** | Initial setup downloads images, build dependencies and the embedding model. The default web address is local to the host. See [LAN access](docs/development/compose.md#allow-web-access-from-another-machine) to connect other devices. |
 
-Memory needs grow with document size and concurrent jobs. If you also host a
-chat or extraction provider, budget for that service separately. See the
-[resource guide](docs/development/resources.md) for the individual container limits.
+If you also host a chat or extraction model, budget for that service separately.
+For GPU-accelerated embeddings, see the [Linux Vulkan setup](docs/development/compose.md#select-the-embedding-runtime).
 
 Use the [quick start](#quick-start) to run the source checkout. The
 [self-hosting guide](docs/development/compose.md) covers configuration, building

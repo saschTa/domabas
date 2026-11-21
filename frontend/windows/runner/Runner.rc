@@ -61,7 +61,7 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Sascha Traub" "\0"
+            VALUE "CompanyName", "Domabas" "\0"
             VALUE "FileDescription", "Domabas" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "domabas" "\0"

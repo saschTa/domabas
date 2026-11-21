@@ -45,7 +45,7 @@ The existing Flutter client supports web, Android, iOS, Linux, macOS and Windows
 Use one shared Domabas interface with platform-specific interactions, rather
 than separate mobile product identities. Adapt navigation, input, window insets,
 file handling, scanning and sharing to the host platform. Preserve all six
-targets. The current redesign focuses on desktop screens.
+targets.
 
 Browser clients use the hosted application's origin. Native clients select and
 remember a Domabas server. Users work within a selected personal or shared
@@ -101,19 +101,17 @@ The product name is **Domabas**. Preserve the canonical
 [Filed Paper mark](frontend/assets/branding/domabas-mark.svg) as the source for
 branding assets.
 
-The user selected **Glacier**, a frosted-glass direction with both light and dark
-appearance, for the redesign. This is a binding direction, not a claim that the
-production interface has already migrated. Detailed visual rules and component
-specifications belong in design guidance, not in this product record.
+The production Flutter app uses **Glacier**, a frosted-glass interface with
+light and dark appearances. The [Glacier guide](docs/arch/frontend/glacier.md)
+describes the shared components and visual rules.
 
 ## Evidence on Hand
 
 - The [README](readme.md) documents the product's existing features and hosting
   model; the [frontend guide](frontend/README.md) covers client capabilities and
   platform setup.
-- [Repository screenshots](docs/screenshots/index.md) show the existing web
-  application with fictional documents and users. They are interface evidence,
-  not customer testimonials or proof of adoption.
+- [Repository screenshots](docs/screenshots/index.md) show fictional documents
+  and users in the earlier web interface.
 - The production code, architecture guides and API contract provide the
   functionality baseline. The separate design exploration does not certify
   complete feature parity, native performance or accessibility conformance.
@@ -150,8 +148,6 @@ without verification.
 
 ## Open Decisions
 
-- Detailed mobile adaptations of Glacier remain to be designed; the confirmed
-  policy is a shared Domabas interface with native interactions.
 - Ambient activity metrics, aggregation coverage and their production API remain
   future implementation decisions.
 - Formal accessibility targets and any commercial positioning beyond the

@@ -1,9 +1,9 @@
 # Design guide
 
-Domabas uses warm paper backgrounds, charcoal text and a restrained rust action
-color. Rounded panels, fine outlines, a static dot grid and striped progress
-indicators give the workspace its Paper & Ink appearance. Light and dark modes
-share the same controls and layout. Original document pixels keep their own colors.
+Domabas uses the Glacier interface in light and dark modes. Navigation and
+toolbars use translucent surfaces with teal accents. Document pages and image
+previews retain their original colors. The [Glacier guide](../arch/frontend/glacier.md)
+defines the palette, typography and shared controls.
 
 ## Current design references
 

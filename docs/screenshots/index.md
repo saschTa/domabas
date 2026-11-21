@@ -1,6 +1,7 @@
 # Application screenshots
 
-These screenshots show the running Domabas web app in light appearance.
+These screenshots show the light appearance of the web app before the
+[Glacier interface](../arch/frontend/glacier.md).
 All documents, accounts and email addresses shown are fictional.
 
 ## README product tour

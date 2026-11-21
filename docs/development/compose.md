@@ -147,8 +147,8 @@ credentials; changing the administrator setting does not rotate its stored
 password. Plan administrator password rotation in PostgreSQL separately;
 changing this file alone is insufficient.
 
-Edit only the private file to add deployment settings, such as
-`CORS_ORIGINS=http://192.168.0.230:8088` with your actual browser origin.
+Set `CORS_ORIGINS` in the private file to the exact origin you will open in
+the browser, including its scheme and port.
 HTTP works directly on the published web port. To use HTTPS, configure a proxy
 separately and use its HTTPS origin. Keep `BIND_ADDRESS=127.0.0.1` and
 `PRIVATE_BIND_ADDRESS=127.0.0.1` in the private file. Changing `BIND_ADDRESS`
@@ -186,21 +186,22 @@ of these files private too. For standalone TrueNAS YAML, follow the
 ### Allow web access from another machine
 
 For a trusted LAN, keep both bind settings above on loopback and save this as
-`compose.web.local.yaml`. Replace `192.168.0.230` with the Docker host's LAN
-address and set `CORS_ORIGINS=http://192.168.0.230:8088` in
-`.env.deployment.local` to match your address and web port.
+`compose.web.local.yaml`. In `.env.deployment.local`, set `WEB_LAN_IP` to the
+Docker host's LAN IPv4 address and `CORS_ORIGINS` to the matching browser
+origin, for example `http://192.0.2.10:8088` with your own IP in place of
+the example address.
 
 ```yaml
 services:
   web:
     ports: !override
-      - "192.168.0.230:${WEB_PORT:-8088}:8080"
+      - "${WEB_LAN_IP:?Set WEB_LAN_IP to the host LAN IPv4 address}:${WEB_PORT:-8088}:8080"
 ```
 
 This requires Docker Compose 2.24.4 or newer. The
 [`!override` tag](https://docs.docker.com/reference/compose-file/merge/#replace-value)
-replaces the web port mapping instead of appending another one. PostgreSQL,
-The private processor retains its loopback binding and the embedding server stays on the Compose network.
+replaces the web port mapping. PostgreSQL and the private processor retain
+their loopback bindings. The embedding server stays on the Compose network.
 The backend remains reachable through the web proxy without its own host port.
 
 Use both files for every command, including shutdown:

@@ -132,12 +132,10 @@ cleanup retains the schema for diagnosis. Externally managed services remain
 running; the caller owns their lifecycle. Keep those services in an explicitly
 disposable Compose project when testing a complete isolated stack.
 
-Set `E2E_HOST` to this computer's reachable LAN IPv4 address to run the same browser
-workflows over non-loopback HTTP, for example
-`E2E_HOST=192.168.0.211 task test:e2e`. The API and Flutter bind to that address;
-ChromeDriver remains on loopback. This checks HTTP browser behavior without
-localhost's secure-context exception. Only use an address assigned to the test
-host; the fixture schema, queues and storage remain isolated.
+To exercise browser HTTP outside the localhost secure context, set `E2E_HOST`
+to a reachable LAN IPv4 address assigned to the test host, then run
+`task test:e2e`. The API and Flutter bind to that address. ChromeDriver stays
+on loopback and the fixture schema, queues and storage remain isolated.
 
 The worker restart suite uses a disposable PostgreSQL schema and a deterministic processor fixture. It verifies the upload entry point, model permits and recovery during an interrupted embedding operation.
 
